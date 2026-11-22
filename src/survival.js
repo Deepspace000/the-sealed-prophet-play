@@ -1,5 +1,10 @@
 // Staying alive: hunger, tiredness, and the light you carry. Also what happens when you use a thing.
 // The numbers for each thing are in data/items.json (food, heal, drinks, light, fuel, count, sleep).
+import { play } from './sound.js';
+
+const AIR_TIME = 20;            // seconds you can stay under water on one breath
+const AIR_BACK = 2.5;           // seconds to get your breath back at the surface
+const DROWN = 4;                // health lost each second once the air is gone
 const FOOD_TIME = 45 * 60;      // seconds of play from full to starving
 const REST_TIME = 70 * 60;      // seconds of play from rested to worn out
 const low = s => s.toLowerCase();
@@ -100,6 +105,19 @@ export class Survival {
   // ctx: { underwater, hunting }
   update(dt, ctx) {
     const F = this.fight, inv = this.inv;
+    // Breath. Under water the air runs down; when it is gone you lose health every second until you come up.
+    if (this.air == null) this.air = 1;
+    if (ctx.underwater && !F.dead) {
+      const was = this.air;
+      this.air = Math.max(0, this.air - dt / AIR_TIME);
+      if (was > 0.3 && this.air <= 0.3) this.ui.say('You are running out of air.');
+      if (was > 0 && this.air <= 0) { this.ui.say('You have no air left. You are drowning.'); this.drownT = 0; }
+      if (this.air <= 0) { this.drownT -= dt; if (this.drownT <= 0) { this.drownT += 1; F.harm(DROWN, 'drowned'); } }
+    } else if (this.air < 1) {
+      if (this.wasUnder && this.air < 0.6) play('gasp');
+      this.air = Math.min(1, this.air + dt / AIR_BACK);
+    }
+    this.wasUnder = ctx.underwater;
     // a light only burns in a hand or on the belt
     const top = this.top();
     for (const [it] of inv.all()) {

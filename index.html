@@ -98,6 +98,8 @@
   .bar i { display: block; height: 100%; width: 100%; }
   .barRow.small { margin-bottom: 4px; } .barRow.small .bar { height: 5px; }
   #foodBar { background: #b98a4a; } #restBar { background: #6f8fc0; } #lightBar { background: #ffb347; }
+  #airBar { background: linear-gradient(#bfeaf2, #5fa9bd); }
+  #airRow { margin-top: 8px; } #airRow.out label { color: #ff5a36; } #airRow.out #airBar { background: #ff5a36; }
   #hpBar { background: linear-gradient(#d24a34, #8a2416); }
   #stBar { background: linear-gradient(#e8d9a8, #a89868); }
   /* ---- the creature you are fighting: a frame round it, its name and health, and numbers that rise when it is hit ---- */
@@ -125,6 +127,19 @@
   #floats b.dull { font-size: 17px; color: #a3a3a3; }
   #floats b.word { font-size: 14px; letter-spacing: .14em; color: #c9bb8e; }
   @keyframes floatUp { from { opacity: 1; margin-top: 0; } 70% { opacity: 1; } to { opacity: 0; margin-top: -80px; } }
+  /* ---- a text scene: your thoughts, the first time something happens ---- */
+  #scene { display: none; position: fixed; inset: 0; z-index: 28; flex-direction: column; align-items: center; justify-content: flex-end;
+           background: linear-gradient(rgba(4,3,2,.15), rgba(4,3,2,.7)); }
+  #sceneIn { width: min(720px, 94vw); box-sizing: border-box; margin-bottom: max(18px, 7vh); padding: 18px 26px 16px; text-align: center;
+             background: linear-gradient(rgba(26,16,8,.96), rgba(10,6,3,.96)); border: 1px solid #d9b65a; box-shadow: 0 10px 40px #000; }
+  #sceneTitle { margin: 0 0 10px; font-weight: normal; font-size: 13px; letter-spacing: .3em; text-transform: uppercase; color: #ecc96c; }
+  #sceneLines { text-align: left; }
+  #sceneLines p { margin: 0 0 7px; font-family: Quill, Georgia, serif; font-size: clamp(19px, 2.4vw, 24px); line-height: 1.25; color: #efe4c0;
+                  opacity: 0; animation: sceneLine .7s ease-out forwards; }
+  @keyframes sceneLine { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: none; } }
+  #sceneGo { margin-top: 8px; font: inherit; font-size: 11px; letter-spacing: .2em; color: #e8d9a8; background: #17120a; border: 1px solid #d9b65a;
+             padding: 9px 22px; cursor: pointer; }
+  #sceneGo:hover { background: #d9b65a; color: #17120a; }
   #wind { position: fixed; left: 50%; top: calc(50% + 16px); transform: translateX(-50%); width: 84px; text-align: center;
           font-size: 10px; letter-spacing: .22em; color: #e8d9a8; text-shadow: 0 1px 2px #000; opacity: 0; pointer-events: none; }
   #wind div { height: 4px; margin-bottom: 4px; border: 1px solid #d9b65a; background: rgba(8,6,3,.7); }
@@ -259,6 +274,7 @@
 <div id="cross"></div>
 <div id="tgt"><i></i><i></i><i></i><i></i><div id="tgtHead"><span id="tgtName"></span><div><b id="tgtBar"></b></div><span id="tgtFoot"></span></div></div>
 <div id="floats"></div>
+<div id="scene"><div id="sceneIn"><h3 id="sceneTitle"></h3><div id="sceneLines"></div><button id="sceneGo">CONTINUE</button></div></div>
 <div id="wind"><div><i id="windBar"></i></div><span id="windName"></span></div>
 <div id="bars">
   <div class="barRow"><label>HEALTH</label><div class="bar"><i id="hpBar"></i></div></div>
@@ -266,6 +282,7 @@
   <div class="barRow small"><label>FOOD</label><div class="bar"><i id="foodBar"></i></div></div>
   <div class="barRow small"><label>REST</label><div class="bar"><i id="restBar"></i></div></div>
   <div class="barRow small"><label>LIGHT</label><div class="bar"><i id="lightBar"></i></div></div>
+  <div class="barRow" id="airRow" style="display:none"><label>AIR</label><div class="bar"><i id="airBar"></i></div></div>
 </div>
 <button id="settingsBtn">SETTINGS</button>
 <div id="dead">YOU ARE DEAD</div>

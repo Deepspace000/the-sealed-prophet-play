@@ -12,6 +12,7 @@ import { Survival } from './survival.js';
 import { Menu } from './menu.js';
 import { GameMap } from './map.js';
 import { Target } from './target.js';
+import { Scenes } from './scenes.js';
 import { loadArt } from './art.js';
 import { buildProps, strikeUrn } from './props.js';
 import { loadModels } from './models.js';
@@ -176,6 +177,13 @@ fight.onMiss = (me, yaw, reach, half, dmg, type, kind) => {
   } else if (!chipped.has(type)) { chipped.add(type); ui.say(`${kind} blows only chip the clay. Something heavy would break it.`); }
 };
 const life = new Survival({ inv, fight, ui, onSleep: () => sleep(), onMap: () => openMap() });
+// Text scenes: your thoughts the first time you meet an enemy, a body, water, a hidden room. ?scenes=0 turns them off for tests.
+const scenes = new Scenes({
+  data: (await (await fetch('data/scenes.json')).json()).scenes, seen: run && run.seen, off: params.get('scenes') === '0',
+  level, player, creatures, brightnessAt: (x, y, z) => brightnessAt(x, y, z), areas: data.scenes || [],
+  remains: (data.props || []).filter(p => p.id === 'remains' && p.kind === 'bones')
+    .map(p => ({ x: (p.cell[0] + (p.at ? p.at[0] : 0.5)) * level.size, z: (p.cell[1] + (p.at ? p.at[1] : 0.5)) * level.size })),
+});
 let played = 0;                 // seconds of play in this game
 if (run) {
   fight.hp = run.hp ?? fight.hpMax;
@@ -188,8 +196,9 @@ const fade = (to, sec) => {
   requestAnimationFrame(() => { b.style.opacity = to; });
 };
 // Dying takes you back to your newest save.
-fight.onDeath = () => {
+fight.onDeath = (c, cause) => {
   leaving = true;
+  document.getElementById('dead').textContent = cause === 'drowned' ? 'YOU DROWNED' : 'YOU ARE DEAD';
   document.getElementById('black').style.opacity = 0;
   fade(1, 2);
   document.getElementById('dead').style.display = 'flex';
@@ -210,7 +219,7 @@ function capture() {
     v: 1, level: LEVEL, from: null,
     pos: { x: player.pos.x, y: player.pos.y, z: player.pos.z, yaw: player.yaw, pitch: player.pitch },
     inv: { hands: inv.hands.map(pack), belt: inv.belt.map(pack), back: inv.back.map(pack) },
-    hp: fight.hp, food: life.food, rest: life.rest, played, levels, maps: map.pack(),
+    hp: fight.hp, food: life.food, rest: life.rest, played, levels, maps: map.pack(), seen: scenes.pack(),
   };
 }
 const loadRun = r => { leaving = true; setRun(r); fade(1, 0.5); setTimeout(go, 550); };
@@ -362,6 +371,7 @@ const hud = {
   tint: document.getElementById('tint'),
   hp: document.getElementById('hpBar'), st: document.getElementById('stBar'), hurt: document.getElementById('hurt'),
   food: document.getElementById('foodBar'), rest: document.getElementById('restBar'), light: document.getElementById('lightBar'),
+  air: document.getElementById('airBar'), airRow: document.getElementById('airRow'),
   wind: document.getElementById('wind'), windBar: document.getElementById('windBar'), windName: document.getElementById('windName'),
 };
 let clickUsed = false;
@@ -409,6 +419,12 @@ function step(dt, forced) {
     if (inp.pressed.has('right')) menu.nav(1);
     if (input.device === 'pad' && inp.pressed.has('jump')) menu.press();
     if (inp.pressed.has('back')) menu.toggle();
+    renderer.render(scene, camera);
+    return;
+  }
+  // A text scene. The game stands still while it is up; E, Space, A or the button goes on.
+  if (scenes.open) {
+    if (inp.pressed.has('use') || inp.pressed.has('jump') || inp.pressed.has('back')) scenes.close();
     renderer.render(scene, camera);
     return;
   }
@@ -520,6 +536,7 @@ function step(dt, forced) {
     brightnessAt(player.pos.x, player.eyeY, player.pos.z));
 
   target.update(dt, inp.aim, ui.open || fight.dead);
+  if (!fight.dead && asleep <= 0 && !leaving) scenes.check(dt);
   const seen = world.target(camera.position, viewDir, 2.6, 0.3);
   const beast = seen ? null : creatures.target(camera.position, viewDir);
   ui.setLook(seen ? seen.item.def.name : beast ? beast.def.name + '. ' + health(beast)
@@ -529,6 +546,9 @@ function step(dt, forced) {
   hud.st.style.width = (fight.st / fight.stMax * 100) + '%';
   hud.food.style.width = life.food + '%'; hud.rest.style.width = life.rest + '%';
   hud.light.style.width = (glow ? glow.left * 100 : 0) + '%';
+  const air = life.air ?? 1;
+  hud.airRow.style.display = air < 1 ? 'flex' : 'none';
+  hud.air.style.width = (air * 100) + '%'; hud.airRow.classList.toggle('out', air <= 0.3);
   hud.hurt.style.opacity = fight.dead ? 1 : Math.min(1, fight.hurtT * 2) * 0.9 + (fight.hp < fight.hpMax * 0.25 ? 0.25 : 0);
   hud.wind.style.opacity = fight.winding ? 1 : 0;
   if (fight.winding) {
@@ -614,4 +634,4 @@ function frame(now) {
 requestAnimationFrame(frame);
 
 // For testing from the console.
-window.game = { THREE, scene, camera, renderer, level, player, input, lamp, torches, step, inv, world, ui, make, creatures, fight, life, menu, capture, sleep, map, openMap, target };
+window.game = { THREE, scene, camera, renderer, level, player, input, lamp, torches, step, inv, world, ui, make, creatures, fight, life, menu, capture, sleep, map, openMap, target, scenes };

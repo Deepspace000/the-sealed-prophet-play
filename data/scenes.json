@@ -1,0 +1,65 @@
+{
+  "notes": [
+    "Short text scenes. Each is shown once in a game, the first time the thing happens, and the game stands still while it is up.",
+    "enemy: the first living beast you see. skeleton: the first walking skeleton. walking_dead: the first other dead thing that walks.",
+    "body: the first human remains you see. water: the first water you come to. secret: the first hidden room you get into.",
+    "The words are the player's own thoughts, in the voice of the opening journal. Keep them plain. {name} is the creature's name.",
+    "A level can name hidden rooms that have no false wall: \"scenes\": [{ \"id\": \"secret\", \"area\": [x0, z0, x1, z1] }] (cells, both ends included)."
+  ],
+  "scenes": {
+    "enemy": {
+      "title": "Something alive",
+      "lines": [
+        "Something moved at the edge of my light.",
+        "It is a {name}. It has seen me, and it is not afraid of me.",
+        "This tomb was shut for three thousand years. Nothing should be living in it.",
+        "Nobody is coming to help me. I will have to kill it, or get away from it."
+      ]
+    },
+    "skeleton": {
+      "title": "The bones are standing",
+      "lines": [
+        "There is a skeleton standing ahead of me. It is holding a spear.",
+        "I took it for a burial propped against the wall. Then it turned its head and looked at me.",
+        "There is no flesh on it, and nothing to hold the bones together. It is walking toward me all the same.",
+        "I have dug up the dead for eleven years. Not one of them ever moved. My hands are shaking.",
+        "A knife is no use against bare bone. I need something heavy, to break it."
+      ]
+    },
+    "walking_dead": {
+      "title": "A dead man",
+      "lines": [
+        "A man is walking toward me out of the dark.",
+        "He has been dead a long time. I can see that from here, and I can smell it.",
+        "He should be lying in a coffin. He is on his feet, and he is coming for me.",
+        "I want to run. I do not know if a dead man can be killed a second time."
+      ]
+    },
+    "body": {
+      "title": "Bones",
+      "lines": [
+        "There are human bones on the floor here. A skull, ribs, the long bones of the legs.",
+        "I have handled hundreds of skeletons in my work. It is different when I am shut in with one.",
+        "Whoever this was died down here, and nobody came for them.",
+        "I do not want to end the same way. There may be something useful lying with the bones."
+      ]
+    },
+    "water": {
+      "title": "Water",
+      "lines": [
+        "The floor ends here, at the edge of black water.",
+        "My light does not reach the bottom. I cannot tell how deep it is.",
+        "There should be no water in a desert tomb. It must come up from somewhere far below.",
+        "I can swim, and I can hold my breath for about twenty seconds. If I go under, I must be sure I can come up again."
+      ]
+    },
+    "secret": {
+      "title": "A hidden room",
+      "lines": [
+        "This room was hidden. From outside there was no sign of it at all.",
+        "The builders did not want anyone to find it.",
+        "If there is one hidden room, there will be others. From now on I will check the walls and the water."
+      ]
+    }
+  }
+}

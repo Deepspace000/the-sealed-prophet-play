@@ -184,6 +184,14 @@ export class Fight {
     }
   }
 
+  // Harm that is not a blow (drowning). cause is passed on to onDeath.
+  harm(dmg, cause) {
+    if (this.dead) return;
+    this.hp -= dmg; this.hurtT = 0.5; this.calm = 0;
+    play('hurt');
+    if (this.hp <= 0) { this.hp = 0; this.dead = true; this.winding = false; play('death'); this.onDeath(null, cause); }
+  }
+
   // A creature's blow arrives.
   takeHit(c, dmg) {
     if (this.dead) return;
