@@ -577,7 +577,8 @@ export async function runIntro() {
     pen.rest.textContent = pen.text.slice(pen.n);
     if (!all) {                                      // the quill stands where the last letter was made
       const box = pen.rest.getClientRects()[0] || pen.wet.getBoundingClientRect(), paper = quill.parentElement.getBoundingClientRect();
-      quill.style.left = (box.left - paper.left) + 'px'; quill.style.top = (box.bottom - paper.top - 4) + 'px';
+      const z = +getComputedStyle(document.documentElement).getPropertyValue('--z') || 1;      // the page is drawn smaller on a low screen
+      quill.style.left = ((box.left - paper.left) / z) + 'px'; quill.style.top = ((box.bottom - paper.top) / z - 4) + 'px';
       quill.style.transform = `translate(-50%, -100%) rotate(${26 + Math.sin(pen.n * 1.9) * 5}deg)`;
       quill.style.opacity = 1;
     }

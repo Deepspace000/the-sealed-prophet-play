@@ -382,7 +382,7 @@ const health = c => c.state === 'dead' ? 'It is dead.' : c.hp < c.def.health * 0
 const HELP = {
   keys: 'Mouse: hold the right button and move to look &nbsp; add the left button to walk forward &nbsp; Wheel: look up / down<br>'
     + 'Keys: W forward &nbsp; S stop, then back &nbsp; A D sidestep &nbsp; Q E turn &nbsp; Shift run &nbsp; '
-    + 'Space jump / swim up &nbsp; F lamp &nbsp; H hide this &nbsp; L next level<br>'
+    + 'Space jump / swim up &nbsp; F lamp &nbsp; H hides this &nbsp; L next level<br>'
     + 'Things: look at one and press E, or click it, to pick it up &nbsp; Tab pack &nbsp; '
     + 'click a thing you carry to see what you can do with it, then an empty place to move it there &nbsp; G or click the room to drop<br>'
     + 'Hands: the right button strikes with your right hand and the left button with your left: hold still, then let go. '
@@ -401,7 +401,11 @@ const HELP = {
     + 'Fighting: hold HIT, then let go, to strike &nbsp; hold BLOCK to block &nbsp; DODGE steps away &nbsp; TARGET locks on to an enemy<br>'
     + 'Staying alive: LAMP lights or puts out your light &nbsp; tap food to eat it &nbsp; MAP &nbsp; MENU: sleep, save and load',
 };
-let helpOn = true, time = 0, shownDevice = '';
+// The control text can be put away with its button (or H). On a phone it starts put away, as it would fill the screen.
+let helpOn = !document.documentElement.classList.contains('phone'), time = 0, shownDevice = '';
+try { const v = localStorage.getItem('tsp_help'); if (v) helpOn = v === '1'; } catch (e) {}
+const setHelp = on => { helpOn = on; if (params.get('nosave') !== '1') try { localStorage.setItem('tsp_help', on ? '1' : '0'); } catch (e) {} };
+document.getElementById('helpBtn').addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); setHelp(!helpOn); });
 
 function step(dt, forced) {
   const inp = forced || input.read(dt);
@@ -433,7 +437,7 @@ function step(dt, forced) {
   if (asleep > 0) asleep -= dt;
   if (inp.pressed.has('lamp')) life.toggleLight(torches.some(t => t.d < 2.4));
   if (inp.pressed.has('sleep')) sleep();
-  if (inp.pressed.has('help')) helpOn = !helpOn;
+  if (inp.pressed.has('help')) setHelp(!helpOn);
   if (inp.pressed.has('nextLevel')) { travel(LEVELS[(LEVELS.indexOf(LEVEL) + 1) % LEVELS.length]); return; }
   for (const [act, d] of [['resDown', -1], ['resUp', 1]]) {
     if (!inp.pressed.has(act)) continue;
@@ -585,6 +589,7 @@ function step(dt, forced) {
     shownDevice = input.device + helpOn;
     hud.help.innerHTML = helpOn ? HELP[input.device] + (input.device === 'keys'
       ? ` &nbsp; - and = picture detail (now ${RES} lines)` : '') : '';
+    document.getElementById('helpBtn').textContent = helpOn ? 'HIDE CONTROLS' : 'CONTROLS';
   }
 
   renderer.render(scene, camera);

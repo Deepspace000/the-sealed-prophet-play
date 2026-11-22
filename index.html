@@ -5,30 +5,39 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <title>The Sealed Prophet</title>
 <style>
+  /* Sizes follow the screen. --u: layout  --k: the hot bar and pack (much smaller on a phone)  --t: text  --b: touch buttons */
+  :root { --u: 1; --k: 1; --t: 1; --b: 1; --z: 1; }
   html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
   body { font-family: "Gill Sans", "Century Gothic", "Trebuchet MS", sans-serif; color: #e8d9a8;
          user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
   #view { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; cursor: crosshair; image-rendering: pixelated; }
   #tint { position: fixed; inset: 0; background: rgba(10, 70, 85, 0.45); opacity: 0; transition: opacity .15s; pointer-events: none; }
-  #title { position: fixed; left: 14px; top: 10px; letter-spacing: .28em; font-size: 13px; color: #d9b65a; pointer-events: none; }
-  #title small { display: block; letter-spacing: .12em; color: #a89868; font-size: 12px; margin-top: 3px; }
-  #help { position: fixed; left: 14px; right: 14px; top: 46px; font-size: 12px; line-height: 1.5; color: #c9bb8e;
+  #title { position: fixed; left: 14px; top: 10px; letter-spacing: .28em; font-size: calc(13px * var(--t)); color: #d9b65a; pointer-events: none; }
+  #title small { display: block; letter-spacing: .12em; color: #a89868; font-size: calc(12px * var(--t)); margin-top: 3px; }
+  #help { position: fixed; left: 14px; right: max(calc(min(210px * var(--u), 40vw) + 30px), 160px); top: calc(46px * var(--t) + 30px); font-size: calc(12px * var(--t)); line-height: 1.5; color: #c9bb8e;
           pointer-events: none; text-shadow: 0 1px 2px #000; }
-  #look { position: fixed; left: 50%; top: 54%; transform: translateX(-50%); font-size: 14px; letter-spacing: .1em;
+  #helpBtn { position: fixed; left: 14px; top: calc(46px * var(--t)); z-index: 6; font: inherit; font-size: 10px; letter-spacing: .2em; color: #e8d9a8;
+             background: rgba(8,6,3,.8); border: 1px solid #d9b65a; padding: 5px 9px; cursor: pointer; }
+  #helpBtn:hover { background: #d9b65a; color: #17120a; }
+  #look { position: fixed; left: 50%; top: 54%; transform: translateX(-50%); font-size: calc(14px * var(--t)); letter-spacing: .1em;
           text-shadow: 0 1px 3px #000; pointer-events: none; }
-  #msg { position: fixed; left: 50%; top: 22%; transform: translateX(-50%); padding: 6px 16px; font-size: 14px;
+  #msg { position: fixed; left: 50%; top: 22%; transform: translateX(-50%); padding: 6px 16px; font-size: calc(14px * var(--t));
+         width: max-content; max-width: 88vw; box-sizing: border-box; text-align: center;
          background: rgba(0,0,0,.65); border-top: 1px solid #d9b65a; border-bottom: 1px solid #d9b65a;
-         opacity: 0; transition: opacity .3s; pointer-events: none; white-space: nowrap; }
-  #inv { position: fixed; left: 50%; bottom: 8px; transform: translateX(-50%); display: flex; flex-direction: column;
-         align-items: center; gap: 6px; max-width: 96vw; }
-  #bar, #panel { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; justify-content: center;
-                 padding: 8px 12px 5px; background: rgba(8,6,3,.82); border: 1px solid #d9b65a;
+         opacity: 0; transition: opacity .3s; pointer-events: none; }
+  #inv { position: fixed; left: 50%; bottom: calc(8px * var(--k)); transform: translateX(-50%); display: flex; flex-direction: column;
+         align-items: center; gap: calc(6px * var(--k)); width: max-content; max-width: 96vw; }
+  #bar, #panel { display: flex; gap: calc(12px * var(--k)); align-items: flex-end; flex-wrap: wrap; justify-content: center;
+                 padding: calc(8px * var(--k)) calc(12px * var(--k)) calc(5px * var(--k)); background: rgba(8,6,3,.82); border: 1px solid #d9b65a;
                  clip-path: polygon(8px 0, calc(100% - 8px) 0, 100% 8px, 100% calc(100% - 8px), calc(100% - 8px) 100%, 8px 100%, 0 calc(100% - 8px), 0 8px); }
   #panel { display: none; }
   .group { display: flex; flex-direction: column; align-items: center; gap: 3px; }
-  .group label { font-size: 10px; letter-spacing: .22em; text-transform: uppercase; color: #a89868; }
-  .slots { display: flex; gap: 4px; flex-wrap: wrap; max-width: 330px; justify-content: center; }
-  .slot { position: relative; width: 50px; height: 50px; background: #17120a; border: 1px solid #7d6a3c; cursor: pointer; }
+  .group label { font-size: calc(10px * var(--t)); letter-spacing: .22em; text-transform: uppercase; color: #a89868; }
+  .slots { display: flex; gap: calc(4px * var(--k)); flex-wrap: wrap; max-width: calc(330px * var(--k)); justify-content: center; }
+  html.phone .group label { font-size: 8px; letter-spacing: .1em; }
+  html.phone .group { gap: 1px; }
+  html.phone body.touch #bar button { padding: 10px 7px; font-size: 10px; letter-spacing: .1em; }
+  .slot { position: relative; width: calc(50px * var(--k)); height: calc(50px * var(--k)); background: #17120a; border: 1px solid #7d6a3c; cursor: pointer; }
   .slot:hover, .slot.focus { border-color: #ffe39a; background: #2a2110; }
   .slot.lit { border-color: #ffb347; box-shadow: 0 0 9px 1px rgba(255,170,60,.75), inset 0 0 8px rgba(255,170,60,.5); }
   .slot i { position: absolute; inset: 3px; background-size: contain; background-repeat: no-repeat; background-position: center;
@@ -36,27 +45,27 @@
   .slot i.art { inset: 1px; image-rendering: auto; }
   /* what you can do with a thing you carry */
   #opts { display: none; gap: 6px; justify-content: center; }      /* always in this one place, just above the belt */
-  #inv #opts button { width: min(84px, 21vw); padding: 9px 0; white-space: nowrap; text-align: center; letter-spacing: .1em; }
-  #inv #opts button:first-child { width: min(108px, 27vw); }
-  body.touch #inv #opts button { padding: 14px 0; font-size: 12px; }
+  #inv #opts button { width: min(calc(84px * var(--t)), 21vw); padding: calc(9px * var(--t)) 0; white-space: nowrap; text-align: center; letter-spacing: .1em; }
+  #inv #opts button:first-child { width: min(calc(108px * var(--t)), 27vw); }
+  body.touch #inv #opts button { padding: calc(14px * var(--t)) 0; font-size: calc(12px * var(--t)); }
   #inv #opts button.off { opacity: .28; cursor: default; }
   .slot.sel { border-color: #ffe39a; background: #2a2110; box-shadow: inset 0 0 0 2px #d9b65a; }
-  body.touch #bar button { padding: 15px 16px; font-size: 13px; }      /* the one PACK button, beside the hot bar, big enough for a finger */
+  body.touch #bar button { padding: calc(15px * var(--k)) calc(16px * var(--k)); font-size: calc(13px * var(--t)); }      /* the one PACK button, beside the hot bar, big enough for a finger */
   #inv #opts button:not(.off):hover, #inv #opts button.focus { background: #d9b65a; color: #17120a; }
-  .opener { position: absolute; right: -1px; bottom: -1px; width: 16px; height: 15px; font-size: 11px; line-height: 15px;
+  .opener { position: absolute; right: -1px; bottom: -1px; width: calc(16px * var(--k)); height: calc(15px * var(--k)); font-size: calc(11px * var(--k)); line-height: calc(15px * var(--k));
             text-align: center; color: #17120a; background: #d9b65a; }
   .opener.on { background: #ffe39a; }
-  #inv button { font: inherit; font-size: 11px; letter-spacing: .16em; color: #e8d9a8; background: #17120a;
-                border: 1px solid #d9b65a; padding: 6px 10px; cursor: pointer; }
-  .weight { align-self: center; font-size: 12px; color: #c9bb8e; }
-  #info { min-height: 18px; font-size: 13px; text-align: center; text-shadow: 0 1px 2px #000; }
+  #inv button { font: inherit; font-size: calc(11px * var(--t)); letter-spacing: .16em; color: #e8d9a8; background: #17120a;
+                border: 1px solid #d9b65a; padding: calc(6px * var(--t)) calc(10px * var(--t)); cursor: pointer; }
+  .weight { align-self: center; font-size: calc(12px * var(--t)); color: #c9bb8e; }
+  #info { min-height: calc(18px * var(--t)); font-size: calc(13px * var(--t)); text-align: center; text-shadow: 0 1px 2px #000; max-width: min(96vw, 760px); }
   #info b { color: #ffe39a; font-weight: normal; }
   #info i { color: #e9a86a; font-style: normal; white-space: nowrap; }
-  #heldIcon { display: none; position: fixed; width: 44px; height: 44px; margin: 6px 0 0 6px; background-size: contain;
+  #heldIcon { display: none; position: fixed; width: calc(44px * var(--k)); height: calc(44px * var(--k)); margin: 6px 0 0 6px; background-size: contain;
               image-rendering: pixelated; pointer-events: none; }
   body.touch #heldIcon { left: 50% !important; top: 40% !important; }
   #prompt { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); padding: 12px 22px;
-            border: 1px solid #d9b65a; background: rgba(0,0,0,.72); letter-spacing: .14em; font-size: 14px; pointer-events: none; }
+            border: 1px solid #d9b65a; background: rgba(0,0,0,.72); letter-spacing: .14em; font-size: calc(14px * var(--t)); pointer-events: none; }
   #cross { position: fixed; left: 50%; top: 50%; width: 4px; height: 4px; margin: -2px; background: rgba(232,217,168,.6);
            border-radius: 50%; pointer-events: none; }
   #touch { display: none; }
@@ -65,35 +74,36 @@
            border-radius: 50%; pointer-events: none; }
   #knob { position: absolute; left: 50%; top: 50%; width: 46px; height: 46px; border-radius: 50%;
           background: rgba(217,182,90,.5); transform: translate(-50%,-50%); }
-  #touch button { position: fixed; right: 18px; width: 74px; height: 74px; border-radius: 50%; font: inherit; font-size: 13px;
+  #touch button { position: fixed; right: 18px; width: calc(74px * var(--b)); height: calc(74px * var(--b)); border-radius: 50%; font: inherit; font-size: calc(13px * var(--b));
                   letter-spacing: .08em; color: #e8d9a8; background: rgba(0,0,0,.45); border: 2px solid rgba(217,182,90,.7);
                   touch-action: none; }
-  #touch button[data-act=jump] { bottom: 26px; }
-  #touch button[data-act=lamp] { bottom: 114px; }
-  #touch button[data-act=target] { bottom: 202px; font-size: 11px; }
-  #touch button[data-act=attack] { bottom: 26px; right: 104px; border-color: rgba(200,70,50,.8); }
-  #touch button[data-act=block] { bottom: 114px; right: 104px; }
-  #touch button[data-act=dodge] { bottom: 202px; right: 104px; }
-  #touch button[data-act=map] { top: 146px; right: 14px; width: 62px; height: 34px; border-radius: 6px; font-size: 11px; }
+  /* --lift: on a narrow screen the buttons stand above the hot bar */
+  #touch button[data-act=jump] { bottom: calc(var(--lift, 0px) + 26px * var(--b)); }
+  #touch button[data-act=lamp] { bottom: calc(var(--lift, 0px) + 114px * var(--b)); }
+  #touch button[data-act=target] { bottom: calc(var(--lift, 0px) + 202px * var(--b)); font-size: calc(11px * var(--b)); }
+  #touch button[data-act=attack] { bottom: calc(var(--lift, 0px) + 26px * var(--b)); right: calc(18px + 86px * var(--b)); border-color: rgba(200,70,50,.8); }
+  #touch button[data-act=block] { bottom: calc(var(--lift, 0px) + 114px * var(--b)); right: calc(18px + 86px * var(--b)); }
+  #touch button[data-act=dodge] { bottom: calc(var(--lift, 0px) + 202px * var(--b)); right: calc(18px + 86px * var(--b)); }
+  #touch button[data-act=map] { top: 104px; right: 82px; width: 62px; height: 34px; border-radius: 6px; font-size: 11px; }
   #touch button[data-act=menu] { top: 104px; right: 14px; width: 62px; height: 34px; border-radius: 6px; font-size: 11px; }
 
 
   /* ---- the map: a page of your notebook ---- */
   #map { display: none; position: fixed; inset: 0; z-index: 30; flex-direction: column; align-items: center; justify-content: center;
-         gap: 8px; background: rgba(4,3,2,.8); }
+         gap: 8px; padding: 8px 0; box-sizing: border-box; background: rgba(4,3,2,.8); }
   #mapTop { display: flex; gap: 10px; }
   #mapTop button { font: inherit; font-size: 11px; letter-spacing: .16em; color: #e8d9a8; background: #17120a; border: 1px solid #d9b65a;
                    padding: 7px 14px; cursor: pointer; }
   #mapTop button:hover { background: #d9b65a; color: #17120a; }
-  #mapPage { position: relative; width: min(96vw, 1040px); height: min(76vh, 740px); box-shadow: 0 10px 40px #000; }
+  #mapPage { position: relative; width: min(96vw, 1040px); flex: 0 1 740px; min-height: 0; box-shadow: 0 10px 40px #000; }
   #mapCanvas { position: absolute; inset: 0; width: 100%; height: 100%; cursor: crosshair; }
   #mapNote { display: none; position: absolute; width: 190px; box-sizing: border-box; padding: 0 4px; font: 21px Quill, Georgia, serif;
              color: #2b2a28; background: rgba(255,255,255,.45); border: 0; border-bottom: 1px solid #6b665c; outline: 0;
              user-select: text; -webkit-user-select: text; }
-  #mapHint { max-width: 94vw; font-size: 12px; line-height: 1.5; text-align: center; color: #c9bb8e; }
+  #mapHint { max-width: 94vw; font-size: calc(12px * var(--t)); line-height: 1.4; text-align: center; color: #c9bb8e; }
 
   /* ---- fighting ---- */
-  #bars { position: fixed; right: 14px; top: 12px; width: min(210px, 40vw); pointer-events: none; }
+  #bars { position: fixed; right: 14px; top: 12px; width: min(calc(210px * var(--u)), 40vw); pointer-events: none; }
   .barRow { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
   .barRow label { width: 62px; text-align: right; font-size: 10px; letter-spacing: .22em; color: #a89868; }
   .bar { flex: 1; height: 9px; padding: 1px; border: 1px solid #d9b65a; background: rgba(8,6,3,.8);
@@ -133,11 +143,12 @@
   /* ---- a text scene: your thoughts, the first time something happens ---- */
   #scene { display: none; position: fixed; inset: 0; z-index: 28; flex-direction: column; align-items: center; justify-content: flex-end;
            background: linear-gradient(rgba(4,3,2,.15), rgba(4,3,2,.7)); }
-  #sceneIn { width: min(720px, 94vw); box-sizing: border-box; margin-bottom: max(18px, 7vh); padding: 18px 26px 16px; text-align: center;
+  #sceneIn { width: min(calc(720px * var(--u)), 94vw); max-height: 94vh; overflow: auto; box-sizing: border-box; margin-bottom: max(10px, 5vh);
+             padding: calc(18px * var(--u)) calc(26px * var(--u)) calc(16px * var(--u)); text-align: center;
              background: linear-gradient(rgba(26,16,8,.96), rgba(10,6,3,.96)); border: 1px solid #d9b65a; box-shadow: 0 10px 40px #000; }
   #sceneTitle { margin: 0 0 10px; font-weight: normal; font-size: 13px; letter-spacing: .3em; text-transform: uppercase; color: #ecc96c; }
   #sceneLines { text-align: left; }
-  #sceneLines p { margin: 0 0 7px; font-family: Quill, Georgia, serif; font-size: clamp(19px, 2.4vw, 24px); line-height: 1.25; color: #efe4c0;
+  #sceneLines p { margin: 0 0 calc(7px * var(--u)); font-family: Quill, Georgia, serif; font-size: calc(20px * var(--u)); line-height: 1.25; color: #efe4c0;
                   opacity: 0; animation: sceneLine .7s ease-out forwards; }
   @keyframes sceneLine { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: none; } }
   #sceneGo { margin-top: 8px; font: inherit; font-size: 11px; letter-spacing: .2em; color: #e8d9a8; background: #17120a; border: 1px solid #d9b65a;
@@ -154,19 +165,19 @@
   #settingsBtn:hover { background: #d9b65a; color: #17120a; }
   body.touch #settingsBtn { display: none; }      /* a touch screen has its own MENU button */
   #menu { display: none; position: fixed; inset: 0; z-index: 30; align-items: center; justify-content: center; background: rgba(4,3,2,.72); }
-  #menuIn { width: min(560px, 94vw); max-height: 94vh; overflow: auto; box-sizing: border-box; padding: 22px 26px 16px;
+  #menuIn { width: min(560px, 94vw); max-height: 94vh; overflow: auto; box-sizing: border-box; padding: calc(22px * var(--u)) 26px calc(16px * var(--u));
             background: linear-gradient(rgba(26,16,8,.97), rgba(10,6,3,.97)); border: 1px solid #d9b65a;
             clip-path: polygon(14px 0, calc(100% - 14px) 0, 100% 14px, 100% calc(100% - 14px), calc(100% - 14px) 100%, 14px 100%, 0 calc(100% - 14px), 0 14px); }
-  #menuIn h2 { margin: 0 0 14px; text-align: center; font-weight: normal; font-size: 22px; letter-spacing: .2em; color: #ecc96c; }
+  #menuIn h2 { margin: 0 0 calc(14px * var(--u)); text-align: center; font-weight: normal; font-size: calc(22px * var(--t)); letter-spacing: .2em; color: #ecc96c; }
   #menuIn button { font: inherit; font-size: 11px; letter-spacing: .16em; color: #e8d9a8; background: #17120a; border: 1px solid #d9b65a;
                    padding: 8px 12px; cursor: pointer; }
   #menuIn button:hover, #menuIn button.focus { background: #d9b65a; color: #17120a; }
-  .menuRow { display: flex; gap: 10px; justify-content: center; margin: 10px 0; flex-wrap: wrap; }
+  .menuRow { display: flex; gap: 10px; justify-content: center; margin: calc(10px * var(--u)) 0; flex-wrap: wrap; }
   .slotRow { display: flex; gap: 8px; align-items: center; padding: 7px 0; border-top: 1px solid rgba(217,182,90,.3); font-size: 13px; }
   .slotRow span { flex: 1; color: #c9bb8e; } .slotRow b { color: #ecc96c; font-weight: normal; }
   .menuNote { min-height: 18px; margin-top: 8px; text-align: center; font-size: 13px; color: #ffe39a; }
   #dead { display: none; position: fixed; inset: 0; z-index: 45; align-items: center; justify-content: center; pointer-events: none;
-          font-size: 22px; letter-spacing: .4em; color: #d9b65a; }
+          font-size: calc(22px * var(--t)); letter-spacing: .4em; color: #d9b65a; text-align: center; }
 
   /* ---- the opening ---- */
   #black { position: fixed; inset: 0; background: #000; z-index: 40; pointer-events: none; }
@@ -188,7 +199,7 @@
                background: radial-gradient(ellipse 62% 80% at 50% 50%, rgba(18,10,5,.82) 0%, rgba(18,10,5,.55) 55%, rgba(18,10,5,0) 100%); }
   .arch, .archIn { clip-path: polygon(0 100%, 0 34%, 8% 34%, 8% 22%, 18% 22%, 18% 11%, 30% 11%, 30% 0, 70% 0, 70% 11%,
                                       82% 11%, 82% 22%, 92% 22%, 92% 34%, 100% 34%, 100% 100%); }
-  .arch { width: min(540px, 90vw); padding: 2px; background: #d9b65a; box-sizing: border-box; }
+  .arch { width: min(540px, calc(90vw / var(--z))); padding: 2px; background: #d9b65a; box-sizing: border-box; zoom: var(--z); }
   .archIn { padding: 26px 30px 32px; text-align: center; background: linear-gradient(rgba(26,16,8,.9), rgba(10,6,3,.8)); }
   #titleCard .fan { width: 180px; height: 90px; }
   #titleCard h1 { margin: 0; font-weight: normal; font-size: clamp(34px, 7.4vw, 62px); letter-spacing: .14em; line-height: 1.08;
@@ -206,9 +217,9 @@
   /* the journal page: a Deco plate with cut corners */
   #journal, .paper { clip-path: polygon(14px 0, calc(100% - 14px) 0, 100% 14px, 100% calc(100% - 14px), calc(100% - 14px) 100%,
                                         14px 100%, 0 calc(100% - 14px), 0 14px); }
-  #journal { display: none; position: absolute; left: 4vw; top: 50%; transform: translateY(-50%); width: min(470px, 88vw);
-             padding: 2px; background: #b8923a; box-sizing: border-box; }
-  .paper { position: relative; min-height: min(450px, 78vh); box-sizing: border-box; padding: 24px 34px 44px; color: #2a1d10;
+  #journal { display: none; position: absolute; left: 4vw; top: 50%; transform: translateY(-50%); width: min(470px, calc(88vw / var(--z)));
+             zoom: var(--z); padding: 2px; background: #b8923a; box-sizing: border-box; }
+  .paper { position: relative; min-height: min(450px, calc(78vh / var(--z))); box-sizing: border-box; padding: 24px 34px 44px; color: #2a1d10;
            background: linear-gradient(165deg, #efe2bc, #d9c48e); box-shadow: inset 0 0 44px rgba(90,61,18,.55);
            overflow: hidden; transition: filter 5s; }
   .paper::before { content: ''; position: absolute; inset: 8px; border: 1px solid #b8923a; pointer-events: none; }
@@ -268,6 +279,31 @@
                       80% { opacity: .1; } 100% { opacity: 0; } }
   @media (max-width: 700px) { #journal { left: 50%; transform: translate(-50%, -50%); } .paper { padding: 20px 22px 40px; } }
 </style>
+<script>
+// The sizes of everything on the screen follow the size of the screen. See the :root note in the styles.
+(function () {
+  const R = document.documentElement, cl = (a, v, b) => Math.max(a, Math.min(b, v));
+  function fit() {
+    const w = innerWidth, h = innerHeight, f = Math.min(w / 800, h / 560);
+    const phone = Math.min(w, h) < 520 && matchMedia('(pointer: coarse)').matches || new URLSearchParams(location.search).get('phone') === '1';
+    const u = cl(0.7, f, 1.25), k = phone ? Math.min(0.64, (w - 16) / 620) : u;
+    R.style.setProperty('--u', u.toFixed(3));
+    R.style.setProperty('--k', k.toFixed(3));
+    R.style.setProperty('--t', cl(0.85, f, 1.15).toFixed(3));
+    R.style.setProperty('--b', cl(0.72, f, 1.1).toFixed(3));
+    R.style.setProperty('--z', Math.min(1, h / 600).toFixed(3));
+    lift();
+    R.classList.toggle('phone', phone);
+  }
+  // On a narrow screen the touch buttons stand above the hot bar and whatever is open over it.
+  function lift() {
+    const inv = document.getElementById('inv');
+    R.style.setProperty('--lift', inv && innerWidth < 620 ? (inv.offsetHeight + 12) + 'px' : '0px');
+  }
+  addEventListener('DOMContentLoaded', () => { new ResizeObserver(lift).observe(document.getElementById('inv')); lift(); });
+  fit(); addEventListener('resize', fit);
+})();
+</script>
 <script type="importmap">{ "imports": { "three": "./lib/three.module.min.js" } }</script>
 </head>
 <body>
@@ -296,6 +332,7 @@
   <div id="mapHint"></div>
 </div>
 <div id="title">THE SEALED PROPHET<small><span id="levelName"></span> &middot; <span id="state">Walking</span></small></div>
+<button id="helpBtn">HIDE CONTROLS</button>
 <div id="help"></div>
 <div id="look"></div>
 <div id="msg"></div>
