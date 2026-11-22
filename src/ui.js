@@ -199,7 +199,10 @@ export class UI {
       if (d.drinks) return ` ${it.n} ${it.n === 1 ? 'drink' : 'drinks'} left.`;
       return '';
     };
-    const describe = it => `<b>${it.def.name}.</b> ${it.def.text}${left(it)} (${kg(it.weight)})`;
+    // what it does in a fight: the harm of a blow, and how much of a blow it stops when you guard with it
+    const stats = d => (d.weapon || d.block ? ' <i>' + [d.weapon ? `Damage ${d.weapon.damage} (${d.weapon.type})` : '', d.block ? `Block ${Math.round(d.block * 100)}%` : '']
+      .filter(Boolean).join(' &nbsp; ') + '</i>' : '');
+    const describe = it => `<b>${it.def.name}.</b> ${it.def.text}${left(it)}${stats(it.def)} <span style="white-space:nowrap">(${kg(it.weight)})</span>`;
     if (inv.held) {
       this.info.innerHTML = `Holding: ${describe(inv.held)} `
         + (usable(inv.held.def) ? '<button data-btn="use">USE</button> ' : '') + '<button data-btn="drop">DROP</button>';
