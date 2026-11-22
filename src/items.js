@@ -112,15 +112,17 @@ export class Inventory {
     }
     return null;
   }
-  // There is no free place for it: it goes into a hand all the same. The thing that was in that hand is put away
-  // if it fits anywhere (a burning light is never put away). If nothing can be put away, one hand lets go of what
-  // it holds. Returns { out: the thing that left the hand, where: where it went, or null if it must go on the floor }.
+  // There is no free place for it: it goes into a hand, if a hand holds something worth no more than it is.
+  // A burning light is worth most, then a weapon or a shield, then a light that is out, then everything else:
+  // so a weapon is never moved out of your hand for a bone, but it is for another weapon.
+  // The thing that was in the hand is put away if it fits anywhere, and otherwise must go on the floor.
+  // Returns { out: the thing that left the hand, where: where it went, or null for the floor }, or null if no hand gives way.
   swapIn(item) {
-    const rank = h => { const it = this.hands[h]; return it.lit ? 2 : it.def.light ? 1 : 0; };
-    const order = [1, 0].sort((a, b) => rank(a) - rank(b));
+    const worth = it => it.lit ? 3 : it.def.weapon || it.def.block ? 2 : it.def.light ? 1 : 0, w = worth(item);
+    const order = [1, 0].filter(h => worth(this.hands[h]) <= w).sort((a, b) => worth(this.hands[a]) - worth(this.hands[b]));
+    if (!order.length) return null;
     for (const h of order) {
       const out = this.hands[h];
-      if (out.lit) continue;
       this.hands[h] = item;
       const where = this.add(out);
       if (where) { this.lifted(out); return { out, where }; }
