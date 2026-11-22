@@ -105,7 +105,30 @@ export class Inventory {
     };
     if (item.def.wear === 'back' && tryArea('back')) return 'back';
     for (const area of ['hands', 'belt', 'pack']) if (tryArea(area)) return area;
+    for (const [bag] of this.all()) {                 // any other bag you carry
+      if (!bag.inside || bag === item || item.def.size > bag.def.maxSize) continue;
+      const i = bag.inside.indexOf(null);
+      if (i >= 0) { bag.inside[i] = item; this.version++; return 'bag'; }
+    }
     return null;
+  }
+  // There is no free place for it: it goes into a hand all the same. The thing that was in that hand is put away
+  // if it fits anywhere (a burning light is never put away). If nothing can be put away, one hand lets go of what
+  // it holds. Returns { out: the thing that left the hand, where: where it went, or null if it must go on the floor }.
+  swapIn(item) {
+    const rank = h => { const it = this.hands[h]; return it.lit ? 2 : it.def.light ? 1 : 0; };
+    const order = [1, 0].sort((a, b) => rank(a) - rank(b));
+    for (const h of order) {
+      const out = this.hands[h];
+      if (out.lit) continue;
+      this.hands[h] = item;
+      const where = this.add(out);
+      if (where) { this.lifted(out); return { out, where }; }
+      this.hands[h] = out;
+    }
+    const h = order[0], out = this.hands[h];
+    this.hands[h] = item; this.lifted(out); this.version++;
+    return { out, where: null };
   }
   get weight() {
     let w = this.held ? this.held.weight : 0;

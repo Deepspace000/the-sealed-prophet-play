@@ -335,10 +335,14 @@ function dirAt(px, py) {            // the direction through a point on the scre
 function pickUp(dir, tol) {          // returns true if there was something there to pick up
   const e = world.target(camera.position, dir, 2.6, tol);
   if (!e) return false;
-  const where = inv.add(e.item);
-  if (!where) { ui.say('Your hands are full.'); return true; }
+  const where = inv.add(e.item), x = e.x, z = e.z;
   world.remove(e);
-  ui.say(where === 'back' ? `You put on the ${e.item.def.name.toLowerCase()}.` : `Picked up: ${e.item.def.name}.`);
+  if (where) { ui.say(where === 'back' ? `You put on the ${e.item.def.name.toLowerCase()}.` : `Picked up: ${e.item.def.name}.`); return true; }
+  // No free place: it goes into a hand, and what was in that hand is put away, or put down where the new thing lay.
+  const r = inv.swapIn(e.item), name = r.out.def.name.toLowerCase();
+  const put = { belt: 'on your belt', pack: 'in your pack', bag: 'in a bag', back: 'on your back' }[r.where];
+  if (!put) { r.out.lit = false; world.place(r.out, x, z); }
+  ui.say(`Picked up: ${e.item.def.name}. ` + (put ? `You put the ${name} ${put}.` : `You put down the ${name}.`));
   return true;
 }
 function dropHeld() {
