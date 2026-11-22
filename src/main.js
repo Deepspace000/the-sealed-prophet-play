@@ -335,17 +335,11 @@ function dirAt(px, py) {            // the direction through a point on the scre
 function pickUp(dir, tol) {          // returns true if there was something there to pick up
   const e = world.target(camera.position, dir, 2.6, tol);
   if (!e) return false;
-  const where = inv.add(e.item), x = e.x, z = e.z;
-  if (where) { world.remove(e); ui.say(where === 'back' ? `You put on the ${e.item.def.name.toLowerCase()}.` : `Picked up: ${e.item.def.name}.`); return true; }
-  // No free place: it goes into a hand, and what was in that hand is put away, or put down where the new thing lay.
-  // A weapon or a burning light is not moved out of your hand for a lesser thing.
-  const r = inv.swapIn(e.item);
-  if (!r) { ui.say(`You have nowhere to put the ${e.item.def.name.toLowerCase()}.`); return true; }
+  const where = inv.add(e.item), name = e.item.def.name;
+  if (!where) { ui.say(`You have nowhere to put the ${name.toLowerCase()}.`); return true; }
   world.remove(e);
-  const name = r.out.def.name.toLowerCase();
-  const put = { belt: 'on your belt', pack: 'in your pack', bag: 'in a bag', back: 'on your back' }[r.where];
-  if (!put) { r.out.lit = false; world.place(r.out, x, z); }
-  ui.say(`Picked up: ${e.item.def.name}. ` + (put ? `You put the ${name} ${put}.` : `You put down the ${name}.`));
+  const put = { pack: ' It is in your pack.', belt: ' It is on your belt.', bag: ' It is in a bag.' }[where] || '';
+  ui.say(where === 'back' ? `You put on the ${name.toLowerCase()}.` : `Picked up: ${name}.${put}`);
   return true;
 }
 function dropHeld() {

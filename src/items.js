@@ -94,6 +94,9 @@ export class Inventory {
     return false;
   }
   // Take something from the world. Returns where it went, or null if there is no room.
+  // A weapon, a shield or a light goes into an empty hand if there is one. Everything else goes into the pack first,
+  // then the belt, then any other bag, and into an empty hand only if there is nowhere else.
+  // What you already hold in your hands is never moved to make room.
   add(item) {
     const tryArea = area => {
       const arr = this.arr(area);
@@ -103,34 +106,16 @@ export class Inventory {
       arr[i] = item; this.version++;
       return true;
     };
-    if (item.def.wear === 'back' && tryArea('back')) return 'back';
-    for (const area of ['hands', 'belt', 'pack']) if (tryArea(area)) return area;
+    const d = item.def;
+    if (d.wear === 'back' && tryArea('back')) return 'back';
+    if ((d.weapon || d.block || d.light) && tryArea('hands')) return 'hands';
+    for (const area of ['pack', 'belt']) if (tryArea(area)) return area;
     for (const [bag] of this.all()) {                 // any other bag you carry
-      if (!bag.inside || bag === item || item.def.size > bag.def.maxSize) continue;
+      if (!bag.inside || bag === item || d.size > bag.def.maxSize) continue;
       const i = bag.inside.indexOf(null);
       if (i >= 0) { bag.inside[i] = item; this.version++; return 'bag'; }
     }
-    return null;
-  }
-  // There is no free place for it: it goes into a hand, if a hand holds something worth no more than it is.
-  // A burning light is worth most, then a weapon or a shield, then a light that is out, then everything else:
-  // so a weapon is never moved out of your hand for a bone, but it is for another weapon.
-  // The thing that was in the hand is put away if it fits anywhere, and otherwise must go on the floor.
-  // Returns { out: the thing that left the hand, where: where it went, or null for the floor }, or null if no hand gives way.
-  swapIn(item) {
-    const worth = it => it.lit ? 3 : it.def.weapon || it.def.block ? 2 : it.def.light ? 1 : 0, w = worth(item);
-    const order = [1, 0].filter(h => worth(this.hands[h]) <= w).sort((a, b) => worth(this.hands[a]) - worth(this.hands[b]));
-    if (!order.length) return null;
-    for (const h of order) {
-      const out = this.hands[h];
-      this.hands[h] = item;
-      const where = this.add(out);
-      if (where) { this.lifted(out); return { out, where }; }
-      this.hands[h] = out;
-    }
-    const h = order[0], out = this.hands[h];
-    this.hands[h] = item; this.lifted(out); this.version++;
-    return { out, where: null };
+    return tryArea('hands') ? 'hands' : null;
   }
   get weight() {
     let w = this.held ? this.held.weight : 0;
