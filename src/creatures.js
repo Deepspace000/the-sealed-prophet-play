@@ -323,6 +323,22 @@ export class Creatures {
     return best;
   }
 
+  // The nearest dead creature that has something to take from it (def.skin), has not been taken from yet, and lies within arm's
+  // reach in front of you. Loose on purpose: you only need to be facing it and near, not have the crosshair on it.
+  skinnable(eye, dir, reach = 2.0) {
+    const fl = Math.hypot(dir.x, dir.z) || 1, fx = dir.x / fl, fz = dir.z / fl;
+    let best = null, bd = reach;
+    for (const c of this.list) {
+      if (c.state !== 'dead' || !c.def.skin || c.skinned) continue;
+      const dx = c.x - eye.x, dz = c.z - eye.z, d = Math.hypot(dx, dz) - c.def.radius * 0.5;
+      if (d > bd || eye.y - c.y > 3 || c.y > eye.y) continue;
+      if (d > 0.5 && (dx * fx + dz * fz) / (Math.hypot(dx, dz) || 1) < 0.55) continue;
+      if (!this.sees(eye.x, eye.y, eye.z, c.x, c.y + 0.3, c.z)) continue;
+      best = c; bd = d;
+    }
+    return best;
+  }
+
   // Living creatures in front of the player within reach, nearest first. half = half the width of the swing, in radians.
   inArc(P, yaw, reach, half) {
     const fx = -Math.sin(yaw), fz = -Math.cos(yaw), out = [];

@@ -1,7 +1,7 @@
 // Saving. The whole game so far is one plain object, the "run":
 //   { v, level, from, pos, inv, hp, food, rest, played, levels: { name: { items, creatures } } }
 // The run being played is kept for this tab (so moving between levels and reloading the page keep it).
-// Saves are copies of it kept by the browser: three numbered places and one the game writes itself ("auto").
+// Saves are copies of it kept by the browser: three numbered places, one the game writes itself ("auto") and the one F5 writes ("quick").
 // Add ?nosave=1 to the address to keep a test from writing over real saves.
 const RUN = 'sp_run', SAVE = 'sp_save_';
 const OFF = new URLSearchParams(location.search).get('nosave') === '1';
@@ -22,7 +22,7 @@ export function writeSlot(slot, run, levelName) {
 export const readSlot = slot => { const v = parse(localStorage.getItem(SAVE + slot)); return v && valid(v.run) ? v : null; };
 export function newest() {
   let best = null;
-  for (const s of [...SLOTS, 'auto']) { const v = readSlot(s); if (v && (!best || v.when > best.when)) best = v; }
+  for (const s of [...SLOTS, 'auto', 'quick']) { const v = readSlot(s); if (v && (!best || v.when > best.when)) best = v; }
   return best;
 }
 export const valid = run => !!run && run.v === 1 && typeof run.level === 'string' && /^[a-z0-9_]+$/.test(run.level) && !!run.inv;

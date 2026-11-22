@@ -10,11 +10,11 @@ const REST_TIME = 70 * 60;      // seconds of play from rested to worn out
 const low = s => s.toLowerCase();
 const FUEL = { paraffin: 'paraffin', oil: 'oil' };
 
-export const usable = def => !!(def.food || def.drinks || def.light || def.fuel || def.sleep || def.potion || def.count || def.map);
+export const usable = def => !!(def.food || def.drinks || def.light || def.fuel || def.sleep || def.potion || def.count || def.map || def.bandage);
 // What using a thing does, in a word or two, for the button. '' if there is nothing to do with it.
 export function verb(it) {
   const d = it.def;
-  return d.map ? 'OPEN THE MAP' : d.food ? 'EAT' : d.potion ? 'DRINK' : d.drinks ? (it.n > 0 ? 'DRINK' : 'FILL') : d.light ? (it.lit ? 'PUT OUT' : 'LIGHT')
+  return d.map ? 'OPEN THE MAP' : d.bandage ? 'BIND' : d.food ? 'EAT' : d.potion ? 'DRINK' : d.drinks ? (it.n > 0 ? 'DRINK' : 'FILL') : d.light ? (it.lit ? 'PUT OUT' : 'LIGHT')
     : d.count ? 'LIGHT YOUR LAMP' : d.fuel ? 'FILL THE LAMP' : d.sleep ? 'SLEEP' : it.inside ? 'OPEN' : '';
 }
 
@@ -60,7 +60,12 @@ export class Survival {
   use(it, inWater) {
     const d = it.def, name = low(d.name), F = this.fight;
     if (d.map) this.onMap();
-    else if (d.potion) {
+    else if (d.bandage) {
+      if (F.hp >= F.hpMax) { this.ui.say('You are not hurt.'); return; }
+      F.hp = Math.min(F.hpMax, F.hp + d.bandage.heal);
+      this.inv.remove(it);
+      this.ui.say('You bind your wounds with the linen.');
+    } else if (d.potion) {
       F.hp = Math.min(F.hpMax, F.hp + (d.potion.heal || 0));
       this.inv.remove(it);
       this.ui.say('You drink it. You feel better.');

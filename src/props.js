@@ -132,10 +132,11 @@ export function strikeUrn(urns, me, yaw, reach, half, dmg, type) {
 // fires: where a fire burns on a brazier, as [{ x, y, z }] }.
 // smashed: the numbers of the urns the player has already broken (from a save).
 export function buildProps(scene, level, list, smashed) {
-  if (!list.length) return { solid: [], flat: [], fires: [] };
+  if (!list.length) return { solid: [], flat: [], fires: [], seal: null };
   const mat = new THREE.MeshLambertMaterial({ map: clay(), side: THREE.DoubleSide, flatShading: true });
   const dark = new THREE.MeshBasicMaterial({ color: 0x050302 });
   const solid = [], flat = [], fires = [];
+  let seal = null;
   list.forEach((p, n) => {
     const at = p.at || [0.5, 0.5], x = (p.cell[0] + at[0]) * level.size, z = (p.cell[1] + at[1]) * level.size;
     if (level.cellAt(x, z).solid) throw new Error(`Prop ${n} (${p.id}) is placed inside solid rock`);
@@ -151,6 +152,32 @@ export function buildProps(scene, level, list, smashed) {
       spr.position.set(x, y - 0.03, z);
       scene.add(spr);
       flat.push({ spr, x, y: y + 0.3, z });
+      return;
+    }
+    if (p.id === 'seal') {                         // a ring of empty sockets laid on the floor, one for each relic (see DESIGN.md)
+      const y = level.floorAt(x, z) + (p.lift || 0), n8 = p.sockets || 8, R = p.radius || 0.78;
+      const rim = new THREE.MeshBasicMaterial({ color: 0xc9a444 }), hole = new THREE.MeshBasicMaterial({ color: 0x050302 });
+      const grp = new THREE.Group(), gods = p.gods || [], at8 = {};
+      for (let i = 0; i < n8; i++) {
+        const a = (i - 0.5) / n8 * Math.PI * 2, s = new THREE.Group();      // clockwise from the north-west: each socket points at its god's door
+        const ring = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.05, 20), rim);
+        const pit = new THREE.Mesh(new THREE.CylinderGeometry(0.145, 0.145, 0.056, 20), hole);
+        s.add(ring, pit);
+        s.position.set(Math.sin(a) * R, 0.025, -Math.cos(a) * R);
+        grp.add(s);
+        if (gods[i]) at8[gods[i]] = s;
+      }
+      grp.position.set(x, y, z);
+      scene.add(grp);
+      // fill(god, colour): a gem sits in that god's socket
+      seal = { x, y, z, fill: (god, colour) => {
+        const s = at8[god];
+        if (!s || s.userData.full) return;
+        s.userData.full = true;
+        const gem = new THREE.Mesh(new THREE.OctahedronGeometry(0.13), new THREE.MeshBasicMaterial({ color: new THREE.Color(colour || '#ffffff') }));
+        gem.scale.y = 1.35; gem.position.y = 0.1;
+        s.add(gem);
+      } };
       return;
     }
     if (p.id === 'model') {                        // a statue, a pillar or other piece of scenery (see models.js)
@@ -178,5 +205,5 @@ export function buildProps(scene, level, list, smashed) {
     scene.add(grp);
     solid.push(u);
   });
-  return { solid, flat, fires };
+  return { solid, flat, fires, seal };
 }

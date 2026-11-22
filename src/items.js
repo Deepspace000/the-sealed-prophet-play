@@ -11,6 +11,7 @@ export class Item {
     if (def.count) this.n = def.count;
     else if (def.drinks) this.n = def.drinks;
     else if (def.light) this.n = def.light.start ?? def.light.burn;
+    else if (def.durability) this.n = def.durability;       // blows it can take before it breaks
     this.lit = false;
   }
   get weight() {

@@ -7,7 +7,7 @@
 export const art = { items: {}, held: {}, creatures: {} };
 export const HELD_AT = [176 / 384, 200 / 384];      // where the middle of the fist is in a held picture, from its top left corner
 
-export async function loadArt() {
+export async function loadArt(onProgress = () => {}) {
   let m;
   try { m = await (await fetch('art/manifest.json')).json(); } catch (e) { return; }
   const load = src => new Promise(done => {
@@ -15,9 +15,11 @@ export async function loadArt() {
     im.onload = () => done(im); im.onerror = () => done(null);
     im.src = src;
   });
-  const jobs = [];
+  const jobs = []; let done = 0, total = 0;
+  const tick = () => onProgress(++done / total);
   for (const kind of Object.keys(art)) {
-    for (const name of m[kind] || []) jobs.push(load(`art/${kind}/${name}.png?v=${m.v}`).then(im => { if (im) art[kind][name] = im; }));
+    for (const name of m[kind] || []) jobs.push(load(`art/${kind}/${name}.png?v=${m.v}`).then(im => { if (im) art[kind][name] = im; tick(); }));
   }
+  total = jobs.length;
   await Promise.all(jobs);
 }

@@ -14,11 +14,14 @@ import { GameMap } from './map.js';
 import { Target } from './target.js';
 import { Scenes } from './scenes.js';
 import { loadArt } from './art.js';
+import { play } from './sound.js';
 import { buildProps, strikeUrn } from './props.js';
 import { loadModels } from './models.js';
 import { getRun, setRun, clearRun, writeSlot, readSlot, newest, toFile, fromFile } from './save.js';
 
+const LOAD = window.loading || { set() {}, name() {}, finish: async () => {} };      // the loading page (see index.html)
 const LEVELS = ['test', 'shaft', 'hub'];
+const REALMS = ['ptah', 'nut', 'thoth', 'sekhmet', 'anubis', 'osiris', 'sobek', 'ra'];      // the levels behind the hall's eight doors
 // The game so far (see save.js). Without ?intro=0 in the address a new game begins at the title.
 const params = new URLSearchParams(location.search);
 const fresh = params.get('intro') !== '0';
@@ -54,8 +57,27 @@ function resize() {
 addEventListener('resize', resize);
 resize();
 
+LOAD.set(0.03);
 const data = await (await fetch(`levels/${LEVEL}.json`)).json();
-await loadArt();
+LOAD.name((data.name || LEVEL).toUpperCase());
+// The hall's false doors are for the eight realms. A spot with a "realm" becomes a real door as soon as levels/<realm>.json exists,
+// so each realm can be added by dropping its level file in, with no change to the hall.
+// The Sealed Prophet's ghost opens them one at a time (see data/prophet.json); which are open is kept in the save.
+const unlocked = new Set(run && run.prophet && run.prophet.unlocked || []);
+let heard = run && run.prophet ? run.prophet.heard : 0;           // how many of his visits have been told
+const setDoor = s => {
+  const name = s.realm[0].toUpperCase() + s.realm.slice(1);
+  if (!unlocked.has(s.realm)) return;
+  if (s.exists) { s.to = s.realm; s.text = `The door of ${name}.`; }
+  else s.text = `The door of ${name}. It is unlocked, but nothing lies beyond it yet.`;
+};
+await Promise.all((data.spots || []).filter(s => s.realm && !s.to).map(async s => {
+  try { s.exists = (await fetch(`levels/${s.realm}.json`, { method: 'HEAD' })).ok; } catch (e) { s.exists = false; }
+  setDoor(s);
+}));
+LOAD.set(0.1);
+await loadArt(p => LOAD.set(0.1 + 0.55 * p));
+LOAD.set(0.66);
 const level = new Level(data);
 if (data.fog != null) scene.fog.density = DARK.density = data.fog;      // how fast things fade into the dark
 scene.add(level.build(standinMaterials()));
@@ -79,6 +101,7 @@ for (let i = 0; i < Math.min(TORCH_LIGHTS, torches.length); i++) {
   torchLights.push(l);
 }
 
+LOAD.set(0.75);
 await loadModels((data.props || []).filter(p => p.id === 'model').map(p => p.name));
 const props = buildProps(scene, level, data.props || [], run && run.levels && run.levels[LEVEL] && run.levels[LEVEL].urns);      // big clay urns: you walk round them
 for (const f of props.fires) {      // a fire on a brazier burns and gives light like a wall torch
@@ -92,6 +115,7 @@ const player = new Player(level);
 const input = new Input(canvas);
 
 // Things: what you carry, and what lies about the level.
+LOAD.set(0.86);
 const defs = (await (await fetch('data/items.json')).json()).items;
 for (const id in defs) defs[id].id = id;
 const make = id => { if (!defs[id]) throw new Error(`No item called "${id}"`); return new Item(defs[id]); };
@@ -120,6 +144,21 @@ if (saved) {
   world.place(thing, (it.cell[0] + at[0]) * level.size, (it.cell[1] + at[1]) * level.size);
 }
 const ui = new UI(inv, () => dropHeld(), it => useThing(it));
+// The great seal in the hall has a socket for the relic of each realm. Carry one back and set it in. Which are set is kept in the save.
+const placed = new Set(run && run.relics || []);
+if (props.seal) for (const god of placed) props.seal.fill(god, defs['relic_' + god] && defs['relic_' + god].icon[0]);
+const nearSeal = () => !!props.seal && Math.hypot(player.pos.x - props.seal.x, player.pos.z - props.seal.z) < 2.4 && Math.abs(player.pos.y - props.seal.y) < 1.4;
+const relicsCarried = () => [...inv.all()].map(e => e[0]).filter(it => it.def.relic && !placed.has(it.def.relic));
+function setRelics() {            // returns true if it set any
+  if (!nearSeal()) return false;
+  const mine = relicsCarried();
+  if (!mine.length) return false;
+  for (const it of mine) { inv.remove(it); placed.add(it.def.relic); props.seal.fill(it.def.relic, it.def.icon[0]); }
+  play('smash');
+  ui.say(placed.size >= 8 ? 'The eighth gem is set. Far above, something heavy grinds and begins to move.'
+    : `${mine.length > 1 ? 'You set the gems' : 'You set the ' + mine[0].def.name.toLowerCase()} in the seal. ${placed.size} of 8 are in.`);
+  return true;
+}
 
 // Where you stand: as saved, or just inside the door you came through, or the level's own starting place.
 if (run && run.pos) {
@@ -137,6 +176,7 @@ if (run && run.pos) {
 player.eyeY = player.pos.y + 1.55;
 
 // Creatures, and the fighting.
+LOAD.set(0.93);
 const kinds = (await (await fetch('data/creatures.json')).json()).creatures;
 for (const id in kinds) kinds[id].id = id;
 const creatures = new Creatures(scene, level, kinds, {
@@ -156,7 +196,7 @@ const creatures = new Creatures(scene, level, kinds, {
   const cr = creatures.spawn(c.id, was ? was.x : (c.cell[0] + at[0]) * level.size, was ? was.z : (c.cell[1] + at[1]) * level.size, n,
     !!(was && was.dead));
   if (was) {
-    cr.y = was.y; cr.hp = was.hp; cr.fled = !!was.fled;
+    cr.y = was.y; cr.hp = was.hp; cr.fled = !!was.fled; cr.skinned = !!was.skinned;
     if (!was.dead && was.awake && cr.state === 'still') cr.state = 'idle';
   }
 });
@@ -213,13 +253,13 @@ function capture() {
   levels[LEVEL] = {
     items: world.list.map(e => ({ ...pack(e.item), x: e.x, z: e.z })),
     urns: props.solid.filter(u => u.smashed).map(u => u.n),
-    creatures: creatures.list.map(c => ({ x: c.x, y: c.y, z: c.z, hp: c.hp, dead: c.state === 'dead', fled: c.fled, awake: c.state !== 'still' })),
+    creatures: creatures.list.map(c => ({ x: c.x, y: c.y, z: c.z, hp: c.hp, dead: c.state === 'dead', skinned: c.skinned || undefined, fled: c.fled, awake: c.state !== 'still' })),
   };
   return {
     v: 1, level: LEVEL, from: null,
     pos: { x: player.pos.x, y: player.pos.y, z: player.pos.z, yaw: player.yaw, pitch: player.pitch },
     inv: { hands: inv.hands.map(pack), belt: inv.belt.map(pack), back: inv.back.map(pack) },
-    hp: fight.hp, food: life.food, rest: life.rest, played, levels, maps: map.pack(), seen: scenes.pack(),
+    relics: [...placed], prophet: { heard, unlocked: [...unlocked] }, hp: fight.hp, food: life.food, rest: life.rest, played, levels, maps: map.pack(), seen: scenes.pack(),
   };
 }
 const loadRun = r => { leaving = true; setRun(r); fade(1, 0.5); setTimeout(go, 550); };
@@ -249,7 +289,7 @@ document.getElementById('settingsBtn').addEventListener('pointerdown', e => {
 
 // The map in your notebook: a page for each level.
 const map = new GameMap({
-  id: LEVEL, level, data, pages: run && run.maps, order: LEVELS,
+  id: LEVEL, level, data, pages: run && run.maps, order: [...LEVELS, ...REALMS],
   load: async id => { const d = await (await fetch(`levels/${id}.json`)).json(); return { level: new Level(d), data: d }; },
 });
 let bookAt = -1, book = false;
@@ -304,6 +344,7 @@ const WALL = { N: [0, -1, 0], S: [0, 1, Math.PI], E: [1, 0, -Math.PI / 2], W: [-
 const spots = (data.spots || []).map(s => {
   if (s.wall) {
     const [ox, oz, turn] = WALL[s.wall], door = standinDoor(!!s.to);
+    s.mesh = door;
     door.position.set((s.cell[0] + 0.5 + ox * 0.49) * level.size, level.cell(s.cell[0], s.cell[1]).floor + 1.22,
       (s.cell[1] + 0.5 + oz * 0.49) * level.size);
     door.rotation.y = turn;
@@ -315,7 +356,73 @@ const spotHere = () => {
   const cx = Math.floor(player.pos.x / level.size), cz = Math.floor(player.pos.z / level.size);
   return spots.find(s => s.cell[0] === cx && s.cell[1] === cz);
 };
+// The Sealed Prophet. His ghost hangs over his sarcophagus (the level's "prophet" place) once there is something to tell. Go near and a
+// short cutscene plays (the view turns to him, bars close in, he fades up out of the dark), then he speaks: his story, and the door to
+// go to next, which he opens. He has something new to say after each gem you set in the seal.
+const prophetStages = data.prophet ? (await (await fetch('data/prophet.json')).json()).stages : null;
+let cut = null, ghost = null, ghostA = 0, pw = null;
+if (prophetStages) {
+  const at = data.prophet.at || [0.5, 0.5], px = (data.prophet.cell[0] + at[0]) * level.size, pz = (data.prophet.cell[1] + at[1]) * level.size;
+  pw = { x: px, z: pz, y: level.floorAt(px, pz) };
+  prophetStages.forEach((st, i) => { scenes.data['prophet_' + i] = { title: st.title, lines: st.lines }; });
+  const cv = document.createElement('canvas'); cv.width = 128; cv.height = 192;
+  const g = cv.getContext('2d'), grd = g.createLinearGradient(0, 0, 0, 192);
+  grd.addColorStop(0, 'rgba(210,235,255,.95)'); grd.addColorStop(0.55, 'rgba(150,190,230,.6)'); grd.addColorStop(1, 'rgba(120,160,210,0)');
+  g.fillStyle = grd; g.beginPath(); g.moveTo(64, 6); g.bezierCurveTo(100, 6, 108, 50, 104, 84); g.bezierCurveTo(112, 130, 124, 170, 128, 192);
+  g.lineTo(0, 192); g.bezierCurveTo(4, 170, 16, 130, 24, 84); g.bezierCurveTo(20, 50, 28, 6, 64, 6); g.fill();
+  g.fillStyle = 'rgba(5,10,25,.9)'; g.beginPath(); g.ellipse(64, 50, 22, 28, 0, 0, 7); g.fill();        // the hood's hollow
+  g.fillStyle = 'rgba(190,255,250,1)'; g.fillRect(50, 46, 7, 5); g.fillRect(71, 46, 7, 5);                     // eyes
+  const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace;
+  ghost = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, opacity: 0, depthWrite: false, fog: false }));
+  ghost.scale.set(1.5, 2.25, 1); ghost.visible = false;
+  scene.add(ghost);
+}
+const turnTo = (a, b) => { let d = (b - a) % (Math.PI * 2); if (d > Math.PI) d -= Math.PI * 2; if (d < -Math.PI) d += Math.PI * 2; return d; };
+function unlockRealm(realm) {
+  unlocked.add(realm);
+  const s = spots.find(sp => sp.realm === realm);
+  if (!s) return;
+  const was = !!s.to;
+  setDoor(s);
+  if (s.mesh && s.to && !was) {                       // the closed door picture is swapped for an open one
+    const open = standinDoor(true);
+    open.position.copy(s.mesh.position); open.rotation.copy(s.mesh.rotation);
+    scene.remove(s.mesh); scene.add(open); s.mesh = open;
+  }
+}
+function prophetTick(dt) {
+  if (!pw) return;
+  const pend = heard < prophetStages.length && placed.size >= heard;
+  const d = Math.hypot(player.pos.x - pw.x, player.pos.z - pw.z);
+  const want = cut ? Math.min(0.9, cut.t / 1.2) : pend && d < 12 ? 0.2 + 0.08 * Math.sin(time * 2.1) : 0;       // a faint glimmer calls you
+  ghostA += (want - ghostA) * Math.min(1, dt * 3);
+  ghost.visible = ghostA > 0.01;
+  ghost.material.opacity = ghostA * (0.88 + 0.12 * Math.sin(time * 9));
+  ghost.position.set(pw.x, pw.y + 1.9 + Math.sin(time * 1.3) * 0.08, pw.z);
+  if (cut) {
+    cut.t += dt;
+    const dx = pw.x - player.pos.x, dz = pw.z - player.pos.z, h = Math.hypot(dx, dz) || 1;
+    const k = Math.min(1, dt * 3.5);
+    player.yaw += turnTo(player.yaw, Math.atan2(-dx, -dz)) * k;
+    player.pitch += (Math.atan2(ghost.position.y - player.eyeY, h) - player.pitch) * k;
+    if (cut.t >= cut.dur) {
+      const i = cut.id, st = prophetStages[i];
+      cut = null; heard++;
+      document.getElementById('cutBars').classList.remove('on');
+      if (st.realm) unlockRealm(st.realm);
+      scenes.show('prophet_' + i);
+    }
+  } else if (pend && d < 3 && Math.abs(turnTo(player.yaw, Math.atan2(player.pos.x - pw.x, player.pos.z - pw.z))) < 0.45 && !scenes.open && !fight.dead && !creatures.hunting && asleep <= 0 && !leaving && !map.open && !menu.open) {
+    if (ui.open) ui.toggle();
+    cut = { t: 0, id: heard, dur: heard === 0 ? 4.6 : 2.6 };         // the first meeting is the longer one
+    document.getElementById('cutBars').classList.add('on');
+    play('groan');
+  }
+}
+document.getElementById('cutSkip').addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); if (cut) cut.t = cut.dur; });
 let leaving = false;
+const SKIN_TIME = 1.8;            // seconds to hold a button to take something from a corpse
+const skinning = { c: null, t: 0 };
 let autoArmed = false;           // a flooded passage takes you on only after you have been somewhere else first
 function travel(to) {
   if (leaving) return;
@@ -325,6 +432,7 @@ function travel(to) {
   fade(1, 0.7);
   setTimeout(go, 800);
 }
+const SET = { keys: 'Press E to set your gems in.', pad: 'Press X to set your gems in.', touch: 'Tap to set your gems in.' };
 const GO = { keys: 'Press E to go on.', pad: 'Press X to go on.', touch: 'Tap to go on.' };
 
 const viewDir = new THREE.Vector3(), ray = new THREE.Raycaster();
@@ -340,7 +448,17 @@ function pickUp(dir, tol) {          // returns true if there was something ther
   world.remove(e);
   const put = { pack: ' It is in your pack.', belt: ' It is on your belt.', bag: ' It is in a bag.' }[where] || '';
   ui.say(where === 'back' ? `You put on the ${name.toLowerCase()}.` : `Picked up: ${name}.${put}`);
+  if (e.item.def.relic && e.item.def.relic === LEVEL) finishRealm();
   return true;
+}
+// A realm is finished when you take its relic (the item "relic_<realm>", where <realm> is the level's own name). The way back
+// to the hall then opens: after a moment you are drawn back through the door you came in by.
+let finishing = false;
+function finishRealm() {
+  if (finishing || LEVEL === 'hub') return;
+  finishing = true;
+  setTimeout(() => ui.say('The gem is yours. The walls tremble, and the way back opens.'), 1800);
+  setTimeout(() => { if (!fight.dead) travel('hub'); else finishing = false; }, 4600);
 }
 function dropHeld() {
   const it = inv.held;
@@ -373,11 +491,12 @@ const hud = {
   hp: document.getElementById('hpBar'), st: document.getElementById('stBar'), hurt: document.getElementById('hurt'),
   food: document.getElementById('foodBar'), rest: document.getElementById('restBar'), light: document.getElementById('lightBar'),
   air: document.getElementById('airBar'), airRow: document.getElementById('airRow'),
+  skin: document.getElementById('skin'), skinBar: document.getElementById('skinBar'), skinName: document.getElementById('skinName'),
   wind: document.getElementById('wind'), windBar: document.getElementById('windBar'), windName: document.getElementById('windName'),
 };
 let clickUsed = false;
 // How a creature looks to be doing, in plain words.
-const health = c => c.state === 'dead' ? 'It is dead.' : c.hp < c.def.health * 0.35 ? 'It is badly hurt.'
+const health = c => c.state === 'dead' ? (c.def.skin && !c.skinned ? `It is dead. Hold a button to ${c.def.skin.verb} it.` : 'It is dead.') : c.hp < c.def.health * 0.35 ? 'It is badly hurt.'
   : c.hp < c.def.health * 0.8 ? 'It is hurt.' : (c.state === 'idle' || c.state === 'still') ? c.def.text : '';
 const HELP = {
   keys: 'Mouse: hold the right button and move to look &nbsp; add the left button to walk forward &nbsp; Wheel: look up / down<br>'
@@ -408,6 +527,7 @@ const setHelp = on => { helpOn = on; if (params.get('nosave') !== '1') try { loc
 document.getElementById('helpBtn').addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); setHelp(!helpOn); });
 
 function step(dt, forced) {
+  input.charging = fight.winding;
   const inp = forced || input.read(dt);
   // The map. The game stands still while it is open.
   if (map.open) {
@@ -418,6 +538,9 @@ function step(dt, forced) {
   }
   if (inp.pressed.has('map')) { openMap(); if (map.open) { map.control(inp, 0); return; } }
   // The menu. The game stands still while it is open.
+  if (inp.pressed.has('quicksave') && !fight.dead && asleep <= 0 && !leaving && !menu.open && !map.open) {
+    ui.say(writeSlot('quick', capture(), data.name || LEVEL) ? 'Quicksaved.' : 'The quicksave could not be written.');
+  }
   if (inp.pressed.has('menu') && !fight.dead && asleep <= 0 && !leaving) { menu.pad = input.device === 'pad'; menu.toggle(); }
   if (menu.open) {
     if (inp.pressed.has('left')) menu.nav(-1);
@@ -458,6 +581,8 @@ function step(dt, forced) {
   }
   inp.slow = ls * (fight.blocking ? 0.5 : fight.winding ? 0.75 : 1);
   if (fight.dead || asleep > 0) { inp.attackHeld = inp.blockHeld = inp.mouseAttack = inp.handR = inp.handL = false; inp.mx = inp.mz = inp.lookX = inp.lookY = 0; inp.jumpHeld = false; inp.pressed.clear(); inp.clicks = []; }
+  if (cut && (inp.pressed.has('use') || inp.pressed.has('jump') || inp.pressed.has('back') || (inp.clicks && inp.clicks.length))) cut.t = cut.dur;      // E, Space, B or a click skips the cutscene
+  if (cut) { inp.attackHeld = inp.blockHeld = inp.mouseAttack = inp.handR = inp.handL = false; inp.mx = inp.mz = inp.lookX = inp.lookY = 0; inp.jumpHeld = false; inp.pressed.clear(); inp.clicks = []; }
   player.update(dt, inp);
   if (inp.pressed.has('target') && !ui.open && !fight.dead) {
     const r = target.toggle();
@@ -488,7 +613,7 @@ function step(dt, forced) {
     if (inp.pressed.has('back')) { if (ui.opts) ui.closeOpts(); else ui.toggle(); }
   } else {
     if (inp.pressed.has('use')) {
-      if (inv.held) dropHeld(); else if (!pickUp(viewDir, 0.3) && spot && spot.to && !spot.auto) travel(spot.to);
+      if (setRelics()) { /* gems set in the seal */ } else if (inv.held) dropHeld(); else if (!pickUp(viewDir, 0.3) && spot && spot.to && !spot.auto) travel(spot.to);
     }
     if (inp.pressed.has('back')) inp.pressed.add('dodge');          // B dodges when the pack is shut
   }
@@ -496,7 +621,7 @@ function step(dt, forced) {
   // A click picks up, drops or goes through a door. If it did none of those, it is the start of a blow.
   for (const [cx, cy] of inp.clicks || []) {
     if (inv.held) { dropHeld(); clickUsed = true; }
-    else if (pickUp(dirAt(cx, cy), 0.14)) clickUsed = true;
+    else if (pickUp(dirAt(cx, cy), 0.14) || setRelics()) clickUsed = true;
     else if (spot && spot.to && !spot.auto && (input.device === 'touch' || !creatures.hunting)) { travel(spot.to); clickUsed = true; }
   }
   if (!inp.handL) clickUsed = false;
@@ -537,14 +662,32 @@ function step(dt, forced) {
     }
     if (inp.attackHeld && strikeHand < 0) strikeHand = fight.mainHand();
   }
+  // Hold any button over a dead creature that has something to take (an animal's hide, a mummy's wrappings, a skeleton's
+  // bone) and you work at it instead of striking. The bar fills, and the thing is yours.
+  const corpse = !fight.dead && !ui.open && !fight.winding && fight.swing <= 0 ? creatures.skinnable(camera.position, viewDir) : null;
+  if (corpse && (strikeHand >= 0 || guardNow)) {
+    strikeHand = -1; guardNow = false;
+    if (skinning.c !== corpse) { skinning.c = corpse; skinning.t = 0; }
+    skinning.t += dt;
+    if (Math.random() < dt * 9) play('chip');
+    if (skinning.t >= SKIN_TIME) {
+      const sk = corpse.def.skin, it = make(sk.item);
+      corpse.skinned = true; skinning.c = null; skinning.t = 0;
+      if (!inv.add(it)) world.place(it, player.pos.x - Math.sin(player.yaw) * 0.6, player.pos.z - Math.cos(player.yaw) * 0.6);
+      ui.say(sk.done);
+    }
+  } else { skinning.c = null; skinning.t = 0; }
   fight.update(dt, { attack: strikeHand >= 0, hand: strikeHand, cancel: inp.cancelR, block: guardNow, dodge, aim: inp.aim },
     brightnessAt(player.pos.x, player.eyeY, player.pos.z));
 
   target.update(dt, inp.aim, ui.open || fight.dead);
-  if (!fight.dead && asleep <= 0 && !leaving) scenes.check(dt);
+  if (!fight.dead && asleep <= 0 && !leaving && !cut) scenes.check(dt);
+  prophetTick(dt);
   const seen = world.target(camera.position, viewDir, 2.6, 0.3);
   const beast = seen ? null : creatures.target(camera.position, viewDir);
   ui.setLook(seen ? seen.item.def.name : beast ? beast.def.name + '. ' + health(beast)
+    : corpse ? `${corpse.def.name}. It is dead. Hold a button to ${corpse.def.skin.verb} it.`
+    : spot && spot.seal ? `A great seal is set in the stone. ${placed.size} of its eight sockets hold a gem.` + (relicsCarried().length && nearSeal() ? ' ' + SET[input.device] : '')
     : spot && spot.text ? spot.text + (spot.to && !spot.auto ? ' ' + GO[input.device] : '') : '');
   ui.update(dt, pad);
   hud.hp.style.width = (fight.hp / fight.hpMax * 100) + '%';
@@ -555,10 +698,13 @@ function step(dt, forced) {
   hud.airRow.style.display = air < 1 ? 'flex' : 'none';
   hud.air.style.width = (air * 100) + '%'; hud.airRow.classList.toggle('out', air <= 0.3);
   hud.hurt.style.opacity = fight.dead ? 1 : Math.min(1, fight.hurtT * 2) * 0.9 + (fight.hp < fight.hpMax * 0.25 ? 0.25 : 0);
+  hud.skin.style.opacity = skinning.c ? 1 : 0;
+  if (skinning.c) { hud.skinBar.style.width = Math.min(100, skinning.t / SKIN_TIME * 100) + '%'; hud.skinName.textContent = skinning.c.def.skin.label; }
   hud.wind.style.opacity = fight.winding ? 1 : 0;
   if (fight.winding) {
     hud.windBar.style.width = (fight.charge * 100) + '%';
-    if (hud.windName.textContent !== MOVES[fight.move].name) hud.windName.textContent = MOVES[fight.move].name;
+    const blowName = fight.blowName();
+    if (hud.windName.textContent !== blowName) hud.windName.textContent = blowName;
   }
 
   // the nearest torches get the lights
@@ -597,6 +743,7 @@ function step(dt, forced) {
 
 // The opening plays first (add ?intro=0 to the address to go straight in). Then you come to in the dark.
 step(0);
+await LOAD.finish();
 const black = document.getElementById('black');
 let started = false;
 if (!fresh) {

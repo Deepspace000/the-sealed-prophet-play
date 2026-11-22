@@ -50,6 +50,7 @@ export class Menu {
     this.box.innerHTML = '<h2 class="deco">SETTINGS</h2>'
       + '<div class="menuRow"><button data-m="close">BACK TO THE GAME</button><button data-m="sleep">SLEEP</button></div>'
       + SLOTS.map(s => row(`Place ${s}.`, readSlot(s), s, true)).join('')
+      + row('Quicksave (F5).', readSlot('quick'), 'quick', true)
       + row('Kept by the game.', readSlot('auto'), 'auto', false)
       + '<div class="menuRow"><button data-m="export">SAVE TO A FILE</button><button data-m="import">LOAD FROM A FILE</button></div>'
       + '<div class="menuRow"><button data-m="title">EXIT TO THE MENU</button><button data-m="desktop">EXIT TO DESKTOP</button></div>'

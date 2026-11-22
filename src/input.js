@@ -1,6 +1,6 @@
 // Gathers keyboard and mouse, game controller and touch into one set of controls per frame.
 const KEY_ACTION = {
-  Space: 'jump', KeyF: 'lamp', KeyH: 'help', Minus: 'resDown', Equal: 'resUp',
+  Space: 'jump', F5: 'quicksave', KeyF: 'lamp', KeyH: 'help', Minus: 'resDown', Equal: 'resUp',
   KeyE: 'use', Tab: 'bag', KeyI: 'bag', KeyG: 'drop', KeyL: 'nextLevel', KeyV: 'dodge', Escape: 'menu', KeyB: 'sleep', KeyM: 'map', KeyT: 'target',
 };
 // Fighting: R (hold, let go) or the left mouse button strikes; C (hold) blocks; V, or A, D or S tapped twice, dodges.
@@ -26,6 +26,7 @@ export class Input {
     this.leftAlone = false;       // the left button went down without the right one
     this.rightMoved = 0;          // how far the mouse has moved since the right button went down: a still hold is a blow, a drag is a look
     this.rightCancel = false;
+    this.charging = false;        // set by the game each frame: a blow is being wound up, so moving the mouse no longer drops it
 
     const typing = e => e.target && e.target.tagName === 'INPUT';      // writing a note on the map: the keys are letters
     addEventListener('keydown', e => {
@@ -40,7 +41,7 @@ export class Input {
         }
         this.device = 'keys';
       }
-      if (e.code === 'Space' || e.code === 'Tab' || e.code.startsWith('Arrow')) e.preventDefault();
+      if (e.code === 'Space' || e.code === 'Tab' || e.code === 'F5' || e.code.startsWith('Arrow')) e.preventDefault();
     });
     addEventListener('keyup', e => this.keys.delete(e.code));
     addEventListener('blur', () => this.keys.clear());
@@ -166,8 +167,8 @@ export class Input {
     // Both buttons together (right first, then left) walk you forward, and neither hand acts.
     const both = this.mouse.right && this.mouse.left;
     if (both) mz += 1;
-    const handR = this.mouse.right && !both && this.rightMoved < 14, handL = this.leftAlone && !this.mouse.right && !this.mouse.zLook;
-    const cancelR = this.rightCancel || both;
+    const handR = this.mouse.right && !both && (this.rightMoved < 14 || this.charging), handL = this.leftAlone && !this.mouse.right && !this.mouse.zLook;
+    const cancelR = (this.rightCancel && !this.charging) || both;      // a blow already wound up stays wound up until you let go
     this.rightCancel = false;
     const mouseAttack = handR || handL;
 

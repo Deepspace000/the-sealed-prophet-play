@@ -33,7 +33,7 @@ export class UI {
       if (e.target.closest('#opts')) return;
       const opener = e.target.closest('.opener'), slot = e.target.closest('.slot'), btn = e.target.closest('[data-btn]');
       if (opener) { this.closeOpts(); this.inv.toggleOpen(this.itemAt(opener.parentElement)); this.open = true; return; }
-      if (slot) return this.clickSlot(slot, e);
+      if (slot) return this.slotDown(slot, e);
       this.closeOpts();
       if (btn && btn.dataset.btn === 'drop') this.onDrop();
       else if (btn && btn.dataset.btn === 'use') { if (this.inv.held) this.onUse(this.inv.held); }
@@ -49,6 +49,72 @@ export class UI {
     addEventListener('mousemove', e => {
       this.heldEl.style.left = e.clientX + 'px'; this.heldEl.style.top = e.clientY + 'px';
     });
+    // Dragging: press on a thing and pull it away to pick it up; let go on a place to put it there, on the room to drop it.
+    addEventListener('pointermove', e => {
+      if (this.drag) { this.heldEl.style.left = e.clientX + 'px'; this.heldEl.style.top = e.clientY + 'px'; return; }
+      const c = this.cand;
+      if (c && c.id === e.pointerId && Math.hypot(e.clientX - c.x, e.clientY - c.y) > 7) this.startDrag();
+    });
+    addEventListener('pointerup', e => {
+      const c = this.cand;
+      if (!c || c.id !== e.pointerId) return;
+      this.cand = null;
+      if (this.drag) return this.endDrag(e);
+      const el = this.slots().find(s => s.dataset.area === c.area && +s.dataset.i === c.i);      // it was only a click
+      if (el) this.clickSlot(el, { pointerType: c.type, button: c.button });
+    });
+    addEventListener('pointercancel', e => {
+      if (this.cand && this.cand.id === e.pointerId) { if (this.drag) this.putBack(); this.cand = null; this.drag = null; }
+    });
+  }
+
+  // A press on a place. With a thing in it (and nothing in your hand-held cursor) it may turn into a drag, so a click is
+  // only acted on when the button comes up; everything else acts at once, as before.
+  slotDown(slotEl, e) {
+    const it = this.itemAt(slotEl);
+    if (it && !this.inv.held && (e.pointerType !== 'mouse' || e.button === 0)) {
+      this.cand = { area: slotEl.dataset.area, i: +slotEl.dataset.i, x: e.clientX, y: e.clientY, id: e.pointerId, type: e.pointerType, button: e.button };
+      return;
+    }
+    this.clickSlot(slotEl, e);
+  }
+  startDrag() {
+    const c = this.cand;
+    this.closeOpts();
+    this.drag = { area: c.area, i: c.i };
+    this.inv.click(c.area, c.i);                      // the thing comes up on the pointer
+    this.heldEl.style.left = c.x + 'px'; this.heldEl.style.top = c.y + 'px';
+    this.seen = '';
+  }
+  endDrag(e) {
+    const d = this.drag, inv = this.inv, it = inv.held;
+    this.drag = null;
+    if (!it) return;
+    const el = document.elementFromPoint(e.clientX, e.clientY), slot = el && el.closest && el.closest('#inv .slot');
+    if (slot) this.dropOn(slot.dataset.area, +slot.dataset.i, d);
+    else if (el && el.id === 'view') this.onDrop();               // let go on the room: it is dropped
+    else this.putBack(d);                                          // let go anywhere else: it goes back where it was
+  }
+  // Put the dragged thing on a place. A weapon, shield or light dropped on an occupied hand goes into the other hand if that
+  // one is free, so what you already hold is not pushed out. Otherwise things swap, and what was there goes to where the
+  // dragged one came from.
+  dropOn(area, i, from) {
+    const inv = this.inv, it = inv.held, d = it.def, arr = inv.arr(area);
+    if (area === 'hands' && arr[i] && !arr[1 - i] && (d.weapon || d.block || d.light)) {
+      arr[1 - i] = it; inv.held = null; inv.version++;
+      return;
+    }
+    if (inv.click(area, i) === 'no') { this.say('That does not fit there.'); this.putBack(from); return; }
+    if (inv.held) this.putBack(from);                              // it swapped something out: that goes where the dragged one was
+  }
+  // Return what is on the pointer to the place it was lifted from, or anywhere it fits.
+  putBack(from) {
+    const inv = this.inv, it = inv.held;
+    if (!it) return;
+    const arr = from && inv.arr(from.area);
+    if (arr && !arr[from.i] && inv.fits(it, from.area)) { arr[from.i] = it; inv.held = null; inv.version++; return; }
+    if (inv.add(it)) inv.held = null;
+    else this.say('Put it down where it fits.');
   }
 
   itemAt(slotEl) {
@@ -96,7 +162,9 @@ export class UI {
   equip(area, i) {
     const inv = this.inv, arr = inv.arr(area), it = arr && arr[i];
     if (!it) return;
-    const to = it.def.wear === 'back' ? inv.back : inv.hands, n = it.def.wear === 'back' ? 0 : it.def.weapon ? 1 : 0, old = to[n];
+    const back = it.def.wear === 'back', to = back ? inv.back : inv.hands, usual = back ? 0 : it.def.weapon ? 1 : 0;
+    // a weapon goes in the right hand and anything else in the left; if that hand is taken and the other is free, use the other
+    const n = !to[usual] || back ? usual : !to[1 - usual] ? 1 - usual : usual, old = to[n];
     arr[i] = null; to[n] = it;
     inv.lifted(it);
     if (old) {
@@ -195,6 +263,7 @@ export class UI {
     const left = it => {              // how much is left in it
       const d = it.def;
       if (d.light) return (it.lit ? ' Lit.' : '') + (it.n > 0 ? ` Burns for ${Math.ceil(it.n / 60)} more ${Math.ceil(it.n / 60) === 1 ? 'minute' : 'minutes'}.` : ' Empty.');
+      if (d.durability) return it.n <= d.durability * 0.25 ? ' It is cracked and close to breaking.' : it.n <= d.durability * 0.6 ? ' It is worn.' : '';
       if (d.count) return ` ${it.n} left.`;
       if (d.drinks) return ` ${it.n} ${it.n === 1 ? 'drink' : 'drinks'} left.`;
       return '';

@@ -1,0 +1,114 @@
+{
+  "notes": [
+    "What the Sealed Prophet's ghost says at his sarcophagus in the hall. One entry per visit, in order.",
+    "Visit 0 is the first (no gems needed). Visit N is told once you have set N gems in the great seal.",
+    "realm: the door the ghost opens on that visit (the level file levels/<realm>.json is the level behind it).",
+    "His voice gets angrier and more deranged with every visit. Three thousand years walled in alive have broken his mind. He starts as a courteous, lonely old man and ends as a raving thing.",
+    "The last entry (no realm) is his final rant once all eight gems are in. He then ATTACKS the player (the fight is not built yet).",
+    "ending: what the good man he once was says when the madness falls away after the fight, before he dies peacefully. Not shown by the game yet."
+  ],
+  "stages": [
+    {
+      "realm": "ptah",
+      "title": "A voice in the stone",
+      "lines": [
+        "You came down through the water. Few do. None have ever come as far as this stone.",
+        "I am the one they walled in. They called me a prophet. Some days I think I was only a man who spoke too plainly.",
+        "Forgive me. It has been a long while since I spoke to anyone. I have rather forgotten how it is done.",
+        "The great door is sealed from inside with eight sockets. I am the lock. Eight gems are the key, and each lies in a realm of a god.",
+        "Bring them, and you may leave. Bring them, and I may leave too. That is all I want. Only that.",
+        "Begin with Ptah, the maker. His door is in the north wall of this hall, on the left. It is open to you now. Take his gem and come back to me."
+      ]
+    },
+    {
+      "realm": "nut",
+      "title": "The first gem",
+      "lines": [
+        "I felt it go in. The water moved, and the dead above me stirred. Good. Good.",
+        "I was a scribe here, once. I wrote down what the priests dared not say aloud. They did not thank me for it.",
+        "Three thousand years in the dark. One begins to count the stones. One begins to talk to them. They do not answer. That is rude of them.",
+        "Now go to Nut, mother of the sky. Her door is also in the north wall, on the right. It is open. Do not take long."
+      ]
+    },
+    {
+      "realm": "thoth",
+      "title": "The second gem",
+      "lines": [
+        "Two. You are slow. Do you know how slow a day is, in here? You do not. You cannot.",
+        "Look at the carvings on these walls. In one I am a monster, chained. In the other I am a man on his knees. Liars, both. Paid liars.",
+        "They sat in the sun and called me mad. Me! I, who saw the river rise! Let them see how mad I am.",
+        "Thoth the reckoner keeps the next gem. His door is in the east wall, nearer the north. It is open. Go. Go."
+      ]
+    },
+    {
+      "realm": "sekhmet",
+      "title": "The third gem",
+      "lines": [
+        "Three. The lamps burn higher, and the stone is warm. Do you feel me in it? I am in all of it now.",
+        "You are not the first of your kind down here. Someone from your own age came before you, with a thing that speaks thunder. I heard it. I heard what it said at the end.",
+        "I will not tell you what became of them. Ask the walls. Ask the water. Ask what is left of the hands that held it.",
+        "Sekhmet, the lioness, holds the next gem. Her door is in the east wall, nearer the south. It is open. She will like you. She likes everything that bleeds."
+      ]
+    },
+    {
+      "realm": "anubis",
+      "title": "The fourth gem",
+      "lines": [
+        "FOUR. Half the lock is mine. Half!",
+        "The high priest wanted a daughter in my chair. I would not leave it, and so they built the wall one stone at a time, while I was still speaking. Do you understand? I was STILL SPEAKING.",
+        "Not an enemy. Not a war. A man who needed my chair. That is how the world ends, thief. Small, and polite, and with a trowel.",
+        "Anubis, who weighs hearts, holds the next gem. His door is in the south wall, on the right. It is open. Perhaps he will weigh yours. I should like to watch."
+      ]
+    },
+    {
+      "realm": "osiris",
+      "title": "The fifth gem",
+      "lines": [
+        "Five. I can feel the stone above me thinning. I can feel their grandchildren's grandchildren walking on it.",
+        "I saw it before they shut me in. A river rising, and a city under it. I told them, and they heard a curse. Then let it be a curse. Let it be a curse and a flood and a fire.",
+        "I forget which of the tales is true. I forget my own name. I forget the sound of her voice. I do not forget the trowel.",
+        "Osiris, the green lord, keeps the next gem. His door is in the south wall, on the left. It is open. HURRY."
+      ]
+    },
+    {
+      "realm": "sobek",
+      "title": "The sixth gem",
+      "lines": [
+        "Six. SIX. Do you hear the water in the walls? It is laughing. It has always laughed at me.",
+        "You bring them back to me like a good little dog. I almost like you. I almost remember liking people.",
+        "Sobek of the crocodile mouth keeps the next. His door is in the west wall, nearer the south. It is open. If he eats you, I will wait for the next one. I am very good at waiting. It is all I am good at."
+      ]
+    },
+    {
+      "realm": "ra",
+      "title": "The seventh gem",
+      "lines": [
+        "SEVEN. We are so close, you and I. Closer than lovers. Closer than the stone and the hand that laid it.",
+        "There is a hunger in me. It was not there before. I think it grew out of the dark, the way mould grows. I think it has my face now.",
+        "Ra, the sun, keeps the last gem. His door is in the west wall, nearer the north. It is open. Bring it to me. BRING IT TO ME.",
+        "And when you do... do not be afraid. I will be quick. I think."
+      ]
+    },
+    {
+      "title": "The eighth gem",
+      "lines": [
+        "Eight. EIGHT. It is done. All of it, all of it, all of it.",
+        "Three thousand years, and the first thing I will do with these hands is not a kindness. I am sorry. I would have been sorry, once.",
+        "Did you think I would let you walk out of this hall and leave me the only one who remembers the trowel? You will carry it with me. You will carry it in the dark.",
+        "Set the last of it in the seal, thief. And then COME HERE."
+      ]
+    }
+  ],
+  "ending": {
+    "title": "The good man",
+    "lines": [
+      "The anger went out of him all at once, like a lamp snuffed. What was left on the stones was thin, and old, and very tired.",
+      "\"Oh,\" he said. \"Oh. It has gone quiet. I had forgotten it could.\"",
+      "\"I am so sorry. That was not me. I think it was something the dark made, and wore my voice. I am sorry for what it said to you.\"",
+      "\"You brought them all. Even after the way I spoke. Thank you. No one has been kind to me in a very long time.\"",
+      "\"I was a scribe. I only wanted to write down the truth. Is that so terrible a thing?\"",
+      "He looked up, toward a sky he could not see. He smiled. Then he was gone, and the hall was only a hall.",
+      "Somewhere far above, the great door began to open."
+    ]
+  }
+}

@@ -17,6 +17,7 @@
   "creatures": {
     "jackal": {
       "name": "Black jackal", "text": "A black jackal with red eyes.", "kind": "beast",
+      "skin": { "item": "jackal_hide", "verb": "skin", "label": "SKINNING", "done": "You skin the jackal." },
       "health": 12, "speed": 4.2, "radius": 0.42, "height": 1.25, "wide": 1.65, "deadSize": 1.5,
       "sense": "sight", "sight": 12, "hearing": 9,
       "attack": { "damage": 3, "type": "stab", "reach": 1.1, "windup": 0.6, "recover": 1.1 },
@@ -26,6 +27,7 @@
     },
     "bone_guard": {
       "name": "Bone guard", "text": "A skeleton with a spear. It guards this place.", "kind": "dead",
+      "skin": { "item": "bone", "verb": "pull a bone from", "label": "PULLING A BONE", "done": "You pull a leg bone from the bone guard." },
       "health": 30, "speed": 2.5, "radius": 0.32, "height": 1.85, "wide": 1.25, "deadSize": 1.68,
       "sense": "life", "sight": 10, "hearing": 5,
       "attack": { "damage": 5, "type": "stab", "reach": 1.9, "windup": 0.9, "recover": 1.3 },
@@ -35,6 +37,7 @@
     },
     "wrapped_dead": {
       "name": "Wrapped dead", "text": "A dead man in linen wrappings.", "kind": "dead",
+      "skin": { "item": "bandage", "verb": "unwrap", "label": "UNWRAPPING", "done": "You strip the wrappings from the dead man." },
       "health": 34, "speed": 1.5, "radius": 0.36, "height": 1.95, "wide": 1.3, "deadSize": 1.35,
       "sense": "life", "sight": 8, "hearing": 0,
       "attack": { "damage": 8, "type": "crush", "reach": 1.3, "windup": 1.1, "recover": 1.6 },
@@ -44,6 +47,7 @@
     },
     "rotting_dead": {
       "name": "Rotting dead", "text": "A dead man, half rotted away. It is quick.", "kind": "dead",
+      "skin": { "item": "bandage", "verb": "unwrap", "label": "UNWRAPPING", "done": "You strip a bandage from the rotting dead." },
       "health": 16, "speed": 3.4, "radius": 0.34, "height": 1.85, "wide": 1.25, "deadSize": 1.4,
       "sense": "life", "sight": 11, "hearing": 6,
       "attack": { "damage": 4, "type": "cut", "reach": 1.2, "windup": 0.7, "recover": 1.1 },

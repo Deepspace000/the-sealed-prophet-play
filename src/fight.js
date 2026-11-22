@@ -13,6 +13,14 @@ export const MOVES = {
   mid: { name: 'Slash', dmg: 1, cost: 1, reach: 0, arc: 0.9, all: true },        // a slash hits everything in front of you
   low: { name: 'Thrust', dmg: 0.85, cost: 0.8, reach: 0.4, arc: 0.35 },
 };
+// What a blow is called, and how it behaves, follows the damage the weapon does: an axe-edge chops and slashes, a point stabs,
+// a heavy head smashes and swings. Only cutting and crushing blows sweep across several enemies; a stab hits one, narrowly.
+const SAYS = { cut: ['Chop', 'Slash', 'Thrust'], stab: ['Downward stab', 'Stab', 'Thrust'], crush: ['Smash', 'Swing', 'Jab'], fists: ['Haymaker', 'Hook', 'Jab'] };
+export function blowOf(w, move) {
+  const m = MOVES[move], kind = w.id === '_fists' ? 'fists' : w.weapon.type, n = move === 'high' ? 0 : move === 'mid' ? 1 : 2;
+  const name = kind === 'cut' && move === 'low' && !w.weapon.thrust ? 'Jab' : SAYS[kind][n];
+  return { ...m, name, all: !!m.all && (kind === 'cut' || kind === 'crush'), arc: kind === 'stab' && move === 'mid' ? 0.45 : m.arc };
+}
 const SWING = 0.26;       // seconds a blow takes
 const KIND = { cut: 'Cutting', stab: 'Stabbing', crush: 'Crushing' };
 const lerp = (a, b, t) => a + (b - a) * t;
@@ -96,9 +104,10 @@ export class Fight {
   // Would a blow struck now reach this creature? aim: 'high' | 'mid' | 'low'.
   reaches(c, aim) {
     const busy = this.winding || this.swing > 0, it = this.inv.hands[busy ? this.hand : this.mainHand()];
-    const wp = (it && it.def.weapon ? it.def : FISTS).weapon, m = MOVES[busy ? this.move : aim || 'mid'], P = this.player;
+    const w = it && it.def.weapon ? it.def : FISTS, wp = w.weapon, m = blowOf(w, busy ? this.move : aim || 'mid'), P = this.player;
     return this.creatures.inArc({ x: P.pos.x, y: P.pos.y, z: P.pos.z, eyeY: P.eyeY }, P.yaw, wp.reach + m.reach + 0.3, m.arc).includes(c);
   }
+  blowName() { return blowOf(this.weapon(), this.move).name; }      // what the blow being wound up is called, for the screen
   guard() {                 // what you block with: the best of what is in your hands
     let best = FISTS;
     for (const it of this.inv.hands) if (it && (it.def.block || 0) > best.block) best = it.def;
@@ -130,7 +139,7 @@ export class Fight {
       this.move = ctl.aim || 'mid';
     } else if (this.winding) {                                         // let go: the blow
       this.winding = false;
-      const cost = (7 + 9 * this.charge + (w.weight || 0) * 2) * MOVES[this.move].cost;
+      const cost = (7 + 14 * this.charge + (w.weight || 0) * 2) * MOVES[this.move].cost;
       this.tired = this.st < cost;
       this.st = Math.max(0, this.st - cost); this.stWait = 0.9;
       this.power = this.charge; this.swing = SWING; this.landed = false; this.noise = 1;
@@ -159,14 +168,15 @@ export class Fight {
 
   // The blow arrives: who is in the way?
   land(w) {
-    const m = MOVES[this.move], wp = w.weapon, P = this.player;
+    const m = blowOf(w, this.move), wp = w.weapon, P = this.player;
     const type = this.move === 'low' && wp.thrust ? wp.thrust : wp.type;
     const me = { x: P.pos.x, y: P.pos.y, z: P.pos.z, eyeY: P.eyeY };
     const hits = this.creatures.inArc(me, P.yaw, wp.reach + m.reach + 0.3, m.arc);
-    const blow = () => wp.damage * m.dmg * (0.45 + 0.85 * this.power) * (this.tired ? 0.5 : 1) * (0.9 + Math.random() * 0.2);
+    const blow = () => wp.damage * m.dmg * (0.35 + 2.0 * this.power) * (this.tired ? 0.5 : 1) * (0.9 + Math.random() * 0.2);
     // nothing alive in the way: the blow may land on an urn
     if (!hits.length && this.onNone) this.onNone(wp.reach + m.reach + 0.3);
     if (!hits.length && this.onMiss) this.onMiss(me, P.yaw, wp.reach + m.reach + 0.2, m.arc, blow(), type, KIND[type]);
+    if (hits.length) this.wear();
     for (const c of m.all ? hits : hits.slice(0, 1)) {
       const dmg = blow();
       const bare = w === FISTS, res = this.creatures.hurt(c, dmg, type, me.x, me.z, 0.5 + this.power, bare);
@@ -181,6 +191,18 @@ export class Fight {
         this.ui.say(res.weak <= 0.2 ? `${what} do almost nothing to the ${name}. Try something heavy.`
           : res.weak < 1 ? `${what} do little to the ${name}.` : `${what} hurt the ${name} badly.`);
       }
+    }
+  }
+
+  // A weapon that can break (a bone) loses some of its life with each blow that lands, and snaps at the end of it.
+  wear() {
+    const it = this.inv.hands[this.hand];
+    if (!it || !it.def.durability || !it.def.weapon) return;
+    it.n--;
+    this.inv.version++;
+    if (it.n <= 0) {
+      this.inv.hands[this.hand] = null; this.winding = false; this.inv.version++;
+      play('crack'); this.ui.say(`Your ${it.def.name.toLowerCase()} snaps.`);
     }
   }
 
@@ -276,7 +298,8 @@ export class Fight {
       H.mesh.visible = true;
       H.mesh.position.set(side * Math.max(-edge, Math.min(edge, H.pose[0])), H.pose[1], H.pose[2]);
       H.mesh.rotation.set(H.pose[4], 0, side * H.pose[3]);
-      H.mesh.scale.set(side * 0.64, 0.64, 1);
+      const hs = 0.64 * (it && it.def.heldScale || 1);      // a weapon may be drawn larger in the hand ("heldScale" in data/items.json)
+      H.mesh.scale.set(side * hs, hs, 1);
       const glow = it && it.lit ? Math.max(0.85, Math.min(1, 0.22 + bright)) : Math.min(1, 0.22 + bright);      // a burning light is not dimmed
       H.mesh.material.color.setScalar(glow);
       H.thing.material.color.setScalar(glow);

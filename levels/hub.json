@@ -59,6 +59,7 @@
     "###########################"
   ],
   "start": {"cell": [8, 8], "face": "S"},
+  "prophet": {"cell": [13, 8], "at": [0.5, 0.5]},
   "carry": ["lantern", "pocket_knife", "matches", "notebook"],
   "items": [
     {"id": "honey", "cell": [13, 13], "at": [0.3, 0.3]},
@@ -98,6 +99,8 @@
     {"id": "model", "name": "bm_anubis", "cell": [10, 12], "at": [0.5, 0.5], "size": 1.7, "turn": 0.75, "solid": 0.6},
     {"id": "model", "name": "bm_anubis", "cell": [10, 14], "at": [0.5, 0.5], "size": 1.7, "turn": 0.75, "solid": 0.6},
     {"id": "model", "name": "tomb_scarab_sun_disk", "cell": [13, 13], "at": [0.5, 0.5], "solid": 0},
+    {"id": "model", "name": "tomb_sarcophagus", "cell": [13, 8], "at": [0.5, 0.5], "size": 1.1, "turn": 0, "solid": 0.9},
+    {"id": "seal", "cell": [13, 13], "at": [0.5, 0.5], "lift": 0.13, "radius": 0.78, "sockets": 8, "gods": ["ptah", "nut", "thoth", "sekhmet", "anubis", "osiris", "sobek", "ra"]},
     {"id": "model", "name": "tomb_wall_decorative", "cell": [13, 7], "at": [0.5, 0.1], "size": 4, "turn": 0.25, "solid": 0},
     {"id": "model", "name": "tomb_wall_decorative", "cell": [13, 19], "at": [0.5, 0.9], "size": 4, "turn": 0.25, "solid": 0},
     {"id": "model", "name": "tomb_wall_decorative", "cell": [19, 13], "at": [0.9, 0.5], "size": 4, "solid": 0},
@@ -113,16 +116,16 @@
     {"id": "model", "name": "bm_chest_painted", "cell": [13, 18], "at": [0.5, 0.75], "size": 0.85, "solid": 0.3}
   ],
   "spots": [
-    {"cell": [10, 3], "wall": "N", "text": "The false door of Ptah. It is sealed."},
-    {"cell": [16, 3], "wall": "N", "text": "The false door of Nut. It is sealed."},
-    {"cell": [23, 10], "wall": "E", "text": "The false door of Thoth. It is sealed."},
-    {"cell": [23, 16], "wall": "E", "text": "The false door of Sekhmet. It is sealed."},
-    {"cell": [16, 23], "wall": "S", "text": "The false door of Anubis. It is sealed."},
-    {"cell": [10, 23], "wall": "S", "text": "The false door of Osiris. It is sealed."},
-    {"cell": [3, 16], "wall": "W", "text": "The false door of Sobek. It is sealed."},
-    {"cell": [3, 10], "wall": "W", "text": "The false door of Ra. It is sealed."},
+    {"cell": [10, 3], "wall": "N", "text": "The false door of Ptah. It is sealed.", "realm": "ptah"},
+    {"cell": [16, 3], "wall": "N", "text": "The false door of Nut. It is sealed.", "realm": "nut"},
+    {"cell": [23, 10], "wall": "E", "text": "The false door of Thoth. It is sealed.", "realm": "thoth"},
+    {"cell": [23, 16], "wall": "E", "text": "The false door of Sekhmet. It is sealed.", "realm": "sekhmet"},
+    {"cell": [16, 23], "wall": "S", "text": "The false door of Anubis. It is sealed.", "realm": "anubis"},
+    {"cell": [10, 23], "wall": "S", "text": "The false door of Osiris. It is sealed.", "realm": "osiris"},
+    {"cell": [3, 16], "wall": "W", "text": "The false door of Sobek. It is sealed.", "realm": "sobek"},
+    {"cell": [3, 10], "wall": "W", "text": "The false door of Ra. It is sealed.", "realm": "ra"},
     {"cell": [7, 7], "wall": "N", "text": "The stair back up to the well.", "to": "shaft"},
-    {"cell": [13, 13], "text": "A great seal is set in the stone. Eight empty sockets are cut into it."}
+    {"cell": [13, 13], "seal": true, "text": "A great seal is set in the stone. Eight empty sockets are cut into it."}
   ],
   "torches": [
     {"cell": [10, 4], "wall": "E", "h": 2.2},
