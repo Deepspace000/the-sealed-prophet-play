@@ -1,10 +1,11 @@
 {
- "v": 1795336916,
+ "v": 1795343489,
  "items": [
   "bedroll",
   "bone",
   "bully_beef",
   "canteen",
+  "club",
   "cracked_jar",
   "curved_sword",
   "dagger",
@@ -38,6 +39,7 @@
   "torch"
  ],
  "held": [
+  "club",
   "curved_sword",
   "dagger",
   "fist",

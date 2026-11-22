@@ -93,6 +93,12 @@ export class Fight {
     const h = this.inv.hands, free = i => !h[i] || !h[i].def.light;
     return h[1] && h[1].def.weapon ? 1 : h[0] && h[0].def.weapon ? 0 : free(1) ? 1 : 0;
   }
+  // Would a blow struck now reach this creature? aim: 'high' | 'mid' | 'low'.
+  reaches(c, aim) {
+    const busy = this.winding || this.swing > 0, it = this.inv.hands[busy ? this.hand : this.mainHand()];
+    const wp = (it && it.def.weapon ? it.def : FISTS).weapon, m = MOVES[busy ? this.move : aim || 'mid'], P = this.player;
+    return this.creatures.inArc({ x: P.pos.x, y: P.pos.y, z: P.pos.z, eyeY: P.eyeY }, P.yaw, wp.reach + m.reach + 0.3, m.arc).includes(c);
+  }
   guard() {                 // what you block with: the best of what is in your hands
     let best = FISTS;
     for (const it of this.inv.hands) if (it && (it.def.block || 0) > best.block) best = it.def;
@@ -159,17 +165,21 @@ export class Fight {
     const hits = this.creatures.inArc(me, P.yaw, wp.reach + m.reach + 0.3, m.arc);
     const blow = () => wp.damage * m.dmg * (0.45 + 0.85 * this.power) * (this.tired ? 0.5 : 1) * (0.9 + Math.random() * 0.2);
     // nothing alive in the way: the blow may land on an urn
+    if (!hits.length && this.onNone) this.onNone(wp.reach + m.reach + 0.3);
     if (!hits.length && this.onMiss) this.onMiss(me, P.yaw, wp.reach + m.reach + 0.2, m.arc, blow(), type, KIND[type]);
     for (const c of m.all ? hits : hits.slice(0, 1)) {
       const dmg = blow();
-      const res = this.creatures.hurt(c, dmg, type, me.x, me.z, 0.5 + this.power);
+      const bare = w === FISTS, res = this.creatures.hurt(c, dmg, type, me.x, me.z, 0.5 + this.power, bare);
       if (!res) continue;
-      play(c.def.look && c.def.look.detail === 'bones' ? 'bone' : 'hit');
-      const name = c.def.name.toLowerCase(), key = c.def.id + type;
+      const bones = c.def.look && c.def.look.detail === 'bones';
+      play(res.weak <= 0.6 ? 'glance' : bones ? (res.weak >= 1.5 ? 'crack' : 'bone') : 'hit');
+      if (this.onHit) this.onHit(c, res);
+      const name = c.def.name.toLowerCase(), key = c.def.id + (bare ? 'bare' : type), what = bare ? 'Your fists' : KIND[type] + ' blows';
       if (res.killed) this.ui.say(`The ${name} is dead.`);
       else if (!this.told.has(key) && (res.weak <= 0.6 || res.weak >= 1.5)) {
         this.told.add(key);
-        this.ui.say(res.weak < 1 ? `${KIND[type]} blows do little to the ${name}.` : `${KIND[type]} blows hurt the ${name} badly.`);
+        this.ui.say(res.weak <= 0.2 ? `${what} do almost nothing to the ${name}. Try something heavy.`
+          : res.weak < 1 ? `${what} do little to the ${name}.` : `${what} hurt the ${name} badly.`);
       }
     }
   }

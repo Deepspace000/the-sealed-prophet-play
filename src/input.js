@@ -1,12 +1,12 @@
 // Gathers keyboard and mouse, game controller and touch into one set of controls per frame.
 const KEY_ACTION = {
   Space: 'jump', KeyF: 'lamp', KeyH: 'help', Minus: 'resDown', Equal: 'resUp',
-  KeyE: 'use', Tab: 'bag', KeyI: 'bag', KeyG: 'drop', KeyL: 'nextLevel', KeyV: 'dodge', Escape: 'menu', KeyB: 'sleep', KeyM: 'map',
+  KeyE: 'use', Tab: 'bag', KeyI: 'bag', KeyG: 'drop', KeyL: 'nextLevel', KeyV: 'dodge', Escape: 'menu', KeyB: 'sleep', KeyM: 'map', KeyT: 'target',
 };
 // Fighting: R (hold, let go) or the left mouse button strikes; C (hold) blocks; V, or A, D or S tapped twice, dodges.
 // Controller: right trigger strikes, left trigger blocks, B dodges.
 // A, right bumper, X, Y, B, then the D-pad (up and left go back a place, down and right go on)
-const PAD_ACTION = { 0: 'jump', 5: 'lamp', 2: 'use', 3: 'bag', 1: 'back', 9: 'menu', 8: 'map', 12: 'left', 14: 'left', 13: 'right', 15: 'right' };
+const PAD_ACTION = { 0: 'jump', 5: 'lamp', 2: 'use', 3: 'bag', 1: 'back', 9: 'menu', 8: 'map', 11: 'target', 12: 'left', 14: 'left', 13: 'right', 15: 'right' };
 const clamp1 = v => Math.max(-1, Math.min(1, v));
 const dead = v => (Math.abs(v) < 0.18 ? 0 : v);
 

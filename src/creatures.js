@@ -153,10 +153,11 @@ export class Creatures {
   stagger(c, time) { if (c.state !== 'dead') { c.state = 'hurt'; c.t = time; } }
 
   // Damage from the player. Returns { real, weak, killed }.
-  hurt(c, dmg, type, fromX, fromZ, push = 1) {
+  // bare: the blow is a bare fist, which some things (bone) hardly feel.
+  hurt(c, dmg, type, fromX, fromZ, push = 1, bare = false) {
     if (c.state === 'dead') return null;
-    const weak = (c.def.weak && c.def.weak[type]) ?? 1, real = dmg * weak;
-    c.hp -= real; c.flash = 0.16;
+    const W = c.def.weak || {}, weak = (W[type] ?? 1) * (bare ? W.bare ?? 1 : 1), real = dmg * weak;
+    c.hp -= real; c.flash = 0.16; c.dull = weak <= 0.6;
     const dx = c.x - fromX, dz = c.z - fromZ, d = Math.hypot(dx, dz) || 1;
     c.kx = dx / d * 3 * push; c.kz = dz / d * 3 * push;
     c.last = { x: fromX, z: fromZ }; c.seen = 0;
@@ -302,7 +303,8 @@ export class Creatures {
     const shake = c.state === 'windup' ? Math.sin(c.t * 60) * 0.015 : 0;
     c.spr.position.set(c.x + dx / d * lunge + shake, c.y - 0.03, c.z + dz / d * lunge);
     const b = brightnessAt(c.x, c.y + c.def.height * 0.6, c.z);
-    if (c.flash > 0) c.spr.material.color.setRGB(Math.min(1.4, b * 1.6 + 0.35), b * 0.35, b * 0.3);
+    if (c.flash > 0 && c.dull) c.spr.material.color.setScalar(Math.min(1.3, b * 1.3 + 0.25));      // a blow that did little: a pale flash
+    else if (c.flash > 0) c.spr.material.color.setRGB(Math.min(1.4, b * 1.6 + 0.35), b * 0.35, b * 0.3);
     else c.spr.material.color.setScalar(b);
   }
 

@@ -11,6 +11,7 @@ import { Fight, MOVES } from './fight.js';
 import { Survival } from './survival.js';
 import { Menu } from './menu.js';
 import { GameMap } from './map.js';
+import { Target } from './target.js';
 import { loadArt } from './art.js';
 import { buildProps, strikeUrn } from './props.js';
 import { loadModels } from './models.js';
@@ -159,6 +160,10 @@ const creatures = new Creatures(scene, level, kinds, {
   }
 });
 const fight = new Fight({ camera, player, inv, creatures, ui });
+// The creature you are fighting is marked, and numbers rise from it when it is hit.
+const target = new Target({ camera, creatures, player, fight });
+fight.onHit = (c, res) => target.float(c, res.real >= 0.5 ? String(Math.round(res.real)) : '0', res.weak >= 1.5 ? 'big' : res.weak <= 0.6 ? 'dull' : '');
+fight.onNone = reach => target.whiff(reach);
 // A blow that meets no creature may break an urn. Crushing blows smash clay at once; others only chip it.
 const chipped = new Set();
 fight.onMiss = (me, yaw, reach, half, dmg, type, kind) => {
@@ -371,18 +376,18 @@ const HELP = {
     + 'put the pointer on a thing you carry to see what you can do with it &nbsp; click it to move it &nbsp; G or click the room to drop<br>'
     + 'Hands: the right button strikes with your right hand and the left button with your left: hold still, then let go. '
     + 'Longer hold, harder blow. A shield guards instead, and a hand holding a light lets the other hand strike &nbsp; pointer high = overhead, middle = slash, low = thrust &nbsp; '
-    + 'R strikes and C guards too &nbsp; V, or tap A, D or S twice, to dodge<br>'
+    + 'R strikes and C guards too &nbsp; V, or tap A, D or S twice, to dodge &nbsp; T locks your view on to an enemy<br>'
     + 'Staying alive: F lights or puts out your light &nbsp; click food to eat it &nbsp; click the notebook, or press M, for the map &nbsp; '
     + 'B sleep &nbsp; Esc or SETTINGS: save, load, leave',
   pad: 'Move: left stick &nbsp; Look: right stick &nbsp; Run: LB &nbsp; Jump / swim up: A &nbsp; Lamp: RB<br>'
     + 'Things: X pick up &nbsp; Y pack &nbsp; in the pack: D-pad choose a place, A take or put, X what you can do with it, B close<br>'
     + 'Fighting: hold the right trigger, then let go, to strike &nbsp; push forward for a thrust, pull back for an overhead blow &nbsp; '
-    + 'left trigger blocks &nbsp; B dodges<br>'
+    + 'left trigger blocks &nbsp; B dodges &nbsp; press the right stick to lock on to an enemy<br>'
     + 'Staying alive: RB lights or puts out your light &nbsp; in the pack, X on food eats it &nbsp; '
     + 'View map &nbsp; Start menu: sleep, save and load (D-pad chooses, A presses, B closes)',
   touch: 'Move: drag on the left &nbsp; Look: drag on the right &nbsp; Push the stick fully to run<br>'
     + 'Things: tap one to pick it up &nbsp; tap a thing you carry to see what you can do with it &nbsp; tap the room to drop<br>'
-    + 'Fighting: hold HIT, then let go, to strike &nbsp; hold BLOCK to block &nbsp; DODGE steps away<br>'
+    + 'Fighting: hold HIT, then let go, to strike &nbsp; hold BLOCK to block &nbsp; DODGE steps away &nbsp; TARGET locks on to an enemy<br>'
     + 'Staying alive: LAMP lights or puts out your light &nbsp; tap food to eat it &nbsp; MAP &nbsp; MENU: sleep, save and load',
 };
 let helpOn = true, time = 0, shownDevice = '';
@@ -433,6 +438,11 @@ function step(dt, forced) {
   inp.slow = ls * (fight.blocking ? 0.5 : fight.winding ? 0.75 : 1);
   if (fight.dead || asleep > 0) { inp.attackHeld = inp.blockHeld = inp.mouseAttack = inp.handR = inp.handL = false; inp.mx = inp.mz = inp.lookX = inp.lookY = 0; inp.jumpHeld = false; inp.pressed.clear(); inp.clicks = []; }
   player.update(dt, inp);
+  if (inp.pressed.has('target') && !ui.open && !fight.dead) {
+    const r = target.toggle();
+    ui.say(r === 'on' ? `Locked on to the ${target.c.def.name.toLowerCase()}.` : r === 'off' ? 'Lock let go.' : 'Nothing to lock on to.');
+  }
+  target.steer(dt);
   for (const p of props.solid) {      // you cannot walk through an urn
     const dx = player.pos.x - p.x, dz = player.pos.z - p.z, d = Math.hypot(dx, dz), min = p.r + 0.28;
     if (d >= min || d < 0.001 || player.pos.y < p.y - 1.1 || player.pos.y > p.y + (p.tall ? 3 : 1.1)) continue;
@@ -509,6 +519,7 @@ function step(dt, forced) {
   fight.update(dt, { attack: strikeHand >= 0, hand: strikeHand, cancel: inp.cancelR, block: guardNow, dodge, aim: inp.aim },
     brightnessAt(player.pos.x, player.eyeY, player.pos.z));
 
+  target.update(dt, inp.aim, ui.open || fight.dead);
   const seen = world.target(camera.position, viewDir, 2.6, 0.3);
   const beast = seen ? null : creatures.target(camera.position, viewDir);
   ui.setLook(seen ? seen.item.def.name : beast ? beast.def.name + '. ' + health(beast)
@@ -603,4 +614,4 @@ function frame(now) {
 requestAnimationFrame(frame);
 
 // For testing from the console.
-window.game = { THREE, scene, camera, renderer, level, player, input, lamp, torches, step, inv, world, ui, make, creatures, fight, life, menu, capture, sleep, map, openMap };
+window.game = { THREE, scene, camera, renderer, level, player, input, lamp, torches, step, inv, world, ui, make, creatures, fight, life, menu, capture, sleep, map, openMap, target };

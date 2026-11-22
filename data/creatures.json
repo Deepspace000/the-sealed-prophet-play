@@ -7,7 +7,7 @@
     "sense: 'sight' = it must see you, and sees less far when you are in the dark. 'life' = the dead: light makes no difference.",
     "sight: how far it notices you, in metres. hearing: how far it hears running and fighting.",
     "attack: damage, type (cut, stab or crush), reach in metres, windup = seconds of warning before the blow lands, recover = seconds before it can attack again.",
-    "weak: how much of each kind of damage gets through. 1 = normal, 2 = double, 0.5 = half.",
+    "weak: how much of each kind of damage gets through. 1 = normal, 2 = double, 0.5 = half. bare: the same for bare fists (1 if left out).",
     "still + wake: it stands like a statue until you come within 'wake' metres, or hit it.",
     "fleeAt: it runs away once when its health falls below this part (0.35 = 35%).",
     "wade: the deepest water it will walk into, in metres.",
@@ -26,10 +26,10 @@
     },
     "bone_guard": {
       "name": "Bone guard", "text": "A skeleton with a spear. It guards this place.", "kind": "dead",
-      "health": 18, "speed": 2.5, "radius": 0.32, "height": 1.85, "wide": 1.25,
+      "health": 30, "speed": 2.5, "radius": 0.32, "height": 1.85, "wide": 1.25,
       "sense": "life", "sight": 10, "hearing": 5,
       "attack": { "damage": 6, "type": "stab", "reach": 1.9, "windup": 0.7, "recover": 1.1 },
-      "weak": { "cut": 0.7, "stab": 0.4, "crush": 1.7 },
+      "weak": { "cut": 0.08, "stab": 0.05, "crush": 2, "bare": 0.15 },
       "wade": 1.0, "xp": 12, "drops": [["spear", 1]],
       "look": { "shape": "biped", "colour": "#d8cfb0", "eyes": "#3ea098", "detail": "bones", "weapon": "spear" }
     },
