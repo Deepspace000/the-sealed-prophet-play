@@ -170,7 +170,7 @@ export class Creatures {
       this.hooks.onDeath(c);
       return { real, weak, killed: true };
     }
-    if (real >= c.def.health * 0.22) this.stagger(c, 0.42);       // a hard blow stops what it was doing
+    if (real >= c.def.health * 0.15) this.stagger(c, 0.55);       // a hard blow stops what it was doing
     else if (!HUNTING.has(c.state)) this.rouse(c, d);
     return { real, weak, killed: false };
   }

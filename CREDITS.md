@@ -19,6 +19,7 @@ the creatures are posed and rendered to pictures by `tools/blender/creatures.py`
 | Knife (the rustic knife) | scrampunk | CC Attribution 4.0 | https://sketchfab.com/3d-models/knife-free-download-8eef43f923ab45678027085242d87638 |
 | Golden-Eared Hound Dog (the black jackal) | iRahulRajput | CC Attribution 4.0 | https://sketchfab.com/3d-models/golden-eared-hound-dog-3d-model-free-8269f0b38a04400cad281b48696674ab |
 | Zombie_Smoke_Mummy_Character (the rotting dead) | Mehdi Shahsavan | CC Attribution 4.0 | https://sketchfab.com/3d-models/zombie-smoke-mummy-character-12-mb-855ade268167415e954f4377ed4519c5 |
+| Wooden Hammer 01 (the hammer) | James Ray Cock | CC0 (public domain) | https://polyhaven.com/a/wooden_hammer_01 |
 
 The downloaded files themselves are kept in `art_src/`, which is not in the repository.
 A row is listed here once the model is downloaded; it is only in the game once its pieces appear in `art/models` or `art/creatures`.

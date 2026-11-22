@@ -1,5 +1,5 @@
 {
- "v": 1795374935,
+ "v": 1795375228,
  "items": [
   "bedroll",
   "bone",
@@ -11,6 +11,7 @@
   "dagger",
   "dates",
   "gold_cup",
+  "hammer",
   "honey",
   "jawbone",
   "knapsack",
@@ -43,6 +44,7 @@
   "curved_sword",
   "dagger",
   "fist",
+  "hammer",
   "lantern",
   "lantern_lit",
   "mace",
@@ -67,6 +69,7 @@
   "jackal_step",
   "jackal_strike",
   "jackal_windup",
+  "remains_dead",
   "rotting_dead_dead",
   "rotting_dead_idle",
   "rotting_dead_step",

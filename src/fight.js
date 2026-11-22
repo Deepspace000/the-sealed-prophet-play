@@ -23,7 +23,7 @@ const sin = Math.sin, PI = Math.PI;
 const REST_DROP = -0.15;      // how far the hands are lowered when they are not striking or guarding
 const HELD = {
   ready: [0.3, -0.37, -0.72, -0.28, 0],
-  light: [0.31, -0.2, -0.72, -0.06, 0],
+  light: [0.31, -0.3, -0.72, -0.06, 0],
   block: [0.02, -0.27, -0.62, 0.22, 0.2],
   high: { wind: c => [0.27, -0.33 + 0.2 * c, -0.7, -0.28 - 0.2 * c, 0.9 * c], swing: k => [0.22 - 0.08 * k, -0.13 - 0.28 * k, -0.72 - 0.1 * k, -0.48 + 0.4 * k, 0.9 - 2.1 * k] },
   mid: { wind: c => [0.33 + 0.2 * c, -0.36 + 0.05 * c, -0.7, -0.28 - 0.5 * c, 0.1 * c],
@@ -35,7 +35,7 @@ const HELD = {
 export class Fight {
   constructor({ camera, player, inv, creatures, ui }) {
     Object.assign(this, { camera, player, inv, creatures, ui });
-    this.hpMax = 40; this.hp = 40; this.stMax = 100; this.st = 100;
+    this.hpMax = 50; this.hp = 50; this.stMax = 100; this.st = 100;
     this.winding = false; this.charge = 0; this.move = 'mid'; this.swing = 0; this.cool = 0; this.landed = true;
     this.blocking = false; this.blockT = 0; this.stWait = 0; this.dodgeCd = 0; this.hurtT = 0; this.noise = 0;
     this.dead = false; this.calm = 0; this.told = new Set(); this.onDeath = () => {};
@@ -198,14 +198,14 @@ export class Fight {
     const P = this.player, dx = c.x - P.pos.x, dz = c.z - P.pos.z, d = Math.hypot(dx, dz) || 1;
     const front = (dx * -Math.sin(P.yaw) + dz * -Math.cos(P.yaw)) / d > 0.3;
     if (this.blocking && front) {
-      if (this.blockT < 0.28) {                        // a guard raised at the last moment turns the blow aside
+      if (this.blockT < 0.4) {                        // a guard raised at the last moment turns the blow aside
         play('parry'); this.creatures.stagger(c, 0.9);
         this.st = Math.max(0, this.st - 4); this.stWait = 0.5;
         return;
       }
       const stopped = dmg * this.guard().block;
       dmg -= stopped;
-      this.st = Math.max(0, this.st - stopped * 2.5 - 3); this.stWait = 0.9;
+      this.st = Math.max(0, this.st - stopped * 2 - 2); this.stWait = 0.9;
       play('block');
       if (this.st <= 0) this.ui.say('Your guard is broken.');
     }
