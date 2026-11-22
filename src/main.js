@@ -383,7 +383,7 @@ const HELP = {
     + 'Keys: W forward &nbsp; S stop, then back &nbsp; A D sidestep &nbsp; Q E turn &nbsp; Shift run &nbsp; '
     + 'Space jump / swim up &nbsp; F lamp &nbsp; H hide this &nbsp; L next level<br>'
     + 'Things: look at one and press E, or click it, to pick it up &nbsp; Tab pack &nbsp; '
-    + 'put the pointer on a thing you carry to see what you can do with it &nbsp; click it to move it &nbsp; G or click the room to drop<br>'
+    + 'click a thing you carry to see what you can do with it, then an empty place to move it there &nbsp; G or click the room to drop<br>'
     + 'Hands: the right button strikes with your right hand and the left button with your left: hold still, then let go. '
     + 'Longer hold, harder blow. A shield guards instead, and a hand holding a light lets the other hand strike &nbsp; pointer high = overhead, middle = slash, low = thrust &nbsp; '
     + 'R strikes and C guards too &nbsp; V, or tap A, D or S twice, to dodge &nbsp; T locks your view on to an enemy<br>'
@@ -396,7 +396,7 @@ const HELP = {
     + 'Staying alive: RB lights or puts out your light &nbsp; in the pack, X on food eats it &nbsp; '
     + 'View map &nbsp; Start menu: sleep, save and load (D-pad chooses, A presses, B closes)',
   touch: 'Move: drag on the left &nbsp; Look: drag on the right &nbsp; Push the stick fully to run<br>'
-    + 'Things: tap one to pick it up &nbsp; tap a thing you carry to see what you can do with it &nbsp; tap the room to drop<br>'
+    + 'Things: tap one to pick it up &nbsp; tap a thing you carry to see what you can do with it, then an empty place to move it there &nbsp; tap the room to drop<br>'
     + 'Fighting: hold HIT, then let go, to strike &nbsp; hold BLOCK to block &nbsp; DODGE steps away &nbsp; TARGET locks on to an enemy<br>'
     + 'Staying alive: LAMP lights or puts out your light &nbsp; tap food to eat it &nbsp; MAP &nbsp; MENU: sleep, save and load',
 };

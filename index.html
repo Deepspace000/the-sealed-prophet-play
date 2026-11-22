@@ -35,12 +35,14 @@
             image-rendering: pixelated; }
   .slot i.art { inset: 1px; image-rendering: auto; }
   /* what you can do with a thing you carry */
-  #opts { display: none; position: fixed; z-index: 5; transform: translateX(-50%); flex-direction: column; gap: 4px; align-items: stretch;
-          padding: 6px 6px 8px; background: rgba(8,6,3,.97); border: 1px solid #d9b65a; }
-  #opts b { font-weight: normal; font-size: 12px; letter-spacing: .08em; color: #ffe39a; text-align: center; white-space: nowrap; padding-bottom: 2px; }
-  #inv #opts button { white-space: nowrap; padding: 8px 14px; }
+  #opts { display: none; gap: 6px; justify-content: center; }      /* always in this one place, just above the belt */
+  #inv #opts button { width: min(84px, 21vw); padding: 9px 0; white-space: nowrap; text-align: center; letter-spacing: .1em; }
+  #inv #opts button:first-child { width: min(108px, 27vw); }
+  body.touch #inv #opts button { padding: 14px 0; font-size: 12px; }
+  #inv #opts button.off { opacity: .28; cursor: default; }
+  .slot.sel { border-color: #ffe39a; background: #2a2110; box-shadow: inset 0 0 0 2px #d9b65a; }
   body.touch #bar button { padding: 15px 16px; font-size: 13px; }      /* the one PACK button, beside the hot bar, big enough for a finger */
-  #inv #opts button:hover, #inv #opts button.focus { background: #d9b65a; color: #17120a; }
+  #inv #opts button:not(.off):hover, #inv #opts button.focus { background: #d9b65a; color: #17120a; }
   .opener { position: absolute; right: -1px; bottom: -1px; width: 16px; height: 15px; font-size: 11px; line-height: 15px;
             text-align: center; color: #17120a; background: #d9b65a; }
   .opener.on { background: #ffe39a; }
@@ -296,7 +298,7 @@
 <div id="help"></div>
 <div id="look"></div>
 <div id="msg"></div>
-<div id="inv"><div id="opts"></div><div id="panel"></div><div id="info"></div><div id="bar"></div></div>
+<div id="inv"><div id="panel"></div><div id="info"></div><div id="opts"></div><div id="bar"></div></div>
 <div id="heldIcon"></div>
 <div id="touch">
   <div id="stick"><div id="knob"></div></div>

@@ -8,6 +8,7 @@ const GROUPS = [
   ['back', 'Back', 1],
 ];
 const $ = id => document.getElementById(id);
+const SHORT = { 'OPEN THE MAP': 'MAP', 'LIGHT YOUR LAMP': 'LIGHT LAMP', 'FILL THE LAMP': 'FILL LAMP' };      // short words for the buttons
 const kg = w => (Math.round(w * 10) / 10) + ' kg';
 
 export class UI {
@@ -28,28 +29,21 @@ export class UI {
     root.addEventListener('pointerdown', e => {
       e.preventDefault();
       const opt = e.target.closest('[data-opt]');
-      if (opt) return this.pressOpt(+opt.dataset.opt);
+      if (opt) { if (!opt.classList.contains('off')) this.pressOpt(+opt.dataset.opt); return; }
+      if (e.target.closest('#opts')) return;
       const opener = e.target.closest('.opener'), slot = e.target.closest('.slot'), btn = e.target.closest('[data-btn]');
+      if (opener) { this.closeOpts(); this.inv.toggleOpen(this.itemAt(opener.parentElement)); this.open = true; return; }
+      if (slot) return this.clickSlot(slot, e);
       this.closeOpts();
-      if (opener) { this.inv.toggleOpen(this.itemAt(opener.parentElement)); this.open = true; }
-      else if (slot) this.clickSlot(slot, e);
-      else if (btn && btn.dataset.btn === 'drop') this.onDrop();
+      if (btn && btn.dataset.btn === 'drop') this.onDrop();
       else if (btn && btn.dataset.btn === 'use') { if (this.inv.held) this.onUse(this.inv.held); }
       else if (btn && btn.dataset.btn === 'pack') this.toggle();
     });
-    root.addEventListener('pointerover', e => {
+    root.addEventListener('pointerover', e => {            // the pointer on a thing shows what it is, and nothing more
       const slot = e.target.closest('.slot');
       const it = slot ? this.itemAt(slot) : null;
       if (it !== this.hover) { this.hover = it; this.seen = ''; }
-      if (e.pointerType !== 'mouse') return;
-      // With a mouse, the list of what you can do comes up as soon as the pointer is on a thing, right against it.
-      if (slot && it && !this.inv.held) {
-        clearTimeout(this.optsTimer);
-        if (!this.opts || this.opts.it !== it) this.showOpts(slot, it);
-      } else if (e.target.closest('#opts')) clearTimeout(this.optsTimer);
-      else this.leaveOpts();
     });
-    root.addEventListener('pointerleave', () => this.leaveOpts());
     root.addEventListener('contextmenu', e => e.preventDefault());
     addEventListener('pointerdown', e => { if (!e.target.closest('#inv')) this.closeOpts(); });
     addEventListener('mousemove', e => {
@@ -61,34 +55,42 @@ export class UI {
     const arr = this.inv.arr(slotEl.dataset.area);
     return arr ? arr[+slotEl.dataset.i] : null;
   }
-  // A click on a place picks the thing up to move it, or puts down what you are moving (the notebook goes straight
-  // to the map). The list of what else you can do with it is already showing, from the pointer being on it.
+  // A click or a tap on a thing picks it out: the row of buttons above the belt then says what you can do with it.
+  // The row is always in the same place, with the same four buttons in the same order. With a thing picked out,
+  // a click on an empty place moves it there. (A click on the notebook with the mouse goes straight to the map.)
   clickSlot(slotEl, e) {
-    const it = this.itemAt(slotEl);
-    if (it && !this.inv.held && e) {
-      const mouse = e.pointerType === 'mouse', right = e.button === 2;
-      if (it.def.map && mouse && !right) return this.onUse(it);
-      if (!mouse || right) return this.showOpts(slotEl, it);          // a finger has no hover: a tap brings up the list
+    const it = this.itemAt(slotEl), area = slotEl.dataset.area, i = +slotEl.dataset.i, inv = this.inv, o = this.opts;
+    if (inv.held) {                                   // you are moving something: put it down here
+      if (inv.click(area, i) === 'no') this.say('That does not fit there.');
+      return;
     }
-    if (this.inv.click(slotEl.dataset.area, +slotEl.dataset.i) === 'no') this.say('That does not fit there.');
+    if (it) {
+      if (it.def.map && e && e.pointerType === 'mouse' && e.button !== 2) { this.closeOpts(); return this.onUse(it); }
+      if (o && o.it === it) return this.closeOpts();
+      return this.showOpts(slotEl, it);
+    }
+    if (!o) return;
+    const from = inv.arr(o.area);
+    this.closeOpts();
+    if (!from || from[o.i] !== o.it) return;
+    inv.click(o.area, o.i);
+    if (inv.click(area, i) === 'no') { inv.click(o.area, o.i); this.say('That does not fit there.'); }
   }
   showOpts(slotEl, it) {
-    const v = verb(it), r = slotEl.getBoundingClientRect(), el = this.optsEl;
-    const area = slotEl.dataset.area, d = it.def;
-    const equip = d.wear === 'back' ? (area !== 'back' ? 'WEAR' : '') : (d.weapon || d.block || d.light) && area !== 'hands' ? 'EQUIP' : '';
-    const list = [...(v ? [[v, 'use']] : []), ...(equip ? [[equip, 'equip']] : []), ['MOVE', 'move'], ['DROP', 'drop']];
-    this.opts = { it, area: slotEl.dataset.area, i: +slotEl.dataset.i, focus: 0, list, at: this.inv.version };
-    el.innerHTML = `<b>${it.def.name}</b>` + list.map(([label], n) => `<button data-opt="${n}">${label}</button>`).join('');
-    el.style.display = 'flex';
-    el.style.left = Math.max(80, Math.min(innerWidth - 80, r.left + r.width / 2)) + 'px';
-    el.style.bottom = (innerHeight - r.top - 9) + 'px';          // touching the thing, so the pointer can go straight onto it
+    const v = SHORT[verb(it)] || verb(it), area = slotEl.dataset.area, d = it.def, back = d.wear === 'back';
+    const equip = back ? area !== 'back' : (d.weapon || d.block || d.light) && area !== 'hands';
+    // [label, what it does, can it be done]: the ones that cannot be done are greyed out, not taken away
+    const all = [[v || 'USE', 'use', !!v], [back ? 'WEAR' : 'EQUIP', 'equip', !!equip], ['MOVE', 'move', true], ['DROP', 'drop', true]];
+    this.opts = { it, area, i: +slotEl.dataset.i, all, focus: all.findIndex(a => a[2]), at: this.inv.version };
+    this.optsEl.innerHTML = all.map(([label, , on], n) => `<button data-opt="${n}"${on ? '' : ' class="off"'}>${label}</button>`).join('');
+    this.optsEl.style.display = 'flex';
+    this.seen = '';
     this.markOpt();
   }
   markOpt() {
     [...this.optsEl.querySelectorAll('button')].forEach((b, n) => b.classList.toggle('focus', this.pad && n === this.opts.focus));
   }
-  closeOpts() { clearTimeout(this.optsTimer); if (this.opts) { this.opts = null; this.optsEl.style.display = 'none'; } }
-  leaveOpts() { clearTimeout(this.optsTimer); this.optsTimer = setTimeout(() => this.closeOpts(), 260); }
+  closeOpts() { if (this.opts) { this.opts = null; this.optsEl.style.display = 'none'; this.seen = ''; } }
   // Put a thing in a hand (a weapon in the right, anything else in the left) or a knapsack on your back.
   // What was there goes where the thing came from, or wherever there is room.
   equip(area, i) {
@@ -107,7 +109,8 @@ export class UI {
   pressOpt(n) {
     const o = this.opts;
     if (!o) return;
-    const act = o.list[n][1], arr = this.inv.arr(o.area);
+    if (!o.all[n][2]) return;
+    const act = o.all[n][1], arr = this.inv.arr(o.area);
     this.closeOpts();
     if (!arr || arr[o.i] !== o.it) return;
     if (act === 'use') {
@@ -127,7 +130,11 @@ export class UI {
   // Controller: step through the places, press to pick up or put down, open a bag.
   slots() { return [...$('inv').querySelectorAll('.slot')]; }
   nav(d) {
-    if (this.opts) { const k = this.opts.list.length; this.opts.focus = (this.opts.focus + d + k) % k; return this.markOpt(); }
+    if (this.opts) {
+      const a = this.opts.all; let f = this.opts.focus;
+      do f = (f + d + a.length) % a.length; while (!a[f][2]);
+      this.opts.focus = f; return this.markOpt();
+    }
     const n = this.slots().length;
     this.focus = ((this.focus < 0 ? 0 : this.focus + d) + n) % n;
     this.seen = '';
@@ -182,6 +189,8 @@ export class UI {
     if (this.focus >= slots.length) this.focus = slots.length - 1;
     if (this.focus >= 0) slots[this.focus].classList.add('focus');
     const focused = this.focus >= 0 ? this.itemAt(slots[this.focus]) : null;
+    const o = this.opts, picked = o && slots.find(s => s.dataset.area === o.area && +s.dataset.i === o.i);
+    if (picked) picked.classList.add('sel');
 
     const left = it => {              // how much is left in it
       const d = it.def;
@@ -195,7 +204,7 @@ export class UI {
       this.info.innerHTML = `Holding: ${describe(inv.held)} `
         + (usable(inv.held.def) ? '<button data-btn="use">USE</button> ' : '') + '<button data-btn="drop">DROP</button>';
     } else {
-      const it = focused || this.hover;
+      const it = focused || (o && o.it) || this.hover;      // the thing picked out is described, whatever the pointer is on
       this.info.innerHTML = it && this.holds(it) ? describe(it) : '';
     }
     this.heldEl.style.backgroundImage = inv.held ? `url(${iconURL(inv.held.def)})` : '';

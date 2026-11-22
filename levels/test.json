@@ -65,8 +65,7 @@
     { "id": "bone", "cell": [17, 6], "at": [0.6, 0.3] },
     { "id": "bone", "cell": [18, 6], "at": [0.3, 0.7] },
     { "id": "skull", "cell": [12, 10], "at": [0.3, 0.65] },
-    { "id": "red_bottle", "cell": [12, 10], "at": [0.72, 0.7] },
-    { "id": "hammer", "cell": [12, 10], "at": [0.8, 0.3] }
+    { "id": "red_bottle", "cell": [12, 10], "at": [0.72, 0.7] }
   ],
   "props": [
     { "id": "urn", "cell": [7, 1], "at": [0.4, 0.25], "kind": "whole", "size": 1.3 },

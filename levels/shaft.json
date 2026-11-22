@@ -97,6 +97,7 @@
     {"id": "knapsack", "cell": [19, 7], "at": [0.75, 0.65], "inside": ["bully_beef", "paraffin_tin"]},
     {"id": "bedroll", "cell": [19, 8], "at": [0.4, 0.3]},
     {"id": "rustic_knife", "cell": [19, 7], "at": [0.45, 0.8]},
+    {"id": "hammer", "cell": [19, 8], "at": [0.7, 0.6]},
     {"id": "skull", "cell": [13, 8], "at": [0.35, 0.5]},
     {"id": "club", "cell": [13, 8], "at": [0.75, 0.7]},
     {"id": "bone", "cell": [14, 8], "at": [0.3, 0.6]},
