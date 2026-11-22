@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>The Sealed Prophet</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+  body { font-family: "Gill Sans", "Century Gothic", "Trebuchet MS", sans-serif; color: #e8d9a8;
+         user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+  #view { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; cursor: crosshair; image-rendering: pixelated; }
+  #tint { position: fixed; inset: 0; background: rgba(10, 70, 85, 0.45); opacity: 0; transition: opacity .15s; pointer-events: none; }
+  #title { position: fixed; left: 14px; top: 10px; letter-spacing: .28em; font-size: 13px; color: #d9b65a; pointer-events: none; }
+  #title small { display: block; letter-spacing: .12em; color: #a89868; font-size: 12px; margin-top: 3px; }
+  #help { position: fixed; left: 14px; right: 14px; top: 46px; font-size: 12px; line-height: 1.5; color: #c9bb8e;
+          pointer-events: none; text-shadow: 0 1px 2px #000; }
+  #look { position: fixed; left: 50%; top: 54%; transform: translateX(-50%); font-size: 14px; letter-spacing: .1em;
+          text-shadow: 0 1px 3px #000; pointer-events: none; }
+  #msg { position: fixed; left: 50%; top: 22%; transform: translateX(-50%); padding: 6px 16px; font-size: 14px;
+         background: rgba(0,0,0,.65); border-top: 1px solid #d9b65a; border-bottom: 1px solid #d9b65a;
+         opacity: 0; transition: opacity .3s; pointer-events: none; white-space: nowrap; }
+  #inv { position: fixed; left: 50%; bottom: 8px; transform: translateX(-50%); display: flex; flex-direction: column;
+         align-items: center; gap: 6px; max-width: 96vw; }
+  #bar, #panel { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; justify-content: center;
+                 padding: 8px 12px 5px; background: rgba(8,6,3,.82); border: 1px solid #d9b65a;
+                 clip-path: polygon(8px 0, calc(100% - 8px) 0, 100% 8px, 100% calc(100% - 8px), calc(100% - 8px) 100%, 8px 100%, 0 calc(100% - 8px), 0 8px); }
+  #panel { display: none; }
+  .group { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+  .group label { font-size: 10px; letter-spacing: .22em; text-transform: uppercase; color: #a89868; }
+  .slots { display: flex; gap: 4px; flex-wrap: wrap; max-width: 330px; justify-content: center; }
+  .slot { position: relative; width: 50px; height: 50px; background: #17120a; border: 1px solid #7d6a3c; cursor: pointer; }
+  .slot:hover, .slot.focus { border-color: #ffe39a; background: #2a2110; }
+  .slot.lit { border-color: #ffb347; box-shadow: 0 0 9px 1px rgba(255,170,60,.75), inset 0 0 8px rgba(255,170,60,.5); }
+  .slot i { position: absolute; inset: 3px; background-size: contain; background-repeat: no-repeat; background-position: center;
+            image-rendering: pixelated; }
+  .slot i.art { inset: 1px; image-rendering: auto; }
+  /* what you can do with a thing you carry */
+  #opts { display: none; position: fixed; z-index: 5; transform: translateX(-50%); flex-direction: column; gap: 4px; align-items: stretch;
+          padding: 6px 6px 8px; background: rgba(8,6,3,.97); border: 1px solid #d9b65a; }
+  #opts b { font-weight: normal; font-size: 12px; letter-spacing: .08em; color: #ffe39a; text-align: center; white-space: nowrap; padding-bottom: 2px; }
+  #inv #opts button { white-space: nowrap; padding: 8px 14px; }
+  #inv #opts button:hover, #inv #opts button.focus { background: #d9b65a; color: #17120a; }
+  .opener { position: absolute; right: -1px; bottom: -1px; width: 16px; height: 15px; font-size: 11px; line-height: 15px;
+            text-align: center; color: #17120a; background: #d9b65a; }
+  .opener.on { background: #ffe39a; }
+  #inv button { font: inherit; font-size: 11px; letter-spacing: .16em; color: #e8d9a8; background: #17120a;
+                border: 1px solid #d9b65a; padding: 6px 10px; cursor: pointer; }
+  .weight { align-self: center; font-size: 12px; color: #c9bb8e; }
+  #info { min-height: 18px; font-size: 13px; text-align: center; text-shadow: 0 1px 2px #000; }
+  #info b { color: #ffe39a; font-weight: normal; }
+  #heldIcon { display: none; position: fixed; width: 44px; height: 44px; margin: 6px 0 0 6px; background-size: contain;
+              image-rendering: pixelated; pointer-events: none; }
+  body.touch #heldIcon { left: 50% !important; top: 40% !important; }
+  #prompt { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); padding: 12px 22px;
+            border: 1px solid #d9b65a; background: rgba(0,0,0,.72); letter-spacing: .14em; font-size: 14px; pointer-events: none; }
+  #cross { position: fixed; left: 50%; top: 50%; width: 4px; height: 4px; margin: -2px; background: rgba(232,217,168,.6);
+           border-radius: 50%; pointer-events: none; }
+  #touch { display: none; }
+  body.touch #touch { display: block; }
+  #stick { display: none; position: fixed; width: 110px; height: 110px; margin: -55px; border: 2px solid rgba(217,182,90,.55);
+           border-radius: 50%; pointer-events: none; }
+  #knob { position: absolute; left: 50%; top: 50%; width: 46px; height: 46px; border-radius: 50%;
+          background: rgba(217,182,90,.5); transform: translate(-50%,-50%); }
+  #touch button { position: fixed; right: 18px; width: 74px; height: 74px; border-radius: 50%; font: inherit; font-size: 13px;
+                  letter-spacing: .08em; color: #e8d9a8; background: rgba(0,0,0,.45); border: 2px solid rgba(217,182,90,.7);
+                  touch-action: none; }
+  #touch button[data-act=jump] { bottom: 26px; }
+  #touch button[data-act=lamp] { bottom: 114px; }
+  #touch button[data-act=bag] { bottom: 202px; }
+  #touch button[data-act=attack] { bottom: 26px; right: 104px; border-color: rgba(200,70,50,.8); }
+  #touch button[data-act=block] { bottom: 114px; right: 104px; }
+  #touch button[data-act=dodge] { bottom: 202px; right: 104px; }
+  #touch button[data-act=map] { top: 146px; right: 14px; width: 62px; height: 34px; border-radius: 6px; font-size: 11px; }
+  #touch button[data-act=menu] { top: 104px; right: 14px; width: 62px; height: 34px; border-radius: 6px; font-size: 11px; }
+
+
+  /* ---- the map: a page of your notebook ---- */
+  #map { display: none; position: fixed; inset: 0; z-index: 30; flex-direction: column; align-items: center; justify-content: center;
+         gap: 8px; background: rgba(4,3,2,.8); }
+  #mapTop { display: flex; gap: 10px; }
+  #mapTop button { font: inherit; font-size: 11px; letter-spacing: .16em; color: #e8d9a8; background: #17120a; border: 1px solid #d9b65a;
+                   padding: 7px 14px; cursor: pointer; }
+  #mapTop button:hover { background: #d9b65a; color: #17120a; }
+  #mapPage { position: relative; width: min(96vw, 1040px); height: min(76vh, 740px); box-shadow: 0 10px 40px #000; }
+  #mapCanvas { position: absolute; inset: 0; width: 100%; height: 100%; cursor: crosshair; }
+  #mapNote { display: none; position: absolute; width: 190px; box-sizing: border-box; padding: 0 4px; font: 21px Quill, Georgia, serif;
+             color: #2b2a28; background: rgba(255,255,255,.45); border: 0; border-bottom: 1px solid #6b665c; outline: 0;
+             user-select: text; -webkit-user-select: text; }
+  #mapHint { max-width: 94vw; font-size: 12px; line-height: 1.5; text-align: center; color: #c9bb8e; }
+
+  /* ---- fighting ---- */
+  #bars { position: fixed; right: 14px; top: 12px; width: min(210px, 40vw); pointer-events: none; }
+  .barRow { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .barRow label { width: 62px; text-align: right; font-size: 10px; letter-spacing: .22em; color: #a89868; }
+  .bar { flex: 1; height: 9px; padding: 1px; border: 1px solid #d9b65a; background: rgba(8,6,3,.8);
+         clip-path: polygon(4px 0, calc(100% - 4px) 0, 100% 50%, calc(100% - 4px) 100%, 4px 100%, 0 50%); }
+  .bar i { display: block; height: 100%; width: 100%; }
+  .barRow.small { margin-bottom: 4px; } .barRow.small .bar { height: 5px; }
+  #foodBar { background: #b98a4a; } #restBar { background: #6f8fc0; } #lightBar { background: #ffb347; }
+  #hpBar { background: linear-gradient(#d24a34, #8a2416); }
+  #stBar { background: linear-gradient(#e8d9a8, #a89868); }
+  #wind { position: fixed; left: 50%; top: calc(50% + 16px); transform: translateX(-50%); width: 84px; text-align: center;
+          font-size: 10px; letter-spacing: .22em; color: #e8d9a8; text-shadow: 0 1px 2px #000; opacity: 0; pointer-events: none; }
+  #wind div { height: 4px; margin-bottom: 4px; border: 1px solid #d9b65a; background: rgba(8,6,3,.7); }
+  #wind i { display: block; height: 100%; width: 0; background: #d9b65a; }
+  #hurt { position: fixed; inset: 0; opacity: 0; pointer-events: none;
+          background: radial-gradient(ellipse at center, rgba(150,20,10,0) 35%, rgba(150,20,10,.75) 100%); }
+  #settingsBtn { position: fixed; right: 14px; top: 96px; z-index: 6; font: inherit; font-size: 10px; letter-spacing: .2em; color: #e8d9a8;
+                 background: rgba(8,6,3,.8); border: 1px solid #d9b65a; padding: 6px 10px; cursor: pointer; }
+  #settingsBtn:hover { background: #d9b65a; color: #17120a; }
+  body.touch #settingsBtn { display: none; }      /* a touch screen has its own MENU button */
+  #menu { display: none; position: fixed; inset: 0; z-index: 30; align-items: center; justify-content: center; background: rgba(4,3,2,.72); }
+  #menuIn { width: min(560px, 94vw); max-height: 94vh; overflow: auto; box-sizing: border-box; padding: 22px 26px 16px;
+            background: linear-gradient(rgba(26,16,8,.97), rgba(10,6,3,.97)); border: 1px solid #d9b65a;
+            clip-path: polygon(14px 0, calc(100% - 14px) 0, 100% 14px, 100% calc(100% - 14px), calc(100% - 14px) 100%, 14px 100%, 0 calc(100% - 14px), 0 14px); }
+  #menuIn h2 { margin: 0 0 14px; text-align: center; font-weight: normal; font-size: 22px; letter-spacing: .2em; color: #ecc96c; }
+  #menuIn button { font: inherit; font-size: 11px; letter-spacing: .16em; color: #e8d9a8; background: #17120a; border: 1px solid #d9b65a;
+                   padding: 8px 12px; cursor: pointer; }
+  #menuIn button:hover, #menuIn button.focus { background: #d9b65a; color: #17120a; }
+  .menuRow { display: flex; gap: 10px; justify-content: center; margin: 10px 0; flex-wrap: wrap; }
+  .slotRow { display: flex; gap: 8px; align-items: center; padding: 7px 0; border-top: 1px solid rgba(217,182,90,.3); font-size: 13px; }
+  .slotRow span { flex: 1; color: #c9bb8e; } .slotRow b { color: #ecc96c; font-weight: normal; }
+  .menuNote { min-height: 18px; margin-top: 8px; text-align: center; font-size: 13px; color: #ffe39a; }
+  #dead { display: none; position: fixed; inset: 0; z-index: 45; align-items: center; justify-content: center; pointer-events: none;
+          font-size: 22px; letter-spacing: .4em; color: #d9b65a; }
+
+  /* ---- the opening ---- */
+  #black { position: fixed; inset: 0; background: #000; z-index: 40; pointer-events: none; }
+  #black.wake { animation: wake 7s ease-in forwards; }
+  @keyframes wake { 0% { opacity: 1; } 22% { opacity: .55; } 34% { opacity: .96; } 58% { opacity: .35; } 68% { opacity: .7; } 100% { opacity: 0; } }
+  #intro { display: none; position: fixed; inset: 0; z-index: 50; background: #000; cursor: pointer; }
+  #introBg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 72% 50%; }
+  /* a pen-and-ink hand, from whatever the device has */
+  @font-face { font-family: Quill; src: local("Gabriola"), local("Apple Chancery"), local("Palatino Linotype Italic"),
+               local("Palatino-Italic"), local("Palatino Italic"), local("Book Antiqua Italic"), local("Georgia Italic"); }
+  .deco { font-family: "Broadway", "Bernard MT Condensed", "Century Gothic", "Gill Sans MT", "Futura", "Trebuchet MS", sans-serif; }
+  .fan { width: 200px; height: 100px; margin: 0 auto 16px; border-radius: 100px 100px 0 0;
+         background: repeating-conic-gradient(from -90deg at 50% 100%, #d9b65a 0 5deg, transparent 5deg 10deg);
+         -webkit-mask: radial-gradient(circle at 50% 100%, transparent 0 24px, #000 25px);
+         mask: radial-gradient(circle at 50% 100%, transparent 0 24px, #000 25px); }
+
+  /* the title: a stepped arch standing on the scene */
+  #titleCard { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; cursor: default;
+               background: radial-gradient(ellipse 62% 80% at 50% 50%, rgba(18,10,5,.82) 0%, rgba(18,10,5,.55) 55%, rgba(18,10,5,0) 100%); }
+  .arch, .archIn { clip-path: polygon(0 100%, 0 34%, 8% 34%, 8% 22%, 18% 22%, 18% 11%, 30% 11%, 30% 0, 70% 0, 70% 11%,
+                                      82% 11%, 82% 22%, 92% 22%, 92% 34%, 100% 34%, 100% 100%); }
+  .arch { width: min(540px, 90vw); padding: 2px; background: #d9b65a; box-sizing: border-box; }
+  .archIn { padding: 26px 30px 32px; text-align: center; background: linear-gradient(rgba(26,16,8,.9), rgba(10,6,3,.8)); }
+  #titleCard .fan { width: 180px; height: 90px; }
+  #titleCard h1 { margin: 0; font-weight: normal; font-size: clamp(34px, 7.4vw, 62px); letter-spacing: .14em; line-height: 1.08;
+                  color: #ecc96c; text-shadow: 0 2px 0 #6b4a12, 0 0 28px rgba(236,201,108,.28); }
+  .sub { margin-top: 12px; font-size: 12px; letter-spacing: .5em; color: #b89a52; }
+  #titleCard .rule { height: 7px; margin: 18px auto 22px; width: 62%; border-top: 2px solid #d9b65a; border-bottom: 1px solid #d9b65a; }
+  #intro button { font: inherit; letter-spacing: .3em; color: #17120a; background: #d9b65a; border: 0; padding: 13px 34px;
+                  cursor: pointer; clip-path: polygon(10px 0, calc(100% - 10px) 0, 100% 50%, calc(100% - 10px) 100%, 10px 100%, 0 50%); }
+  #continueBtn { display: block; margin: 0 auto 12px; }
+  #intro button.plain { display: block; margin: 18px auto 0; padding: 4px 8px; font-size: 11px; letter-spacing: .3em;
+                        color: #c9bb8e; background: none; clip-path: none; opacity: .55; }
+  #introSkip { display: none !important; position: absolute; right: 16px; bottom: 12px; margin: 0 !important; }
+  #introSkip.on { display: block !important; }
+
+  /* the journal page: a Deco plate with cut corners */
+  #journal, .paper { clip-path: polygon(14px 0, calc(100% - 14px) 0, 100% 14px, 100% calc(100% - 14px), calc(100% - 14px) 100%,
+                                        14px 100%, 0 calc(100% - 14px), 0 14px); }
+  #journal { display: none; position: absolute; left: 4vw; top: 50%; transform: translateY(-50%); width: min(470px, 88vw);
+             padding: 2px; background: #b8923a; box-sizing: border-box; }
+  .paper { position: relative; min-height: min(450px, 78vh); box-sizing: border-box; padding: 24px 34px 44px; color: #2a1d10;
+           background: linear-gradient(165deg, #efe2bc, #d9c48e); box-shadow: inset 0 0 44px rgba(90,61,18,.55);
+           overflow: hidden; transition: filter 5s; }
+  .paper::before { content: ''; position: absolute; inset: 8px; border: 1px solid #b8923a; pointer-events: none; }
+  .paper::after { content: ''; position: absolute; left: 50%; bottom: -150px; width: 600px; height: 300px; transform: translateX(-50%);
+                  border-radius: 300px 300px 0 0; pointer-events: none;
+                  background: repeating-conic-gradient(from -90deg at 50% 100%, rgba(138,106,30,.085) 0 4deg, transparent 4deg 8deg); }
+  #journal[data-page="2"] .paper { filter: brightness(.9) saturate(.85); }
+  #journal[data-page="3"] .paper { filter: brightness(.74) sepia(.3); }
+  .zig { position: absolute; width: 20px; height: 20px; background: #b8923a; opacity: .85;
+         clip-path: polygon(0 0, 100% 0, 100% 25%, 75% 25%, 75% 50%, 50% 50%, 50% 75%, 25% 75%, 25% 100%, 0 100%); }
+  .zig.tl { left: 13px; top: 13px; } .zig.tr { right: 13px; top: 13px; transform: scaleX(-1); }
+  .zig.bl { left: 13px; bottom: 13px; transform: scaleY(-1); } .zig.br { right: 13px; bottom: 13px; transform: scale(-1); }
+  #journal .fan { width: 150px; height: 75px; margin: 0 auto 8px;
+                  background: repeating-conic-gradient(from -90deg at 50% 100%, #8a6a1e 0 5deg, transparent 5deg 10deg);
+                  -webkit-mask: radial-gradient(circle at 50% 100%, transparent 0 17px, #000 18px);
+                  mask: radial-gradient(circle at 50% 100%, transparent 0 17px, #000 18px); }
+  #journalHead { display: flex; align-items: center; gap: 8px; font-size: 13px; letter-spacing: .3em; text-transform: uppercase;
+                 color: #3a2a10; white-space: nowrap; }
+  #journalHead .ln { flex: 1; height: 1px; background: #8a6a1e; }
+  #journalHead b { font-size: 8px; font-weight: normal; color: #8a6a1e; }
+  .rule2 { height: 4px; width: 0; margin: 9px 0 16px; border-top: 2px solid #8a6a1e; border-bottom: 1px solid #8a6a1e; }
+  #journalHead.draw + .rule2 { animation: drawRule 1.8s ease-out forwards; }
+  @keyframes drawRule { to { width: 100%; } }
+  #journalLines { position: relative; z-index: 1; min-height: 190px; padding-left: 14px; border-left: 1px solid rgba(138,106,30,.6); }
+  #journalLines p { margin: 0 0 9px; font-family: Quill, Georgia, serif; font-size: clamp(19px, 2.5vw, 24px); line-height: 1.22; }
+  #journalLines p.gap { height: 12px; }
+  #journalLines .unwritten { visibility: hidden; }
+  #journalLines .wet { color: #0b1836; text-shadow: 0 0 1px rgba(11,24,54,.7); }
+  /* the pen that writes the page */
+  #quill { position: absolute; left: 0; top: 0; width: 20px; height: 100px; z-index: 2; opacity: 0; pointer-events: none;
+           transform-origin: 50% 100%; transition: opacity .35s; filter: drop-shadow(3px 4px 2px rgba(60,40,10,.35)); }
+  #quill::before { content: ''; position: absolute; inset: 0 0 18px 0;
+                   background: linear-gradient(90deg, #fbf5e2 0 44%, #6b5320 44% 56%, #ddd0ac 56%);
+                   clip-path: polygon(50% 0, 96% 16%, 100% 46%, 82% 80%, 58% 100%, 42% 100%, 16% 80%, 0 46%, 6% 16%); }
+  #quill::after { content: ''; position: absolute; left: 9px; bottom: 0; width: 2px; height: 20px;
+                  background: linear-gradient(#6b5320, #1c1208 70%); }
+  .paper.turn #journalHead, .paper.turn #journalLines { animation: turn .9s ease-out both; }
+  @keyframes turn { 0% { opacity: 0; transform: translateX(18px); } 100% { opacity: 1; transform: none; } }
+  /* the title card arrives in stages */
+  #introBg { animation: fadeUp 2.6s ease-out both; }
+  .arch { animation: rise 1.8s .5s cubic-bezier(.2,.7,.2,1) both; }
+  #titleCard .fan { animation: fanOpen 1.6s 1.2s ease-out both; transform-origin: 50% 100%; }
+  #titleCard h1 { animation: spread 2.2s 1.3s ease-out both; }
+  #titleCard .sub, #titleCard .rule { animation: fadeUp 1.4s 2.4s both; }
+  #titleCard button { animation: fadeUp 1.2s 3s both; }
+  #intro button.plain { animation-name: fadeDim; }
+  @keyframes fadeUp { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes fadeDim { from { opacity: 0; } to { opacity: .55; } }
+  @keyframes rise { from { opacity: 0; transform: translateY(26px); } to { opacity: 1; transform: none; } }
+  @keyframes fanOpen { from { opacity: 0; transform: scaleY(.2); } to { opacity: 1; transform: none; } }
+  @keyframes spread { from { opacity: 0; letter-spacing: .5em; } to { opacity: 1; letter-spacing: .14em; } }
+  #journalMore { position: absolute; right: 30px; bottom: 20px; color: #8a6a1e; opacity: 0; transition: opacity .6s;
+                 animation: pulse 1.6s infinite; letter-spacing: .2em; font-size: 12px; z-index: 1; }
+  @keyframes pulse { 50% { transform: translateY(3px); } }
+  #journal.gone { animation: gutter 1.3s steps(1) forwards; }
+  @keyframes gutter { 0% { opacity: 1; } 15% { opacity: .3; } 25% { opacity: .9; } 45% { opacity: .15; } 60% { opacity: .7; }
+                      80% { opacity: .1; } 100% { opacity: 0; } }
+  @media (max-width: 700px) { #journal { left: 50%; transform: translate(-50%, -50%); } .paper { padding: 20px 22px 40px; } }
+</style>
+<script type="importmap">{ "imports": { "three": "./lib/three.module.min.js" } }</script>
+</head>
+<body>
+<canvas id="view"></canvas>
+<div id="tint"></div>
+<div id="hurt"></div>
+<div id="cross"></div>
+<div id="wind"><div><i id="windBar"></i></div><span id="windName"></span></div>
+<div id="bars">
+  <div class="barRow"><label>HEALTH</label><div class="bar"><i id="hpBar"></i></div></div>
+  <div class="barRow"><label>STAMINA</label><div class="bar"><i id="stBar"></i></div></div>
+  <div class="barRow small"><label>FOOD</label><div class="bar"><i id="foodBar"></i></div></div>
+  <div class="barRow small"><label>REST</label><div class="bar"><i id="restBar"></i></div></div>
+  <div class="barRow small"><label>LIGHT</label><div class="bar"><i id="lightBar"></i></div></div>
+</div>
+<button id="settingsBtn">SETTINGS</button>
+<div id="dead">YOU ARE DEAD</div>
+<div id="menu"><div id="menuIn"></div><input id="menuFile" type="file" accept=".json,application/json" hidden></div>
+<div id="map">
+  <div id="mapTop"><button data-m="prev">&#9664;</button><button data-m="close">CLOSE</button><button data-m="next">&#9654;</button></div>
+  <div id="mapPage"><canvas id="mapCanvas"></canvas><input id="mapNote" maxlength="36" autocomplete="off" spellcheck="false"></div>
+  <div id="mapHint"></div>
+</div>
+<div id="title">THE SEALED PROPHET<small><span id="levelName"></span> &middot; <span id="state">Walking</span></small></div>
+<div id="help"></div>
+<div id="look"></div>
+<div id="msg"></div>
+<div id="inv"><div id="opts"></div><div id="panel"></div><div id="info"></div><div id="bar"></div></div>
+<div id="heldIcon"></div>
+<div id="touch">
+  <div id="stick"><div id="knob"></div></div>
+  <button data-act="bag">PACK</button>
+  <button data-act="lamp">LAMP</button>
+  <button data-act="jump">JUMP</button>
+  <button data-act="dodge">DODGE</button>
+  <button data-act="block">BLOCK</button>
+  <button data-act="attack">HIT</button>
+  <button data-act="menu">MENU</button>
+  <button data-act="map">MAP</button>
+</div>
+<div id="black"></div>
+<div id="intro">
+  <canvas id="introBg"></canvas>
+  <div id="titleCard" class="deco">
+    <div class="arch"><div class="archIn">
+      <div class="fan"></div>
+      <h1>THE SEALED<br>PROPHET</h1>
+      <div class="sub">A JOURNAL &middot; 1924</div>
+      <div class="rule"></div>
+      <button id="continueBtn" style="display:none">CONTINUE</button>
+      <button id="beginBtn">BEGIN</button>
+      <button id="skipBtn" class="plain">SKIP TO THE TOMB</button>
+    </div></div>
+  </div>
+  <div id="journal"><div class="paper">
+    <i class="zig tl"></i><i class="zig tr"></i><i class="zig bl"></i><i class="zig br"></i>
+    <div class="fan"></div>
+    <div id="journalHead" class="deco"><span class="ln"></span><b>&#9670;</b><span id="journalDate"></span><b>&#9670;</b><span class="ln"></span></div>
+    <div class="rule2"></div>
+    <div id="journalLines"></div>
+    <div id="quill"></div>
+    <div id="journalMore" class="deco">&#9670; TURN</div>
+  </div></div>
+  <button id="introSkip" class="plain deco">SKIP</button>
+</div>
+<script type="module" src="src/main.js"></script>
+</body>
+</html>

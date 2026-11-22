@@ -1,0 +1,56 @@
+{
+  "notes": [
+    "The opening journal. One entry per page.",
+    "scene: what is shown behind the page: flight, landing, night or dark.",
+    "lines: shown one at a time. An empty line is a pause.",
+    "A line may be written as { \"text\": ..., \"cue\": \"cavein\" } to set off the cave-in when it appears."
+  ],
+  "pages": [
+    {
+      "date": "12 March 1924",
+      "scene": "flight",
+      "lines": [
+        "The aeroplane left Cairo at first light.",
+        "For three hours there was nothing below us but sand, and the shadow of our own wings.",
+        "Then the pyramids, small as a child's bricks, and the river like a green thread beside them.",
+        "I have waited eleven years to see this country.",
+        "I did not expect it to be so quiet."
+      ]
+    },
+    {
+      "date": "12 March, evening",
+      "scene": "landing",
+      "lines": [
+        "We came down beside a village the maps do not name.",
+        "The guides were waiting with the camels, as the foreman had promised.",
+        "Two days south of here, in a dry valley, his men have uncovered a stair cut into the rock.",
+        "Sixteen steps. A sealed door. No name on it.",
+        "Tomorrow we ride out."
+      ]
+    },
+    {
+      "date": "15 March",
+      "scene": "night",
+      "lines": [
+        "The door is open.",
+        "The air that came out was cold, and smelled of dust and something sweet.",
+        "A passage. One chamber. Plain walls. No gold. The men are disappointed. I am not.",
+        "There is a draught in the chamber. In a sealed tomb there should be no draught.",
+        "It comes from the back wall."
+      ]
+    },
+    {
+      "date": "16 March",
+      "scene": "dark",
+      "lines": [
+        "I went in alone before breakfast, to measure the back wall.",
+        "I heard the men shouting first.",
+        "Then the timber props.",
+        { "text": "The roof of the passage came down behind me.", "cue": "cavein" },
+        "",
+        "I remember the noise.",
+        "I do not remember falling."
+      ]
+    }
+  ]
+}

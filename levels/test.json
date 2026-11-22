@@ -1,0 +1,103 @@
+{
+  "name": "The Tomb",
+  "notes": [
+    "rows: one string per row, north row first. One character = one cell. All rows the same length.",
+    "cell: width of a cell in metres. Heights are in metres.",
+    "legend: what each character means.",
+    "  solid:true  = rock, nothing there.",
+    "  floor, ceil = floor and ceiling height.",
+    "  slope + rise = the floor climbs by 'rise' toward that side (N, E, S or W). 'floor' is the low end.",
+    "  steps = draw that slope as this many stairs.",
+    "  water = height of the water surface in that cell.",
+    "torches: cell [column, row], the wall it hangs on, height above that cell's floor.",
+    "items: things lying in the level: id from data/items.json and the cell. 'at' [east, south] 0..1 places it within the cell. 'inside': ids of things in it, if it is a bag.",
+    "  Keep things very few, and give each a reason to be where it is: beside the remains of whoever carried it, among grave goods, in a den.",
+    "props 'remains': what is left of someone (kind bones) or of a jackal (kind jackal). It cannot be picked up. Put belongings beside it as items.",
+    "carry: ids of things the player starts with. The first goes in the left hand, the second in the right, the rest on the belt.",
+    "creatures: id from data/creatures.json and the cell it starts in. 'at' places it within the cell, as for items.",
+    "spots: places that say something when you stand there. 'wall' puts a door picture on that wall. 'to' is the level it leads to.",
+    "  auto:true = no door: you go to that level as soon as you enter the cell (a flooded passage). 'face' is the way you look when you arrive there.",
+    "props: scenery that stands in the level. id 'urn' = a big clay urn; kind: whole, broken or tipped; size = height in metres; 'at' as for items.",
+    "start: cell [column, row] and the way the player faces."
+  ],
+  "cell": 2,
+  "legend": {
+    "#": { "solid": true },
+    ".": { "floor": 0, "ceil": 3.5 },
+    "h": { "floor": 0, "ceil": 6 },
+    "g": { "floor": 2, "ceil": 6 },
+    "r": { "floor": 0, "ceil": 6, "slope": "N", "rise": 1 },
+    "R": { "floor": 1, "ceil": 6, "slope": "N", "rise": 1 },
+    "s": { "floor": 0, "ceil": 6, "slope": "N", "rise": 1, "steps": 4 },
+    "S": { "floor": 1, "ceil": 6, "slope": "N", "rise": 1, "steps": 4 },
+    "p": { "floor": -3, "ceil": 3.5 },
+    "q": { "floor": -3, "ceil": 3.5, "slope": "S", "rise": 1.5 },
+    "Q": { "floor": -1.5, "ceil": 3.5, "slope": "S", "rise": 1.5 },
+    "w": { "floor": -3, "ceil": 3.5, "water": -0.3 },
+    "u": { "floor": -3, "ceil": -0.9, "water": -0.3 },
+    "x": { "floor": -3, "ceil": 3, "water": -0.3 },
+    "v": { "floor": -0.5, "ceil": 3, "water": -0.3 },
+    "k": { "floor": 0, "ceil": 3 }
+  },
+  "rows": [
+    "####################",
+    "#....#gggggggg######",
+    "#....#gggggggg######",
+    "#....#RhhhhhhS######",
+    "#....#rhhhhhhs######",
+    "#.....hhhhhhhh..p..#",
+    "##.###hhhhhhhh##p..#",
+    "##.#############q..#",
+    "#........#######Q..#",
+    "#........#######...#",
+    "#...wwwww##vkv######",
+    "#...wwwwwuuxkxuuu###",
+    "#...wwwww##vkv######",
+    "#........###########",
+    "####################"
+  ],
+  "start": { "cell": [2, 3], "face": "E" },
+  "carry": ["lantern", "pocket_knife", "matches", "notebook"],
+  "items": [
+    { "id": "skull", "cell": [9, 1], "at": [0.35, 0.55] },
+    { "id": "bone", "cell": [9, 1], "at": [0.75, 0.75] },
+    { "id": "jawbone", "cell": [8, 1], "at": [0.85, 0.8] },
+    { "id": "bone", "cell": [17, 6], "at": [0.6, 0.3] },
+    { "id": "bone", "cell": [18, 6], "at": [0.3, 0.7] },
+    { "id": "skull", "cell": [12, 10], "at": [0.3, 0.65] },
+    { "id": "red_bottle", "cell": [12, 10], "at": [0.72, 0.7] }
+  ],
+  "props": [
+    { "id": "urn", "cell": [7, 1], "at": [0.4, 0.25], "kind": "whole", "size": 1.3 },
+    { "id": "urn", "cell": [8, 1], "at": [0.2, 0.25], "kind": "whole", "size": 1.1 },
+    { "id": "urn", "cell": [10, 1], "at": [0.7, 0.25], "kind": "broken", "size": 1.2 },
+    { "id": "urn", "cell": [11, 1], "at": [0.5, 0.25], "kind": "whole", "size": 1.2 },
+    { "id": "urn", "cell": [11, 2], "at": [0.6, 0.6], "kind": "tipped" },
+    { "id": "urn", "cell": [12, 12], "at": [0.5, 0.7], "kind": "whole", "size": 1.0 },
+    { "id": "remains", "cell": [9, 1], "at": [0.55, 0.45], "kind": "bones" },
+    { "id": "remains", "cell": [18, 6], "at": [0.6, 0.35], "kind": "jackal" },
+    { "id": "remains", "cell": [12, 10], "at": [0.5, 0.35], "kind": "bones" }
+  ],
+  "creatures": [
+    { "id": "jackal", "cell": [11, 5] },
+    { "id": "jackal", "cell": [17, 6] }
+  ],
+  "spots": [
+    { "cell": [9, 1], "text": "A burial, broken open long ago. The bones were thrown about." },
+    { "cell": [18, 6], "text": "A dead jackal. The others have been at it." },
+    { "cell": [12, 10], "text": "Someone died here, a long time after the tomb was shut." },
+    { "cell": [16, 11], "auto": true, "face": "W", "text": "", "to": "shaft" }
+  ],
+  "torches": [
+    { "cell": [2, 1], "wall": "N", "h": 2.2 },
+    { "cell": [2, 7], "wall": "W", "h": 2.2 },
+    { "cell": [8, 6], "wall": "S", "h": 2.6 },
+    { "cell": [11, 6], "wall": "S", "h": 2.6 },
+    { "cell": [9, 1], "wall": "N", "h": 2.2 },
+    { "cell": [15, 5], "wall": "N", "h": 2.2 },
+    { "cell": [18, 7], "wall": "E", "h": 2.2 },
+    { "cell": [1, 11], "wall": "W", "h": 2.2 },
+    { "cell": [6, 13], "wall": "S", "h": 2.2 },
+    { "cell": [12, 10], "wall": "N", "h": 2.0 }
+  ]
+}
