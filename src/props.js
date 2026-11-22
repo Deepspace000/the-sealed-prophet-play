@@ -74,7 +74,7 @@ function clay() {
   return t;
 }
 
-const REMAINS = { bones: ['bone_guard_dead', 1.85], jackal: ['jackal_dead', 1.9] };      // picture, and how tall its whole frame stands
+const REMAINS = { bones: ['bone_guard_dead', 3.1], jackal: ['jackal_dead', 1.9] };      // picture, and how tall its whole frame stands
 
 // Builds (or builds again, after it is smashed) the meshes of one urn.
 function shape(u) {

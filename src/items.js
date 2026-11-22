@@ -154,7 +154,8 @@ export class WorldItems {
     tex.minFilter = real ? THREE.LinearMipmapLinearFilter : THREE.NearestFilter;
     tex.colorSpace = THREE.SRGBColorSpace;
     const spr = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, fog: true, alphaTest: real ? 0.4 : 0 }));
-    const big = real ? 0.34 + 0.1 * Math.min(3, item.def.size || 1) : 0.46;       // bigger things look bigger
+    // bigger things look bigger; a long thing gives the size of its picture in metres as "floor"
+    const big = item.def.floor || (real ? 0.34 + 0.1 * Math.min(3, item.def.size || 1) : 0.46);
     const y = this.level.floorAt(x, z) + big * 0.5;
     spr.scale.set(big, big, 1);
     spr.position.set(x, y, z);
