@@ -168,7 +168,7 @@ export class Gates {
     play('chip');
     if (!quiet) this.say(l.on ? 'The lever grinds down. Somewhere, stone slides.' : 'The lever clunks back.');
   }
-  // E pressed. Returns true if it did something.
+  // F pressed. Returns true if it did something.
   use(P) {
     const l = this.nearest(P, this.levers);
     const g = this.nearest(P, this.list.filter(x => x.mode === 'key' && x.t > 0.05));

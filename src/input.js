@@ -1,7 +1,7 @@
 // Gathers keyboard and mouse, game controller and touch into one set of controls per frame.
 const KEY_ACTION = {
-  Space: 'jump', F5: 'quicksave', KeyF: 'lamp', KeyH: 'help', Minus: 'resDown', Equal: 'resUp',
-  KeyE: 'use', Tab: 'bag', KeyI: 'bag', KeyG: 'drop', KeyL: 'nextLevel', KeyV: 'dodge', Escape: 'menu', KeyB: 'sleep', KeyM: 'map', KeyT: 'target',
+  Space: 'jump', F5: 'quicksave', KeyL: 'lamp', KeyH: 'help', Minus: 'resDown', Equal: 'resUp',
+  KeyF: 'use', Tab: 'bag', KeyI: 'bag', KeyG: 'drop', KeyN: 'nextLevel', KeyV: 'dodge', Escape: 'menu', KeyB: 'sleep', KeyM: 'map', KeyT: 'target',
 };
 // Fighting: R (hold, let go) or the left mouse button strikes; C (hold) blocks; V, or A, D or S tapped twice, dodges.
 // Controller: right trigger strikes, left trigger blocks, B dodges.

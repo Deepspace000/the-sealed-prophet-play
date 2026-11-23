@@ -156,7 +156,7 @@ const ui = new UI(inv, () => dropHeld(), it => useThing(it));
 const gates = new Gates({ scene, level, gates: data.gates, levers: data.levers, saved: saved && saved.gates, say: t => ui.say(t),
   findKey: id => [...inv.all()].map(e => e[0]).find(it => it.def.key === id) || null, takeKey: it => inv.remove(it) });
 const fireballs = new Fireballs({ scene, level, shooters: data.shooters });
-const USE = { keys: 'Press E to use it.', pad: 'Press X to use it.', touch: 'Tap to use it.' };
+const USE = { keys: 'Press F to use it.', pad: 'Press X to use it.', touch: 'Tap to use it.' };
 // The great seal in the hall has a socket for the relic of each realm. Carry one back and set it in. Which are set is kept in the save.
 const placed = new Set(run && run.relics || []);
 if (props.seal) for (const god of placed) props.seal.fill(god, defs['relic_' + god] && defs['relic_' + god].icon[0]);
@@ -445,8 +445,8 @@ function travel(to) {
   fade(1, 0.7);
   setTimeout(go, 800);
 }
-const SET = { keys: 'Press E to set your gems in.', pad: 'Press X to set your gems in.', touch: 'Tap to set your gems in.' };
-const GO = { keys: 'Press E to go on.', pad: 'Press X to go on.', touch: 'Tap to go on.' };
+const SET = { keys: 'Press F to set your gems in.', pad: 'Press X to set your gems in.', touch: 'Tap to set your gems in.' };
+const GO = { keys: 'Press F to go on.', pad: 'Press X to go on.', touch: 'Tap to go on.' };
 
 const viewDir = new THREE.Vector3(), ray = new THREE.Raycaster();
 function dirAt(px, py) {            // the direction through a point on the screen
@@ -518,10 +518,10 @@ const HELP = {
   keys: HG([
     ['c-move', 'MOVE', '[W] forward &nbsp; [S] back &nbsp; [A] [D] sidestep &nbsp; [Q] [E] turn &nbsp; [Shift] run &nbsp; [Space] jump, swim up'],
     ['c-look', 'LOOK', 'Hold [Right button] and move the mouse &nbsp; add [Left button] to walk forward &nbsp; [Wheel] tilts the view'],
-    ['c-thing', 'THINGS', '[E] or click: pick up &nbsp; [Tab] pack &nbsp; click what you carry for options &nbsp; [G] drop'],
+    ['c-thing', 'THINGS', '[F] or click: pick up &nbsp; [Tab] pack &nbsp; click what you carry for options &nbsp; [G] drop'],
     ['c-fight', 'FIGHT', '[Right button] right hand, [Left button] left hand: hold, then let go &nbsp; longer = harder &nbsp; aim high, middle, low: overhead, slash, thrust'],
     ['c-fight', '', '[C] guard &nbsp; [V] dodge &nbsp; [T] lock on'],
-    ['c-live', 'SURVIVE', '[F] lamp &nbsp; click food to eat &nbsp; [M] map &nbsp; [B] sleep'],
+    ['c-live', 'SURVIVE', '[L] lamp &nbsp; click food to eat &nbsp; [M] map &nbsp; [B] sleep'],
     ['c-game', 'GAME', '[Esc] menu &nbsp; [F5] quicksave &nbsp; [H] hide this'],
   ]),
   pad: HG([
@@ -571,7 +571,7 @@ function step(dt, forced) {
     renderer.render(scene, camera);
     return;
   }
-  // A text scene. The game stands still while it is up; E, Space, A or the button goes on.
+  // A text scene. The game stands still while it is up; F, Space, A or the button goes on.
   if (scenes.open) {
     if (inp.pressed.has('use') || inp.pressed.has('jump') || inp.pressed.has('back')) scenes.close();
     renderer.render(scene, camera);
@@ -602,7 +602,7 @@ function step(dt, forced) {
   }
   inp.slow = ls * (fight.blocking ? 0.5 : fight.winding ? 0.75 : 1);
   if (fight.dead || asleep > 0) { inp.attackHeld = inp.blockHeld = inp.mouseAttack = inp.handR = inp.handL = false; inp.mx = inp.mz = inp.lookX = inp.lookY = 0; inp.jumpHeld = false; inp.pressed.clear(); inp.clicks = []; }
-  if (cut && (inp.pressed.has('use') || inp.pressed.has('jump') || inp.pressed.has('back') || (inp.clicks && inp.clicks.length))) cut.t = cut.dur;      // E, Space, B or a click skips the cutscene
+  if (cut && (inp.pressed.has('use') || inp.pressed.has('jump') || inp.pressed.has('back') || (inp.clicks && inp.clicks.length))) cut.t = cut.dur;      // F, Space, B or a click skips the cutscene
   if (cut) { inp.attackHeld = inp.blockHeld = inp.mouseAttack = inp.handR = inp.handL = false; inp.mx = inp.mz = inp.lookX = inp.lookY = 0; inp.jumpHeld = false; inp.pressed.clear(); inp.clicks = []; }
   player.update(dt, inp);
   gates.update(dt, player);
@@ -796,7 +796,7 @@ if (!fresh) {
     black.classList.add('wake');
     black.addEventListener('animationend', () => { black.style.display = 'none'; });
     setTimeout(() => ui.say('You wake in the dark. The way out is buried.'), 4500);
-    setTimeout(() => ui.say({ keys: 'Press F to light your lantern.', pad: 'Press RB to light your lantern.',
+    setTimeout(() => ui.say({ keys: 'Press L to light your lantern.', pad: 'Press RB to light your lantern.',
       touch: 'Press LAMP to light your lantern.' }[input.device]), 8500);
   } else {
     black.style.display = 'none';
