@@ -196,11 +196,11 @@ export class Gates {
     return best;
   }
   press(b) {
-    if (b.on) { this.say('The button is pressed in. It does not move.'); return; }
+    if (b.on) return;
     b.on = true; b.timer = 3.4;
     this.opened.add(b.opens);
     play('chip'); play('rumble'); play('gurgle');
-    this.say(b.text || 'The button sinks into the wall. Stone rumbles and water gurgles somewhere behind it.');
+    this.say(b.text || 'Something gives way in the wall. Stone rumbles and water gurgles somewhere behind it.');
   }
   pull(l, P, quiet) {
     l.on = !l.on; l.timer = l.hold || 0;
@@ -228,7 +228,7 @@ export class Gates {
   // words for the screen when you look at a door or a lever
   look(P, hasKeyHint) {
     const bt = this.nearest(P, this.buttons);
-    if (bt) return bt.on ? 'A round stone button, pressed in.' : 'A round stone button set in the wall. ' + hasKeyHint;
+    if (bt) return bt.on ? '' : hasKeyHint;
     const l = this.nearest(P, this.levers);
     if (l) return 'A lever, worn smooth by hands. ' + hasKeyHint;
     const g = this.nearest(P, this.list.filter(x => x.mode === 'key' && x.t > 0.05));
