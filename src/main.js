@@ -769,6 +769,7 @@ function step(dt, forced) {
     t.d = Math.hypot(t.x - player.pos.x, t.z - player.pos.z, t.y - player.eyeY);
     t.flick = 0.85 + 0.15 * Math.sin(time * 9 + t.phase) * Math.sin(time * 5.3 + t.phase * 2);
     t.mesh.userData.flame.scale.y = 0.8 + 0.4 * t.flick;
+    t.mesh.userData.flame.scale.x = 0.92 + 0.16 * Math.sin(time * 7.3 + t.phase * 3);
   }
   const near = [...torches].sort((a, b) => a.d - b.d);
   torchLights.forEach((l, i) => {

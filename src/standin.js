@@ -174,16 +174,42 @@ export function standinDoor(open) {
   return new THREE.Mesh(new THREE.PlaneGeometry(1.5, 2.44), new THREE.MeshLambertMaterial({ map: t }));
 }
 
-// A wall torch of the Egyptian kind: a gilded ankh fixed to the wall, a bronze cup on its crossbar, and a twisted linen torch
-// leaning out of the cup. (Real ones: a gilded bronze lamp in the form of an ankh whose arms held a tubular torch holder
-// with a torch of twisted linen in it.) Its local +z points into the room, the wall is at z = -0.16, and the middle of the flame is at the origin.
+// A flame picture: a teardrop made of layers, hot white in the middle, drawn once for each colour of fire.
+const flameTextures = {};
+function flameTexture(colour, core) {
+  const key = colour + '/' + core;
+  if (flameTextures[key]) return flameTextures[key];
+  const c = document.createElement('canvas'); c.width = 64; c.height = 128;
+  const g = c.getContext('2d');
+  const base = new THREE.Color(colour), white = new THREE.Color(0xffffff);
+  const shade = k => { const s = base.clone().lerp(white, k); return `rgb(${Math.round(s.r * 255)},${Math.round(s.g * 255)},${Math.round(s.b * 255)})`; };
+  const drop = (s, lean) => {
+    const w = 23 * s, h = 120 * s, cy = 126 - w;
+    g.beginPath();
+    g.moveTo(32 + lean * s, 126 - h);
+    g.bezierCurveTo(32 + w * 0.35, cy - (h - w) * 0.5, 32 + w, cy - w * 0.35, 32 + w, cy);
+    g.arc(32, cy, w, 0, Math.PI, false);
+    g.bezierCurveTo(32 - w, cy - w * 0.35, 32 - w * 0.35, cy - (h - w) * 0.5, 32 + lean * s, 126 - h);
+    g.fill();
+  };
+  const layers = [[1, 0.0, 0.28, 0.5], [0.84, 0.0, 0.45, 0.75], [0.66, 0, 0.7, 0.9], [0.44, 0, core, 1]];
+  for (const [s, lean, k, a] of layers) { g.fillStyle = shade(k); g.globalAlpha = a; drop(s, lean * 6); }
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
+  return (flameTextures[key] = t);
+}
+const flameSprite = (tex, w, h, y, opacity = 1) => {
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, fog: false, opacity }));
+  s.center.set(0.5, 0.04); s.scale.set(w, h, 1); s.position.y = y;
+  return s;
+};
+
+// A wall torch of the Egyptian kind: a gilded ankh fixed to the wall, a bronze cup on its crossbar, and a burning head of twisted linen
+// in a cage of bronze bars. (Real ones: a gilded bronze lamp in the form of an ankh whose arms held a tubular torch holder with a torch
+// of twisted linen in it.) Its local +z points into the room, the wall is at z = -0.16, and the middle of the flame is at the origin.
 export function egyptianTorch(colour = 0xffb040) {
-  const g = new THREE.Group(), body = new THREE.Group();
-  const gold = new THREE.MeshLambertMaterial({ color: 0xd9aa30, emissive: 0x7a5c14 });
-  const bronze = new THREE.MeshLambertMaterial({ color: 0x9a6430, emissive: 0x4a2a10 });
-  const linen = new THREE.MeshLambertMaterial({ color: 0xe6d8b0, emissive: 0xb09c70 });
-  const band = new THREE.MeshLambertMaterial({ color: 0x8a6a38, emissive: 0x3a2c14 });
-  const char = new THREE.MeshLambertMaterial({ color: 0x1c130b });
+  const g = new THREE.Group(), model = new THREE.Group(), body = new THREE.Group();
+  const lam = (color, emissive) => new THREE.MeshLambertMaterial({ color, emissive });
+  const gold = lam(0xd9aa30, 0x7a5c14), bronze = lam(0x9a6430, 0x4a2a10), dark = lam(0x4a3420, 0x20160c);
   const at = (m, x, y, z) => { m.position.set(x, y, z); return m; };
   // the ankh on the wall: loop, stem and arms
   const ankh = new THREE.Group();
@@ -191,21 +217,28 @@ export function egyptianTorch(colour = 0xffb040) {
   ankh.add(at(new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.36, 0.04), gold), 0, -0.06, 0));
   ankh.add(at(new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.05, 0.04), gold), 0, 0.02, 0));
   ankh.position.set(0, -0.5, -0.13);
-  // the cup and the torch, leaning out from the wall
+  // the cup, the cage and the burning head, leaning out from the wall
   body.position.set(0, -0.47, -0.1); body.rotation.x = 0.35;
-  const cup = at(new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.04, 0.13, 10), bronze), 0, 0.065, 0);
-  const rim = at(new THREE.Mesh(new THREE.TorusGeometry(0.07, 0.012, 5, 12), gold), 0, 0.13, 0); rim.rotation.x = Math.PI / 2;
-  const stick = at(new THREE.Mesh(new THREE.CylinderGeometry(0.036, 0.03, 0.3, 8), linen), 0, 0.19, 0);
-  body.add(cup, rim, stick);
-  for (const y of [0.15, 0.27]) { const b = at(new THREE.Mesh(new THREE.TorusGeometry(0.037, 0.008, 4, 10), band), 0, y, 0); b.rotation.x = Math.PI / 2; body.add(b); }
-  body.add(at(new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.036, 0.07, 8), char), 0, 0.375, 0));
-  // the flame: a wide outer tongue and a pale core. The group is what flickers.
+  body.add(at(new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.04, 0.13, 10), bronze), 0, 0.065, 0));
+  const rim = at(new THREE.Mesh(new THREE.TorusGeometry(0.07, 0.012, 5, 12), gold), 0, 0.13, 0); rim.rotation.x = Math.PI / 2; body.add(rim);
+  body.add(at(new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.036, 0.26, 8), lam(0xe6d8b0, 0xb09c70)), 0, 0.23, 0));       // the linen
+  for (const y of [0.17, 0.25, 0.33]) { const b = at(new THREE.Mesh(new THREE.TorusGeometry(0.047, 0.008, 4, 10), dark), 0, y, 0); b.rotation.x = Math.PI / 2 + 0.25; body.add(b); }
+  body.add(at(new THREE.Mesh(new THREE.CylinderGeometry(0.052, 0.05, 0.09, 8), new THREE.MeshBasicMaterial({ color: 0xffb050, fog: false })), 0, 0.37, 0));   // the burning top
+  for (let i = 0; i < 6; i++) {                                                           // the cage: six bars and a ring
+    const a = i / 6 * Math.PI * 2, bar = at(new THREE.Mesh(new THREE.BoxGeometry(0.012, 0.27, 0.012), bronze), Math.cos(a) * 0.072, 0.27, Math.sin(a) * 0.072);
+    bar.rotation.set(Math.sin(a) * 0.1, 0, -Math.cos(a) * 0.1); body.add(bar);
+  }
+  const top = at(new THREE.Mesh(new THREE.TorusGeometry(0.078, 0.01, 4, 12), gold), 0, 0.41, 0); top.rotation.x = Math.PI / 2; body.add(top);
+  model.add(ankh, body);
+  model.position.y = -0.15;
+  // the flame: a wide teardrop, a hot core, and a soft glow round them. The group is what flickers.
   const flame = new THREE.Group();
-  const pale = new THREE.Color(colour).lerp(new THREE.Color(0xffffff), 0.65);
-  flame.add(at(new THREE.Mesh(new THREE.ConeGeometry(0.075, 0.28, 7), new THREE.MeshBasicMaterial({ color: colour, fog: false })), 0, 0, 0));
-  flame.add(at(new THREE.Mesh(new THREE.ConeGeometry(0.04, 0.17, 6), new THREE.MeshBasicMaterial({ color: pale, fog: false })), 0, -0.03, 0.005));
-  g.add(ankh, body, flame);
-  flame.position.set(0, 0.03, 0.0);
+  const bodyTex = flameTexture(colour, 0.78), coreTex = flameTexture(colour, 0.95);
+  flame.add(flameSprite(bodyTex, 0.3, 0.5, 0));
+  flame.add(flameSprite(coreTex, 0.15, 0.3, 0.01));
+  flame.add(flameSprite(bodyTex, 0.9, 0.9, -0.15, 0.16));
+  flame.position.set(0, -0.25, 0.03);
+  g.add(model, flame);
   g.scale.setScalar(1.2);
   g.userData.flame = flame;
   return g;
