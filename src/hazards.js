@@ -24,7 +24,7 @@ export function buildSpikes(scene, level) {
   const s = level.size;
   for (let cz = 0; cz < level.h; cz++) for (let cx = 0; cx < level.w; cx++) {
     const c = level.cells[cz][cx];
-    if (!c.spikes || c.solid) continue;
+    if (!c.spikes || c.solid || c.spikes === 'deep') continue;      // 'deep': too far down to be seen, so not drawn
     let seed = cx * 7919 + cz * 104729;
     const r = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
     for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) {

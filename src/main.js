@@ -60,6 +60,14 @@ resize();
 
 LOAD.set(0.03);
 const data = await (await fetch(`levels/${LEVEL}.json`)).json();
+// A level that has been rebuilt since the save was made ("rev" in its file) starts again from its door: the old places no longer fit.
+const REV = data.rev || 0;
+let rebuilt = false;
+if (run && run.levels && run.levels[LEVEL] && (run.levels[LEVEL].rev || 0) !== REV) {
+  const levels = { ...run.levels }; delete levels[LEVEL];
+  run = { ...run, levels, pos: null, from: run.from || 'hub' };
+  rebuilt = true;
+}
 LOAD.name((data.name || LEVEL).toUpperCase());
 // The hall's false doors are for the eight realms. A spot with a "realm" becomes a real door as soon as levels/<realm>.json exists,
 // so each realm can be added by dropping its level file in, with no change to the hall.
@@ -153,6 +161,7 @@ if (saved) {
   world.place(thing, (it.cell[0] + at[0]) * level.size, (it.cell[1] + at[1]) * level.size);
 }
 const ui = new UI(inv, () => dropHeld(), it => useThing(it));
+if (rebuilt) setTimeout(() => ui.say('This place has been rebuilt since you were last here. You start it again from its door.'), 1500);
 // Doors that need keys, levers, doors that slide, and fireballs from the walls (see hazards.js).
 const gates = new Gates({ scene, level, gates: data.gates, levers: data.levers, saved: saved && saved.gates, say: t => ui.say(t),
   findKey: id => [...inv.all()].map(e => e[0]).find(it => it.def.key === id) || null, takeKey: it => inv.remove(it) });
@@ -265,7 +274,7 @@ function capture() {
   inv.held = null;
   const levels = { ...(run && run.levels) };
   levels[LEVEL] = {
-    items: world.list.map(e => ({ ...pack(e.item), x: e.x, z: e.z })),
+    rev: REV, items: world.list.map(e => ({ ...pack(e.item), x: e.x, z: e.z })),
     urns: props.solid.filter(u => u.smashed).map(u => u.n), gates: gates.pack(),
     creatures: creatures.list.map(c => ({ x: c.x, y: c.y, z: c.z, hp: c.hp, dead: c.state === 'dead', skinned: c.skinned || undefined, fled: c.fled, awake: c.state !== 'still' })),
   };
