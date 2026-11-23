@@ -450,6 +450,8 @@ function prophetTick(dt) {
 }
 document.getElementById('cutSkip').addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); if (cut) cut.t = cut.dur; });
 let leaving = false;
+// The mouse turns your head while the pointer is held; these are the times it is given back (see input.js).
+input.uiOpen = () => ui.open || menu.open || map.open || !!scenes.open || fight.dead || leaving;
 const SKIN_TIME = 1.8;            // seconds to hold a button to take something from a corpse
 const skinning = { c: null, t: 0 };
 let autoArmed = false, autoStay = 0;           // a flooded passage takes you on only after you have been somewhere else first
@@ -522,6 +524,7 @@ const hud = {
   food: document.getElementById('foodBar'), rest: document.getElementById('restBar'), light: document.getElementById('lightBar'),
   air: document.getElementById('airBar'), airRow: document.getElementById('airRow'),
   skin: document.getElementById('skin'), skinBar: document.getElementById('skinBar'), skinName: document.getElementById('skinName'),
+  lockHint: document.getElementById('lockHint'),
   wind: document.getElementById('wind'), windBar: document.getElementById('windBar'), windName: document.getElementById('windName'),
 };
 let clickUsed = false;
@@ -532,10 +535,10 @@ const health = c => c.state === 'dead' ? (c.def.skin && !c.skinned ? `It is dead
 const HG = rows => rows.map(([c, l, t]) => `<div class="hg ${c}"><b class="hl">${l}</b><span>${t.replace(/\[([^\]]+)\]/g, '<kbd>$1</kbd>')}</span></div>`).join('');
 const HELP = {
   keys: HG([
-    ['c-move', 'MOVE', '[W] forward &nbsp; [S] back &nbsp; [A] [D] sidestep &nbsp; [Q] [E] turn &nbsp; [Shift] run &nbsp; [Space] jump, swim up'],
-    ['c-look', 'LOOK', 'Hold [Right button] and move the mouse &nbsp; add [Left button] to walk forward &nbsp; [Wheel] tilts the view'],
-    ['c-thing', 'THINGS', '[F] or click: pick up &nbsp; [Tab] pack &nbsp; click what you carry for options &nbsp; [G] drop'],
-    ['c-fight', 'FIGHT', '[Right button] right hand, [Left button] left hand: hold, then let go &nbsp; longer = harder &nbsp; aim high, middle, low: overhead, slash, thrust'],
+    ['c-move', 'MOVE', '[W] forward &nbsp; [S] back &nbsp; [A] [D] sidestep &nbsp; [Q] [E] turn &nbsp; [Shift] run &nbsp; [Space] jump, swim up &nbsp; both mouse buttons: walk forward'],
+    ['c-look', 'LOOK', 'Move the mouse (click the view once to take the pointer) &nbsp; [Tab] or [Esc] gives the pointer back'],
+    ['c-thing', 'THINGS', '[F] or left click: pick up what you look at &nbsp; [Tab] pack &nbsp; click what you carry for options &nbsp; [G] drop'],
+    ['c-fight', 'FIGHT', '[Right button] right hand, [Left button] left hand: hold, then let go &nbsp; longer = harder &nbsp; [Wheel] chooses overhead, slash or thrust'],
     ['c-fight', '', '[C] guard &nbsp; [V] dodge &nbsp; [T] lock on'],
     ['c-live', 'SURVIVE', '[L] lamp &nbsp; click food to eat &nbsp; [M] map &nbsp; [B] sleep'],
     ['c-game', 'GAME', '[Esc] menu &nbsp; [F5] quicksave &nbsp; [H] hide this'],
@@ -598,6 +601,7 @@ function step(dt, forced) {
   if (inp.pressed.has('lamp')) life.toggleLight(torches.some(t => t.d < 2.4));
   if (inp.pressed.has('sleep')) sleep();
   if (inp.pressed.has('help')) setHelp(!helpOn);
+  if (inp.pressed.has('stance')) ui.say(`Next blow: ${MOVES[['low', 'mid', 'high'][input.stance]].name.toLowerCase()}.`);
   if (inp.pressed.has('nextLevel')) { travel(LEVELS[(LEVELS.indexOf(LEVEL) + 1) % LEVELS.length]); return; }
   for (const [act, d] of [['resDown', -1], ['resUp', 1]]) {
     if (!inp.pressed.has(act)) continue;
@@ -669,8 +673,8 @@ function step(dt, forced) {
   // A click picks up, drops or goes through a door. If it did none of those, it is the start of a blow.
   for (const [cx, cy] of inp.clicks || []) {
     if (inv.held) { dropHeld(); clickUsed = true; }
-    else if (pickUp(dirAt(cx, cy), 0.14) || setRelics() || gates.use(player)) clickUsed = true;
-    else if (spot && spot.to && !spot.auto && (input.device === 'touch' || !creatures.hunting)) { travel(spot.to); clickUsed = true; }
+    else if (pickUp(dirAt(cx, cy), 0.14) || setRelics() || (input.device === 'touch' && gates.use(player))) clickUsed = true;
+    else if (spot && spot.to && !spot.auto && input.device === 'touch') { travel(spot.to); clickUsed = true; }      // with a mouse a click is a blow: doors are F
   }
   if (!inp.handL) clickUsed = false;
 
@@ -754,6 +758,8 @@ function step(dt, forced) {
   const air = life.air ?? 1;
   hud.airRow.style.display = air < 1 ? 'flex' : 'none';
   hud.air.style.width = (air * 100) + '%'; hud.airRow.classList.toggle('out', air <= 0.3);
+  const needClick = input.device === 'keys' && !input.locked() && !input.noLock && !input.uiOpen() && !cut;
+  if (hud.lockHint.style.display !== (needClick ? 'block' : 'none')) hud.lockHint.style.display = needClick ? 'block' : 'none';
   hud.hurt.style.opacity = fight.dead ? 1 : Math.min(1, fight.hurtT * 2) * 0.9 + (fight.hp < fight.hpMax * 0.25 ? 0.25 : 0);
   hud.skin.style.opacity = skinning.c ? 1 : 0;
   if (skinning.c) { hud.skinBar.style.width = Math.min(100, skinning.t / SKIN_TIME * 100) + '%'; hud.skinName.textContent = skinning.c.def.skin.label; }

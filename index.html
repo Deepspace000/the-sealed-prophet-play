@@ -27,6 +27,8 @@
   #helpBtn { position: fixed; left: 14px; top: calc(46px * var(--t)); z-index: 6; font: inherit; font-size: 10px; letter-spacing: .2em; color: #e8d9a8;
              background: rgba(8,6,3,.8); border: 1px solid #d9b65a; padding: 5px 9px; cursor: pointer; }
   #helpBtn:hover { background: #d9b65a; color: #17120a; }
+  #lockHint { display: none; position: fixed; left: 50%; top: 38%; transform: translateX(-50%); padding: 5px 12px; font-size: 10px; letter-spacing: .24em; color: #e8d9a8;
+              background: rgba(8,6,3,.7); border: 1px solid #7d6a3c; pointer-events: none; }
   #look { position: fixed; left: 50%; top: 54%; transform: translateX(-50%); font-size: calc(14px * var(--t)); letter-spacing: .1em;
           text-shadow: 0 1px 3px #000; pointer-events: none; }
   #msg { position: fixed; left: 50%; top: 22%; transform: translateX(-50%); padding: 6px 16px; font-size: calc(14px * var(--t));
@@ -390,6 +392,7 @@
   <button data-act="menu">MENU</button>
   <button data-act="map">MAP</button>
 </div>
+<div id="lockHint">CLICK TO LOOK AROUND</div>
 <div id="black"></div>
 <div id="cutBars"><i></i><i></i><button id="cutSkip">SKIP</button></div>
 <div id="loading" class="deco">

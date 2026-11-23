@@ -3,7 +3,7 @@ const KEY_ACTION = {
   Space: 'jump', F5: 'quicksave', KeyL: 'lamp', KeyH: 'help', Minus: 'resDown', Equal: 'resUp',
   KeyF: 'use', Tab: 'bag', KeyI: 'bag', KeyG: 'drop', KeyN: 'nextLevel', KeyV: 'dodge', Escape: 'menu', KeyB: 'sleep', KeyM: 'map', KeyT: 'target',
 };
-// Fighting: R (hold, let go) or the left mouse button strikes; C (hold) blocks; V, or A, D or S tapped twice, dodges.
+// Fighting: R (hold, let go) or a mouse button strikes; C (hold) blocks; V, or A, D or S tapped twice, dodges.
 // Controller: right trigger strikes, left trigger blocks, B dodges.
 // A, right bumper, X, Y, B, then the D-pad (up and left go back a place, down and right go on)
 const PAD_ACTION = { 0: 'jump', 5: 'lamp', 2: 'use', 3: 'bag', 1: 'back', 9: 'menu', 8: 'map', 11: 'target', 12: 'left', 14: 'left', 13: 'right', 15: 'right' };
@@ -22,10 +22,6 @@ export class Input {
     this.padPrev = [];
     this.device = 'keys';         // 'keys', 'pad' or 'touch': the one used last
     this.tapped = {}; this.dodgeKey = null;
-    this.mouseY = 0.5;            // how far down the screen the pointer is, 0..1: it chooses the kind of blow
-    this.leftAlone = false;       // the left button went down without the right one
-    this.rightMoved = 0;          // how far the mouse has moved since the right button went down: a still hold is a blow, a drag is a look
-    this.rightCancel = false;
     this.charging = false;        // set by the game each frame: a blow is being wound up, so moving the mouse no longer drops it
 
     const typing = e => e.target && e.target.tagName === 'INPUT';      // writing a note on the map: the keys are letters
@@ -33,6 +29,11 @@ export class Input {
       if (typing(e)) return;
       if (!e.repeat) {
         this.keys.add(e.code);
+        if (e.code === 'Escape') {                       // (the browser may also take Esc to free the pointer: count it once)
+          const now = performance.now();
+          if (now - this.lockLostAt < 400) return;
+          this.escAt = now;
+        }
         if (KEY_ACTION[e.code]) this.pressed.add(KEY_ACTION[e.code]);
         if (e.code === 'KeyA' || e.code === 'KeyD' || e.code === 'KeyS') {      // tapped twice quickly: dodge that way
           const now = performance.now();
@@ -45,46 +46,57 @@ export class Input {
     });
     addEventListener('keyup', e => this.keys.delete(e.code));
     addEventListener('blur', () => this.keys.clear());
-    // Mouse. Hold the right button and move the mouse to look around.
-    // While the right button is down, hold the left button as well to walk forward.
-    // On its own, each button works a hand (see read below): right button, right hand; left button, left hand.
-    // The wheel tilts the view. Z switches free mouse-look on and off (not in every embedded view).
-    this.mouse = { right: false, left: false, zLook: false };
-    const lock = () => Promise.resolve(canvas.requestPointerLock?.()).catch(() => {});
-    const locked = () => document.pointerLockElement === canvas;
-    addEventListener('keydown', e => {
-      if (e.code !== 'KeyZ' || e.repeat || typing(e)) return;
-      this.mouse.zLook = !this.mouse.zLook;
-      if (this.mouse.zLook) lock(); else if (locked()) document.exitPointerLock();
+    // Mouse. Moving the mouse turns your head: the first click on the picture takes the pointer (it is hidden and
+    // held, so you can keep turning), and from then on the buttons are your hands: right button, right hand; left button,
+    // left hand; both together walk you forward. The pointer is given back while your pack, the map, the menu or a text
+    // is open (uiOpen, set by the game), and Esc frees it and opens the menu. The wheel chooses the kind of blow.
+    // Where the pointer cannot be held (some embedded views), holding the right button and moving looks instead.
+    this.mouse = { right: false, left: false };
+    this.uiOpen = () => false;     // set by the game: something that needs the pointer is open
+    this.stance = 1;               // the kind of blow the mouse strikes with: 0 thrust, 1 slash, 2 overhead (the wheel changes it)
+    this.swallow = false;          // the click that took the pointer is not a blow
+    this.noLock = false;           // the pointer could not be held here
+    this.lastWant = false; this.selfExit = false; this.escAt = 0; this.lockLostAt = 0; this.engaged = false;
+    this.locked = () => document.pointerLockElement === canvas;
+    const lock = () => { try { Promise.resolve(canvas.requestPointerLock?.()).catch(() => {}); } catch (e) { /* not allowed here */ } };
+    document.addEventListener('pointerlockchange', () => {
+      if (this.locked()) { this.engaged = true; this.noLock = false; return; }
+      this.mouse.right = this.mouse.left = false;
+      if (this.selfExit) { this.selfExit = false; return; }
+      if (this.uiOpen()) return;                        // something else freed it (a text scene)
+      const now = performance.now();
+      this.lockLostAt = now;
+      if (now - this.escAt > 400) this.pressed.add('menu');      // Esc went to the browser to free the pointer: it still opens the menu
     });
-    document.addEventListener('pointerlockchange', () => { if (!locked()) this.mouse.zLook = false; });
     canvas.addEventListener('mousedown', e => {
       if (this.device === 'touch') return;
       this.device = 'keys';
-      if (e.button === 2) { this.mouse.right = true; this.rightMoved = 0; lock(); }     // lock lets you keep turning past the screen edge
-      if (e.button === 0) {
-        this.mouse.left = true;
-        if (!this.mouse.right) { this.clicks.push([e.clientX, e.clientY]); this.leftAlone = true; }
-      }
+      if (!this.locked()) {
+        if (this.uiOpen()) { if (e.button === 0) this.clicks.push([e.clientX, e.clientY]); return; }      // with the pack open, a click on the room drops or picks up
+        if (!this.noLock) {                               // this click only takes the pointer
+          lock(); this.swallow = true;
+          setTimeout(() => { if (!this.locked()) this.noLock = true; }, 500);
+          return;
+        }
+        if (e.button === 0) this.clicks.push([e.clientX, e.clientY]);
+      } else if (e.button === 0 && !this.mouse.right) this.clicks.push([innerWidth / 2, innerHeight / 2]);      // a click picks up what you are looking at
+      if (e.button === 2) this.mouse.right = true;
+      if (e.button === 0) this.mouse.left = true;
     });
     addEventListener('mouseup', e => {
-      if (e.button === 0) { this.mouse.left = false; this.leftAlone = false; }
-      if (e.button === 2) {
-        this.mouse.right = false;
-        if (locked() && !this.mouse.zLook) document.exitPointerLock();
-      }
+      if (e.button === 0) this.mouse.left = false;
+      if (e.button === 2) this.mouse.right = false;
+      if (!this.mouse.left && !this.mouse.right) this.swallow = false;
     });
-    addEventListener('blur', () => { this.mouse.right = this.mouse.left = this.leftAlone = false; });
+    addEventListener('blur', () => { this.mouse.right = this.mouse.left = false; });
     canvas.addEventListener('contextmenu', e => e.preventDefault());
-    canvas.addEventListener('wheel', e => { this.look[1] += e.deltaY * 0.0012; e.preventDefault(); }, { passive: false });
+    canvas.addEventListener('wheel', e => {
+      const n = Math.max(0, Math.min(2, this.stance + (e.deltaY < 0 ? 1 : -1)));
+      if (n !== this.stance) { this.stance = n; this.pressed.add('stance'); }
+      e.preventDefault();
+    }, { passive: false });
     addEventListener('mousemove', e => {
-      this.mouseY = e.clientY / innerHeight;
-      if (this.mouse.right) {
-        const before = this.rightMoved;
-        this.rightMoved += Math.abs(e.movementX) + Math.abs(e.movementY);
-        if (before < 14 && this.rightMoved >= 14) this.rightCancel = true;       // it has turned into a look
-      }
-      if (!this.mouse.right && !this.mouse.zLook) return;
+      if (!this.locked() && !(this.noLock && this.mouse.right)) return;
       this.look[0] += e.movementX * 0.0032;
       this.look[1] += e.movementY * 0.0032;
     });
@@ -143,6 +155,8 @@ export class Input {
     }
   }
 
+  relock() { try { Promise.resolve(this.canvas.requestPointerLock?.()).catch(() => {}); } catch (e) { /* needs a click */ } }
+
   // Returns this frame's controls and clears the one-shot ones.
   read(dt) {
     const k = this.keys;
@@ -162,14 +176,19 @@ export class Input {
 
     let attackHeld = k.has('KeyR') || this.touchHeld.has('attack');
     let blockHeld = k.has('KeyC') || this.touchHeld.has('block');
+    // The pointer is held for looking unless something that needs it is open.
+    const want = this.uiOpen();
+    if (want !== this.lastWant) {
+      this.lastWant = want;
+      if (want && this.locked()) { this.selfExit = true; document.exitPointerLock(); }
+      else if (!want && this.engaged && !this.locked()) this.relock();
+    }
     // The mouse buttons work the hands: the right button the right hand, the left button the left hand.
-    // Holding the right button and moving the mouse looks about instead, and drops any blow being wound up.
-    // Both buttons together (right first, then left) walk you forward, and neither hand acts.
-    const both = this.mouse.right && this.mouse.left;
+    // Both buttons together walk you forward, and neither hand acts (a blow being wound up is dropped).
+    const both = this.mouse.right && this.mouse.left && !this.swallow;
     if (both) mz += 1;
-    const handR = this.mouse.right && !both && (this.rightMoved < 14 || this.charging), handL = this.leftAlone && !this.mouse.right && !this.mouse.zLook;
-    const cancelR = (this.rightCancel && !this.charging) || both;      // a blow already wound up stays wound up until you let go
-    this.rightCancel = false;
+    const handR = this.mouse.right && !both && !this.swallow, handL = this.mouse.left && !both && !this.swallow;
+    const cancelR = both;
     const mouseAttack = handR || handL;
 
     const pads = navigator.getGamepads ? navigator.getGamepads() : [];
@@ -193,9 +212,9 @@ export class Input {
 
     const len = Math.hypot(mx, mz);
     if (len > 1) { mx /= len; mz /= len; }
-    // The kind of blow. Mouse: where the pointer is, high, middle or low on the screen.
+    // The kind of blow. Mouse: the one chosen with the wheel (thrust, slash or overhead).
     // Keys, controller, touch: pushing forward makes it a thrust, pulling back an overhead blow.
-    const aim = mouseAttack ? (this.mouseY < 0.36 ? 'high' : this.mouseY > 0.66 ? 'low' : 'mid')
+    const aim = mouseAttack ? ['low', 'mid', 'high'][this.stance]
       : mz > 0.5 ? 'low' : mz < -0.5 ? 'high' : 'mid';
     // Which way a dodge goes, as [sideways, forward]: the key tapped twice, or the way you are moving, or straight back.
     const dk = this.dodgeKey;
