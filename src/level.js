@@ -86,6 +86,11 @@ export class Level {
     const s = this.size, cx = Math.floor(x / s), cz = Math.floor(z / s), c = this.cell(cx, cz);
     return c.solid ? Infinity : Level.floorIn(c, x / s - cx, z / s - cz);
   }
+  // The floor as it is drawn (a stair is stepped), for things that lie on it.
+  surfAt(x, z) {
+    const s = this.size, cx = Math.floor(x / s), cz = Math.floor(z / s), c = this.cell(cx, cz);
+    return c.solid ? Infinity : Level.surfIn(c, x / s - cx, z / s - cz);
+  }
   ceilAt(x, z) { const c = this.cellAt(x, z); return c.solid ? -Infinity : c.ceil; }
   waterAt(x, z) { const c = this.cellAt(x, z); return (c.solid || c.water == null) ? null : c.water; }
 

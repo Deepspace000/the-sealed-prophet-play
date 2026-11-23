@@ -31,7 +31,7 @@ let run = getRun();
 const wanted = params.get('level');
 if (run && wanted && wanted !== run.level) run = { ...run, from: run.level, level: wanted, pos: null };   // a jump made for testing
 const LEVEL = run ? run.level : (wanted || 'test');
-const go = () => { location.search = '?intro=0' + (params.get('nosave') === '1' ? '&nosave=1' : ''); };
+const go = () => { location.search = '?intro=0' + (params.get('nosave') === '1' ? '&nosave=1' : '') + (params.get('sound') === '1' ? '&sound=1' : ''); };
 const TORCH_LIGHTS = 5;            // how many wall torches cast light at once (the nearest ones)
 const DARK = { color: 0x000000, density: 0.045 };
 const WET = { color: 0x06323a, density: 0.22 };

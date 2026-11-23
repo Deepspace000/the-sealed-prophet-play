@@ -182,7 +182,18 @@ export class Creatures {
       const def = c.def;
       if (c.burn > 0 && c.state !== 'dead') { c.burn -= dt; this.hurt(c, 5 * dt, 'fire', c.x, c.z, 0); c.flash = 0.16; }       // set alight by a torch
       c.flash = Math.max(0, c.flash - dt);
-      if (c.state === 'dead') { this.draw(c, dt, P, brightnessAt); continue; }
+      if (c.state === 'dead') {                              // a body lies on the ground: it falls if it died in the air, and settles on to the floor under its middle
+        const g0 = this.level.surfAt(c.x, c.z);
+        let g = g0;                                          // on a stair it rests on the lowest step under it, so no end of it hangs in the air
+        for (const [ox, oz] of [[0.5, 0], [-0.5, 0], [0, 0.5], [0, -0.5]]) {
+          const s = this.level.surfAt(c.x + ox, c.z + oz);
+          if (s < g && s > g0 - 0.7) g = s;
+        }
+        if (g !== Infinity && c.y !== g) {
+          if (c.y > g + 0.02) { c.vy -= G * dt; c.y = Math.max(g, c.y + c.vy * dt); } else { c.y = g; c.vy = 0; }
+        }
+        this.draw(c, dt, P, brightnessAt); continue;
+      }
       const dx = P.x - c.x, dz = P.z - c.z, dist = Math.hypot(dx, dz), dy = P.y - c.y;
       const los = dist < 30 && this.sees(c.x, c.y + def.height * 0.85, c.z, P.x, P.eyeY - 0.2, P.z);
       let aware = false;

@@ -71,7 +71,11 @@ function gurgle(v) {
 SOUNDS.rumble = rumble;
 SOUNDS.gurgle = gurgle;
 
+// MUTED FOR NOW: the game is silent unless the address has ?sound=1 (or &sound=1). Set this to false to turn sound back on for everyone.
+export const MUTED = new URLSearchParams(location.search).get('sound') !== '1';
+
 export function play(name, far = 0) {
+  if (MUTED) return;
   if (!ctx() || ac.state !== 'running' || !SOUNDS[name]) return;
   const v = Math.max(0, 1 - far / 22);
   if (v > 0.03) SOUNDS[name](v);

@@ -6,6 +6,7 @@
 //
 // STAND-IN ART AND MUSIC. The scene is drawn by code and the music is made by code,
 // so the opening can be seen and timed. Both are to be replaced by real art and music.
+import { MUTED } from './sound.js';
 
 const W = 384, H = 216;                      // drawing units; the canvas is SHARP times finer
 const SHARP = 3;
@@ -418,7 +419,7 @@ class Music {
     delay.delayTime.value = 0.42; fb.gain.value = 0.4; wet.gain.value = 0.32;
     delay.connect(fb); fb.connect(delay); delay.connect(wet); wet.connect(this.master);
     this.bus = ac.createGain(); this.bus.connect(this.master); this.bus.connect(delay);
-    this.master.gain.linearRampToValueAtTime(0.85, ac.currentTime + 3);
+    this.master.gain.linearRampToValueAtTime(MUTED ? 0 : 0.85, ac.currentTime + 3);
 
     // a low drone, and a glassy pad above it that swells slowly
     this.droneFilter = ac.createBiquadFilter(); this.droneFilter.type = 'lowpass'; this.droneFilter.frequency.value = 420;
