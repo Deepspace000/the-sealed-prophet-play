@@ -696,7 +696,13 @@ function step(dt, forced) {
   hud.hp.style.width = (fight.hp / fight.hpMax * 100) + '%';
   hud.st.style.width = (fight.st / fight.stMax * 100) + '%';
   hud.food.style.width = life.food + '%'; hud.rest.style.width = life.rest + '%';
-  hud.light.style.width = (glow ? glow.left * 100 : 0) + '%';
+  const gz = life.gauge(), lr = document.getElementById('lightRow');
+  lr.style.display = gz ? 'flex' : 'none';
+  if (gz) {
+    hud.light.style.width = gz.left * 100 + '%';
+    lr.classList.toggle('off', !gz.lit); lr.classList.toggle('low', gz.left < 0.2);
+    document.getElementById('lightMin').textContent = gz.mins + ' min';
+  }
   const air = life.air ?? 1;
   hud.airRow.style.display = air < 1 ? 'flex' : 'none';
   hud.air.style.width = (air * 100) + '%'; hud.airRow.classList.toggle('out', air <= 0.3);

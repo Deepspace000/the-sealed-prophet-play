@@ -34,6 +34,13 @@ export class Survival {
     return it ? { ...it.def.light, left: Math.max(0, it.n / it.def.light.burn) } : null;
   }
 
+  // For the fuel gauge: the burning light, else the first one you carry (lit or not): { left 0..1, mins, lit } or null.
+  gauge() {
+    const it = this.lit() || this.top().find(x => x.def.light);
+    if (!it) return null;
+    return { left: Math.max(0, Math.min(1, it.n / it.def.light.burn)), mins: Math.ceil(it.n / 60), lit: !!it.lit };
+  }
+
   // The lamp key. nearFlame: you are standing at a burning wall torch, so no match is needed.
   toggleLight(nearFlame, only) {
     const on = only ? (only.lit ? only : null) : this.lit();

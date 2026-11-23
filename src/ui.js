@@ -228,6 +228,7 @@ export class UI {
     this.pad = usingPad;
     if (this.opts && this.inv.version !== this.opts.at) this.closeOpts();
     if (!usingPad && this.focus >= 0) { this.focus = -1; this.seen = ''; }
+    this.fuelLines();
     const key = this.inv.version + '|' + this.open + '|' + this.focus;
     if (key === this.seen) return;
     this.seen = key;
@@ -237,7 +238,19 @@ export class UI {
   slotHTML(area, i, it) {
     const icon = it ? `<i${hasArt(it.def) ? ' class="art"' : ''} style="background-image:url(${iconURL(it.def)})"></i>` : '';
     const opener = it && it.inside ? `<b class="opener${this.inv.open === it ? ' on' : ''}">&#9662;</b>` : '';
-    return `<div class="slot${it && it.lit ? ' lit' : ''}" data-area="${area}" data-i="${i}">${icon}${opener}</div>`;
+    const fuel = it && it.def.light ? `<u class="fuel"><s></s></u>` : '';       // a small line under a lamp's icon that runs down as it burns
+    return `<div class="slot${it && it.lit ? ' lit' : ''}" data-area="${area}" data-i="${i}">${icon}${opener}${fuel}</div>`;
+  }
+  fuelLines() {                                       // kept current every frame, without redrawing the bar
+    for (const s of this.slots()) {
+      const f = s.querySelector('.fuel');
+      if (!f) continue;
+      const it = this.itemAt(s);
+      if (!it || !it.def.light) continue;
+      const left = Math.max(0, Math.min(1, it.n / it.def.light.burn));
+      f.firstChild.style.width = left * 100 + '%';
+      f.classList.toggle('low', left < 0.2);
+    }
   }
   grid(area, title) {
     const arr = this.inv.arr(area);
