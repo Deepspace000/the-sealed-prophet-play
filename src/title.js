@@ -22,11 +22,11 @@
   const DRIP = { T: [[31, 100]], H: [[3, 99], [56, 98]], E: [[5, 99], [30, 100]], S: [[3, 80], [30, 101]], A: [[2, 100], [58, 100]], L: [[5, 99], [28, 99]],
     D: [[5, 99], [38, 98]], P: [[5, 100]], R: [[5, 100], [58, 100]], O: [[33, 98]] };
   const LINES = ['THE SEALED', 'PROPHET'];
-  const GAP = 15, SPACE = 44, LH = 190, TOP = 12;
+  const GAP = 15, SPACE = 44, TALL = 1.34, LH = 100 * TALL + 70, TOP = 14;      // TALL stretches the letters upward
   let seed = 11;
   const rnd = () => { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; };
   const wid = line => [...line].reduce((w, c) => w + (c === ' ' ? SPACE : G[c][0] + GAP), -GAP);
-  const W = Math.max(...LINES.map(wid)) + 40, H = TOP + LH * LINES.length - 24;
+  const W = Math.max(...LINES.map(wid)) + 40, H = TOP + LH * LINES.length - 10;
   let under = '', body = '', shine = '', drips = '', splash = '', n = 0;
 
   LINES.forEach((line, row) => {
@@ -35,15 +35,15 @@
     for (const c of line) {
       if (c === ' ') { x += SPACE; continue; }
       const [w, strokes] = G[c], slant = -0.06;
-      const tf = `translate(${x.toFixed(1)} ${y}) skewX(${(-slant * 57).toFixed(1)})`;
+      const tf = `translate(${x.toFixed(1)} ${y}) skewX(${(-slant * 57).toFixed(1)}) scale(1 ${TALL})`;
       for (const d of strokes) {
         under += `<path d="${d}" transform="${tf}"/>`;
         body += `<path d="${d}" transform="${tf}"/>`;
-        shine += `<path d="${d}" transform="${tf} translate(-2.2 -2.4)"/>`;
+        shine += `<path d="${d}" transform="${tf} translate(-2.2 -1.8)"/>`;
       }
       for (const [dx, dy] of DRIP[c]) {
         if (rnd() < 0.32) continue;
-        const len = 14 + rnd() * 52, r = 3 + rnd() * 2.4, px = x + dx + (dy - 50) * slant * -1 * 0.0, py = y + dy - 1;
+        const len = 16 + rnd() * 60, r = 3 + rnd() * 2.4, px = x + dx + (dy - 50) * slant * -1 * 0.0, py = y + dy * TALL - 1;
         const cls = `style="animation-delay:${(2.4 + rnd() * 4).toFixed(2)}s"`;
         // the drip: a thin run that swells to a bead at the bottom
         drips += `<g class="btDrip" ${cls}><path d="M${px.toFixed(1)},${py} L${(px + (rnd() - .5) * 1.5).toFixed(1)},${(py + len).toFixed(1)}" stroke-width="${(r * 1.15).toFixed(1)}"/>`
@@ -52,7 +52,26 @@
       x += w + GAP; n++;
     }
   });
-  for (let i = 0; i < 34; i++) {          // splashes and flecks round the words
+  // Stains: big uneven pools and smears soaked into the page behind the words, and a few heavier splashes.
+  let stains = '';
+  const blob = (cx, cy, rad, k) => {
+    const pts = [], m = 14, ph = rnd() * 6;
+    for (let i = 0; i < m; i++) { const a = i / m * Math.PI * 2, q = rad * (0.62 + 0.5 * rnd() + 0.12 * Math.sin(a * 3 + ph)); pts.push([cx + Math.cos(a) * q * k, cy + Math.sin(a) * q]); }
+    let d = `M${((pts[0][0] + pts[m - 1][0]) / 2).toFixed(1)},${((pts[0][1] + pts[m - 1][1]) / 2).toFixed(1)}`;
+    for (let i = 0; i < m; i++) { const a = pts[i], b = pts[(i + 1) % m]; d += ` Q${a[0].toFixed(1)},${a[1].toFixed(1)} ${((a[0] + b[0]) / 2).toFixed(1)},${((a[1] + b[1]) / 2).toFixed(1)}`; }
+    return d + 'Z';
+  };
+  for (let i = 0; i < 7; i++) {
+    const cx = W * (0.08 + rnd() * 0.84), cy = TOP + rnd() * (LH * LINES.length - 40), rad = 22 + rnd() * 46;
+    stains += `<path d="${blob(cx, cy, rad, 1.5)}" fill="#5c0807" opacity="${(0.28 + rnd() * 0.3).toFixed(2)}"/>`;
+    stains += `<path d="${blob(cx + 5, cy + 4, rad * 0.5, 1.3)}" fill="#8a0d0a" opacity="${(0.3 + rnd() * 0.25).toFixed(2)}"/>`;
+    for (let j = 0; j < 4; j++) { const a = rnd() * 6.28, dd = rad * (1.2 + rnd()); stains += `<circle cx="${(cx + Math.cos(a) * dd * 1.4).toFixed(1)}" cy="${(cy + Math.sin(a) * dd).toFixed(1)}" r="${(1.2 + rnd() * 3.4).toFixed(1)}" fill="#6b0a08" opacity=".7"/>`; }
+  }
+  for (let i = 0; i < 3; i++) {                        // a dragged smear
+    const sx = W * (0.1 + rnd() * 0.6), sy = TOP + rnd() * LH * 2 * 0.9, ln = 60 + rnd() * 120;
+    stains += `<path d="M${sx.toFixed(1)},${sy.toFixed(1)} q${(ln / 2).toFixed(1)},${(rnd() * 14 - 7).toFixed(1)} ${ln.toFixed(1)},${(rnd() * 20 - 10).toFixed(1)}" stroke="#5a0706" stroke-width="${(5 + rnd() * 9).toFixed(1)}" stroke-linecap="round" fill="none" opacity=".35"/>`;
+  }
+  for (let i = 0; i < 46; i++) {          // splashes and flecks round the words
     const sx = rnd() * W, sy = TOP + rnd() * (LH * LINES.length), r = rnd() < 0.15 ? 2.5 + rnd() * 3 : 0.8 + rnd() * 1.8;
     splash += `<circle cx="${sx.toFixed(1)}" cy="${sy.toFixed(1)}" r="${r.toFixed(1)}"/>`;
   }
@@ -75,6 +94,7 @@
     </filter>
   </defs>
   <g filter="url(#btWet)" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <g>${stains}</g>
     <g stroke="#250202" stroke-width="15">${under}</g>
     <g class="btDrips" stroke="#7a0907" fill="#7a0907">${drips}</g>
     <g stroke="url(#btRed)" stroke-width="10.5">${body}</g>

@@ -104,7 +104,7 @@ export class UI {
       arr[1 - i] = it; inv.held = null; inv.version++;
       return;
     }
-    if (inv.click(area, i) === 'no') { this.say('That does not fit there.'); this.putBack(from); return; }
+    if (inv.click(area, i) === 'no') { this.say(this.noFit(it, area)); this.putBack(from); return; }
     if (inv.held) this.putBack(from);                              // it swapped something out: that goes where the dragged one was
   }
   // Return what is on the pointer to the place it was lifted from, or anywhere it fits.
@@ -127,7 +127,7 @@ export class UI {
   clickSlot(slotEl, e) {
     const it = this.itemAt(slotEl), area = slotEl.dataset.area, i = +slotEl.dataset.i, inv = this.inv, o = this.opts;
     if (inv.held) {                                   // you are moving something: put it down here
-      if (inv.click(area, i) === 'no') this.say('That does not fit there.');
+      if (inv.click(area, i) === 'no') this.say(this.noFit(inv.held, area));
       return;
     }
     if (it) {
@@ -140,7 +140,16 @@ export class UI {
     this.closeOpts();
     if (!from || from[o.i] !== o.it) return;
     inv.click(o.area, o.i);
-    if (inv.click(area, i) === 'no') { inv.click(o.area, o.i); this.say('That does not fit there.'); }
+    if (inv.click(area, i) === 'no') { inv.click(o.area, o.i); this.say(this.noFit(o.it, area)); }
+  }
+  // Why a thing will not go there, in words.
+  noFit(it, area) {
+    const name = it.def.name.toLowerCase(), cap = it.def.name[0].toUpperCase() + name.slice(1);
+    if (area === 'belt') return `The ${name} is too big for your belt.`;
+    if (area === 'back') return `Only a knapsack can be worn on your back.`;
+    if (area === 'pack') return `The ${name} is too big for your pack.`;
+    if (area === 'bag') return `The ${name} is too big for that bag.`;
+    return `${cap} does not fit there.`;
   }
   showOpts(slotEl, it) {
     const v = SHORT[verb(it)] || verb(it), area = slotEl.dataset.area, d = it.def, back = d.wear === 'back';

@@ -423,7 +423,7 @@ document.getElementById('cutSkip').addEventListener('pointerdown', e => { e.prev
 let leaving = false;
 const SKIN_TIME = 1.8;            // seconds to hold a button to take something from a corpse
 const skinning = { c: null, t: 0 };
-let autoArmed = false;           // a flooded passage takes you on only after you have been somewhere else first
+let autoArmed = false, autoStay = 0;           // a flooded passage takes you on only after you have been somewhere else first
 function travel(to) {
   if (leaving) return;
   leaving = true;
@@ -602,8 +602,11 @@ function step(dt, forced) {
   camera.getWorldDirection(viewDir);
 
   const spot = spotHere();
-  if (!spot || !spot.auto) autoArmed = true;
-  else if (autoArmed && spot.to && !fight.dead) { travel(spot.to); return; }
+  if (!spot || !spot.auto) { autoArmed = true; autoStay = 0; }
+  else if (autoArmed && spot.to && !fight.dead) {         // "delay": seconds to stand there first, so the load starts after you are out of the water, not in it
+    autoStay += dt;
+    if (autoStay >= (spot.delay || 0)) { travel(spot.to); return; }
+  }
   if (inp.pressed.has('bag')) ui.toggle();
   if (pad && ui.open) {
     if (inp.pressed.has('left')) ui.nav(-1);
@@ -686,7 +689,7 @@ function step(dt, forced) {
   const seen = world.target(camera.position, viewDir, 2.6, 0.3);
   const beast = seen ? null : creatures.target(camera.position, viewDir);
   ui.setLook(seen ? seen.item.def.name : beast ? beast.def.name + '. ' + health(beast)
-    : corpse ? `${corpse.def.name}. It is dead. Hold a button to ${corpse.def.skin.verb} it.`
+    : corpse ? (skinning.c ? '' : `${corpse.def.name}. It is dead. Hold a button to ${corpse.def.skin.verb} it.`)
     : spot && spot.seal ? `A great seal is set in the stone. ${placed.size} of its eight sockets hold a gem.` + (relicsCarried().length && nearSeal() ? ' ' + SET[input.device] : '')
     : spot && spot.text ? spot.text + (spot.to && !spot.auto ? ' ' + GO[input.device] : '') : '');
   ui.update(dt, pad);

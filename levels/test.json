@@ -51,7 +51,7 @@
     "#........#######Q..#",
     "#........#######...#",
     "#...wwwww##vkv######",
-    "#...wwwwwuuxkxuuu###",
+    "#...wwwwwuuxkx######",
     "#...wwwww##vkv######",
     "#........###########",
     "####################"
@@ -89,7 +89,7 @@
     { "cell": [9, 1], "text": "A burial, broken open long ago. The bones were thrown about." },
     { "cell": [18, 6], "text": "A dead jackal. The others have been at it." },
     { "cell": [12, 10], "text": "Someone died here, a long time after the tomb was shut." },
-    { "cell": [16, 11], "auto": true, "face": "W", "text": "", "to": "shaft" }
+    { "cell": [12, 11], "auto": true, "delay": 2.5, "face": "W", "text": "", "to": "shaft" }
   ],
   "torches": [
     { "cell": [2, 1], "wall": "N", "h": 2.2 },

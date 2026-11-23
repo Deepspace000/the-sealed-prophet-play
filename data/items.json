@@ -51,7 +51,7 @@
     "rustic_knife": { "name": "Rough knife", "text": "A plain iron knife with a wooden grip. Someone made it by hand.", "weight": 0.4, "size": 1, "weapon": { "damage": 5, "type": "cut", "thrust": "stab", "reach": 1.0, "wind": 0.4, "recover": 0.3 }, "block": 0.2, "icon": ["#8c8c8c", "stick"] },
     "bone": { "name": "Bone", "text": "An old leg bone. It makes a poor club, and it will not last.", "weight": 0.4, "size": 2, "floor": 0.5, "durability": 12, "weapon": { "damage": 2.5, "type": "crush", "reach": 0.95, "wind": 0.35, "recover": 0.28 }, "block": 0.1, "icon": ["#d8cfb0", "stick"] },
     "bandage": { "name": "Bandage", "text": "A strip of old linen, torn from the dead. Wound round a cut, it heals a little.", "weight": 0.05, "size": 1, "bandage": { "heal": 4 }, "icon": ["#e6dcc0", "box"] },
-    "jackal_hide": { "name": "Jackal hide", "text": "The black pelt of a jackal. Rough, and no use to you yet.", "weight": 0.5, "size": 2, "icon": ["#3a2a22", "bag"] },
+    "jackal_hide": { "name": "Jackal hide", "text": "The black pelt of a jackal. Rough, and no use to you yet.", "weight": 0.5, "size": 1, "icon": ["#3a2a22", "bag"] },
     "skull": { "name": "Skull", "text": "A human skull.", "weight": 0.6, "size": 2, "floor": 0.3, "icon": ["#d8cfb0", "disc"] },
     "jawbone": { "name": "Jawbone", "text": "A lower jaw with a few teeth left in it.", "weight": 0.2, "size": 1, "floor": 0.22, "icon": ["#d8cfb0", "ring"] },
     "potsherd": { "name": "Piece of a pot", "text": "A piece of a broken clay pot.", "weight": 0.2, "size": 1, "icon": ["#b5653a", "disc"] },
