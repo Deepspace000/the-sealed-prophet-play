@@ -174,6 +174,43 @@ export function standinDoor(open) {
   return new THREE.Mesh(new THREE.PlaneGeometry(1.5, 2.44), new THREE.MeshLambertMaterial({ map: t }));
 }
 
+// A wall torch of the Egyptian kind: a gilded ankh fixed to the wall, a bronze cup on its crossbar, and a twisted linen torch
+// leaning out of the cup. (Real ones: a gilded bronze lamp in the form of an ankh whose arms held a tubular torch holder
+// with a torch of twisted linen in it.) Its local +z points into the room, the wall is at z = -0.16, and the middle of the flame is at the origin.
+export function egyptianTorch(colour = 0xffb040) {
+  const g = new THREE.Group(), body = new THREE.Group();
+  const gold = new THREE.MeshLambertMaterial({ color: 0xd9aa30, emissive: 0x7a5c14 });
+  const bronze = new THREE.MeshLambertMaterial({ color: 0x9a6430, emissive: 0x4a2a10 });
+  const linen = new THREE.MeshLambertMaterial({ color: 0xe6d8b0, emissive: 0xb09c70 });
+  const band = new THREE.MeshLambertMaterial({ color: 0x8a6a38, emissive: 0x3a2c14 });
+  const char = new THREE.MeshLambertMaterial({ color: 0x1c130b });
+  const at = (m, x, y, z) => { m.position.set(x, y, z); return m; };
+  // the ankh on the wall: loop, stem and arms
+  const ankh = new THREE.Group();
+  ankh.add(at(new THREE.Mesh(new THREE.TorusGeometry(0.075, 0.024, 6, 14), gold), 0, 0.17, 0));
+  ankh.add(at(new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.36, 0.04), gold), 0, -0.06, 0));
+  ankh.add(at(new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.05, 0.04), gold), 0, 0.02, 0));
+  ankh.position.set(0, -0.5, -0.13);
+  // the cup and the torch, leaning out from the wall
+  body.position.set(0, -0.47, -0.1); body.rotation.x = 0.35;
+  const cup = at(new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.04, 0.13, 10), bronze), 0, 0.065, 0);
+  const rim = at(new THREE.Mesh(new THREE.TorusGeometry(0.07, 0.012, 5, 12), gold), 0, 0.13, 0); rim.rotation.x = Math.PI / 2;
+  const stick = at(new THREE.Mesh(new THREE.CylinderGeometry(0.036, 0.03, 0.3, 8), linen), 0, 0.19, 0);
+  body.add(cup, rim, stick);
+  for (const y of [0.15, 0.27]) { const b = at(new THREE.Mesh(new THREE.TorusGeometry(0.037, 0.008, 4, 10), band), 0, y, 0); b.rotation.x = Math.PI / 2; body.add(b); }
+  body.add(at(new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.036, 0.07, 8), char), 0, 0.375, 0));
+  // the flame: a wide outer tongue and a pale core. The group is what flickers.
+  const flame = new THREE.Group();
+  const pale = new THREE.Color(colour).lerp(new THREE.Color(0xffffff), 0.65);
+  flame.add(at(new THREE.Mesh(new THREE.ConeGeometry(0.075, 0.28, 7), new THREE.MeshBasicMaterial({ color: colour, fog: false })), 0, 0, 0));
+  flame.add(at(new THREE.Mesh(new THREE.ConeGeometry(0.04, 0.17, 6), new THREE.MeshBasicMaterial({ color: pale, fog: false })), 0, -0.03, 0.005));
+  g.add(ankh, body, flame);
+  flame.position.set(0, 0.03, 0.0);
+  g.scale.setScalar(1.2);
+  g.userData.flame = flame;
+  return g;
+}
+
 // A wall torch: bracket and flame.
 export function standinTorch(colour = 0xffb040) {
   const g = new THREE.Group();

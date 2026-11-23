@@ -96,7 +96,7 @@
     { "cell": [14, 11], "run": "EW", "mode": "button", "id": "seal", "slide": "side" }
   ],
   "buttons": [
-    { "cell": [12, 10], "wall": "N", "h": 1.2, "opens": "seal" }
+    { "cell": [12, 10], "wall": "N", "h": 0.8, "opens": "seal" }
   ],
   "torches": [
     { "cell": [2, 1], "wall": "N", "h": 2.2 },

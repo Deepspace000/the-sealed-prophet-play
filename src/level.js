@@ -96,6 +96,7 @@ export class Level {
     return (this.data.torches || []).map(t => {
       const [cx, cz] = t.cell, o = off[t.wall] || [0, 0], c = this.cell(cx, cz);
       return {
+        wall: t.wall,
         x: (cx + 0.5 + o[0] * 0.42) * s,
         y: (c.floor || 0) + (t.h ?? 2.2),
         z: (cz + 0.5 + o[1] * 0.42) * s,

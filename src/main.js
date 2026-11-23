@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { Level } from './level.js';
 import { Player } from './player.js';
 import { Input } from './input.js';
-import { standinMaterials, standinTorch, standinDoor } from './standin.js';
+import { standinMaterials, standinTorch, egyptianTorch, standinDoor } from './standin.js';
 import { Item, Inventory, WorldItems } from './items.js';
 import { UI } from './ui.js';
 import { runIntro } from './intro.js';
@@ -100,9 +100,11 @@ const lamp = new THREE.PointLight(0xffd9a6, 14, 13, 2);
 lamp.position.set(0.25, -0.2, 0);
 camera.add(lamp);
 
+const WALL_TURN = { N: 0, S: Math.PI, E: -Math.PI / 2, W: Math.PI / 2 };      // the torch faces into the room
 const torches = level.torchPositions().map(pos => {
-  const mesh = standinTorch(TORCH ?? undefined);
+  const mesh = egyptianTorch(TORCH ?? undefined);
   mesh.position.set(pos.x, pos.y, pos.z);
+  mesh.rotation.y = WALL_TURN[pos.wall] ?? 0;
   scene.add(mesh);
   return { ...pos, mesh, phase: Math.random() * 10 };
 });
@@ -376,6 +378,9 @@ const spots = (data.spots || []).map(s => {
   }
   return s;
 });
+// A place's words are shown once, when you first walk into it, and stay a few seconds. (Doors keep their words: they carry the "go on" prompt.)
+const seenSpots = new Set();
+let spotWords = '', spotWordsT = 0, lastSpot = null;
 const spotHere = () => {
   const cx = Math.floor(player.pos.x / level.size), cz = Math.floor(player.pos.z / level.size);
   return spots.find(s => s.cell[0] === cx && s.cell[1] === cz);
@@ -637,6 +642,11 @@ function step(dt, forced) {
   camera.getWorldDirection(viewDir);
 
   const spot = spotHere();
+  if (spot !== lastSpot) {
+    lastSpot = spot;
+    if (spot && spot.text && !(spot.to && !spot.auto) && !spot.seal && !seenSpots.has(spot.text)) { seenSpots.add(spot.text); spotWords = spot.text; spotWordsT = 6; }
+  }
+  if (spotWordsT > 0) { spotWordsT -= dt; if (spotWordsT <= 0) spotWords = ''; }
   if (!spot || !spot.auto) { autoArmed = true; autoStay = 0; }
   else if (autoArmed && spot.to && !fight.dead) {         // "delay": seconds to stand there first, so the load starts after you are out of the water, not in it
     autoStay += dt;
@@ -728,7 +738,8 @@ function step(dt, forced) {
     : corpse ? (skinning.c ? '' : `${corpse.def.name}. It is dead. Hold a button to ${corpse.def.skin.verb} it.`)
     : gateWords ? gateWords
     : spot && spot.seal ? `A great seal is set in the stone. ${placed.size} of its eight sockets hold a gem.` + (relicsCarried().length && nearSeal() ? ' ' + SET[input.device] : '')
-    : spot && spot.text ? spot.text + (spot.to && !spot.auto ? ' ' + GO[input.device] : '') : '');
+    : spot && spot.text && spot.to && !spot.auto ? spot.text + ' ' + GO[input.device]
+    : spotWords);
   ui.update(dt, pad);
   hud.hp.style.width = (fight.hp / fight.hpMax * 100) + '%';
   hud.st.style.width = (fight.st / fight.stMax * 100) + '%';
