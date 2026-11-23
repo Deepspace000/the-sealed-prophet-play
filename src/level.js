@@ -50,6 +50,7 @@ export class Level {
     this.data = data;
     this.size = data.cell || 2;
     this.h = data.rows.length;
+    this.shut = new Set();          // cells a closed gate fills (see hazards.js): solid while they are in it
     this.w = data.rows[0].length;
     this.cells = data.rows.map((row, z) => {
       if (row.length !== this.w) throw new Error(`Row ${z} is ${row.length} long, expected ${this.w}`);
@@ -62,7 +63,8 @@ export class Level {
   }
 
   cell(cx, cz) {
-    return (cx < 0 || cz < 0 || cx >= this.w || cz >= this.h) ? SOLID : this.cells[cz][cx];
+    if (cx < 0 || cz < 0 || cx >= this.w || cz >= this.h) return SOLID;
+    return this.shut.size && this.shut.has(cz * this.w + cx) ? SOLID : this.cells[cz][cx];
   }
   cellAt(x, z) { return this.cell(Math.floor(x / this.size), Math.floor(z / this.size)); }
 

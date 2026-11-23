@@ -185,6 +185,11 @@ export class Fight {
       play(res.weak <= 0.6 ? 'glance' : bones ? (res.weak >= 1.5 ? 'crack' : 'bone') : 'hit');
       if (this.onHit) this.onHit(c, res);
       const name = c.def.name.toLowerCase(), key = c.def.id + (bare ? 'bare' : type), what = bare ? 'Your fists' : KIND[type] + ' blows';
+      const torch = this.inv.hands[this.hand];
+      if (wp.fire && torch && torch.lit && !res.killed && ((c.def.weak || {}).fire ?? 1) > 0) {
+        if (!(c.burn > 0)) this.ui.say(`The ${name} catches fire.`);
+        c.burn = 5; this.creatures.rouse(c, 3);
+      }
       if (res.killed) this.ui.say(`The ${name} is dead.`);
       else if (!this.told.has(key) && (res.weak <= 0.6 || res.weak >= 1.5)) {
         this.told.add(key);

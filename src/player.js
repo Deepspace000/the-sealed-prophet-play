@@ -33,7 +33,7 @@ export class Player {
     for (const [sx, sz] of this.samples(x, z)) {
       const f = L.floorAt(sx, sz);
       if (f > y + stepUp) return false;
-      if (L.ceilAt(sx, sz) - Math.max(f, y) < H) return false;
+      if (L.ceilAt(sx, sz) - Math.max(f, y) < H - 1e-4) return false;       // (a small margin: pressed against a low ceiling you are exactly H under it)
     }
     return true;
   }

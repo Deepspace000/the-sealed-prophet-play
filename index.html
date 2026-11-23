@@ -17,6 +17,13 @@
   #title small { display: block; letter-spacing: .12em; color: #a89868; font-size: calc(12px * var(--t)); margin-top: 3px; }
   #help { position: fixed; left: 14px; right: max(calc(min(210px * var(--u), 40vw) + 30px), 160px); top: calc(46px * var(--t) + 30px); font-size: calc(12px * var(--t)); line-height: 1.5; color: #c9bb8e;
           pointer-events: none; text-shadow: 0 1px 2px #000; }
+  /* the controls: a row per kind of thing, each in its own colour */
+  .hg { --c: #c9bb8e; display: flex; align-items: baseline; gap: 10px; margin: 0 0 3px; }
+  .hg.c-move { --c: #6fa8ff; } .hg.c-look { --c: #4fd1c0; } .hg.c-thing { --c: #e6bf4a; }
+  .hg.c-fight { --c: #ff6e5e; } .hg.c-live { --c: #90d56a; } .hg.c-game { --c: #b890ff; }
+  .hl { flex: 0 0 5.4em; font-weight: normal; font-size: .82em; letter-spacing: .16em; color: var(--c); border-left: 3px solid var(--c); padding-left: 7px; }
+  .hg span { color: #d8cfae; }
+  .hg kbd { font: inherit; font-size: .92em; color: var(--c); background: rgba(8,6,3,.75); border: 1px solid var(--c); border-radius: 3px; padding: 0 5px; white-space: nowrap; }
   #helpBtn { position: fixed; left: 14px; top: calc(46px * var(--t)); z-index: 6; font: inherit; font-size: 10px; letter-spacing: .2em; color: #e8d9a8;
              background: rgba(8,6,3,.8); border: 1px solid #d9b65a; padding: 5px 9px; cursor: pointer; }
   #helpBtn:hover { background: #d9b65a; color: #17120a; }

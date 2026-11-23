@@ -97,6 +97,54 @@ function oldStone(o) {
   });
 }
 
+// Hieroglyphs: the same old stone with rows of carved and painted signs across it (eyes, ankhs, birds, scarabs, water, reeds, feathers).
+// The stone is 128 pixels for four metres; this one is drawn twice as fine so the signs read up close.
+function glyph(g, kind, cx, cy, s) {
+  g.beginPath();
+  switch (kind) {
+    case 0: g.ellipse(cx, cy, s * 0.5, s * 0.24, 0, 0, 7); g.moveTo(cx - s * 0.5, cy - s * 0.32); g.lineTo(cx + s * 0.5, cy - s * 0.32); g.moveTo(cx - s * 0.1, cy + s * 0.24); g.lineTo(cx - s * 0.25, cy + s * 0.6); g.stroke();
+      g.beginPath(); g.arc(cx, cy, s * 0.1, 0, 7); g.fill(); break;                                                 // the eye
+    case 1: g.ellipse(cx, cy - s * 0.3, s * 0.2, s * 0.26, 0, 0, 7); g.moveTo(cx, cy - s * 0.04); g.lineTo(cx, cy + s * 0.6); g.moveTo(cx - s * 0.28, cy + s * 0.14); g.lineTo(cx + s * 0.28, cy + s * 0.14); g.stroke(); break;     // ankh
+    case 2: g.moveTo(cx, cy - s * 0.55); g.lineTo(cx, cy + s * 0.5); g.moveTo(cx, cy + s * 0.5); g.lineTo(cx - s * 0.18, cy + s * 0.62); g.moveTo(cx, cy + s * 0.5); g.lineTo(cx + s * 0.18, cy + s * 0.62); g.stroke();
+      g.beginPath(); g.arc(cx, cy - s * 0.55, s * 0.12, 0, 7); g.fill(); break;                                     // the was sceptre
+    case 3: for (let i = 0; i < 3; i++) { const y = cy - s * 0.3 + i * s * 0.3; g.moveTo(cx - s * 0.5, y); for (let k = 1; k <= 4; k++) g.lineTo(cx - s * 0.5 + k * s * 0.25, y + (k % 2 ? -s * 0.1 : s * 0.1)); } g.stroke(); break;    // water
+    case 4: g.ellipse(cx, cy + s * 0.05, s * 0.3, s * 0.2, 0, 0, 7); g.fill(); g.beginPath(); g.arc(cx + s * 0.28, cy - s * 0.25, s * 0.12, 0, 7); g.fill();
+      g.beginPath(); g.moveTo(cx + s * 0.38, cy - s * 0.25); g.lineTo(cx + s * 0.56, cy - s * 0.12); g.moveTo(cx - s * 0.1, cy + s * 0.25); g.lineTo(cx - s * 0.1, cy + s * 0.6); g.moveTo(cx + s * 0.08, cy + s * 0.25); g.lineTo(cx + s * 0.08, cy + s * 0.6); g.stroke(); break;   // a bird
+    case 5: g.ellipse(cx, cy, s * 0.3, s * 0.36, 0, 0, 7); g.fill(); for (const d of [-1, 1]) for (let i = 0; i < 3; i++) { g.moveTo(cx + d * s * 0.28, cy - s * 0.2 + i * s * 0.2); g.lineTo(cx + d * s * 0.52, cy - s * 0.3 + i * s * 0.28); } g.stroke(); break;   // scarab
+    case 6: g.ellipse(cx, cy, s * 0.14, s * 0.5, 0, 0, 7); g.moveTo(cx, cy - s * 0.5); g.lineTo(cx, cy + s * 0.62); g.stroke(); break;            // a feather
+    case 7: g.moveTo(cx, cy - s * 0.55); g.lineTo(cx, cy + s * 0.55); for (let i = 0; i < 4; i++) { g.moveTo(cx - s * 0.26, cy - s * 0.42 + i * s * 0.2); g.lineTo(cx + s * 0.26, cy - s * 0.42 + i * s * 0.2); } g.stroke(); break;     // djed pillar
+    case 8: g.arc(cx, cy + s * 0.1, s * 0.2, 0, 7); g.moveTo(cx - s * 0.42, cy - s * 0.2); g.quadraticCurveTo(cx, cy - s * 0.7, cx + s * 0.42, cy - s * 0.2); g.stroke(); g.beginPath(); g.arc(cx, cy + s * 0.1, s * 0.1, 0, 7); g.fill(); break;   // sun disc and horns
+    case 9: g.arc(cx, cy - s * 0.38, s * 0.13, 0, 7); g.fill(); g.beginPath(); g.rect(cx - s * 0.16, cy - s * 0.22, s * 0.32, s * 0.5); g.fill();
+      g.beginPath(); g.moveTo(cx + s * 0.16, cy - s * 0.1); g.lineTo(cx + s * 0.5, cy - s * 0.1); g.moveTo(cx - s * 0.1, cy + s * 0.28); g.lineTo(cx - s * 0.1, cy + s * 0.6); g.moveTo(cx + s * 0.1, cy + s * 0.28); g.lineTo(cx + s * 0.1, cy + s * 0.6); g.stroke(); break;    // a seated figure
+    default: g.moveTo(cx, cy + s * 0.55); g.bezierCurveTo(cx - s * 0.5, cy + s * 0.2, cx + s * 0.5, cy - s * 0.1, cx, cy - s * 0.3); g.stroke(); g.beginPath(); g.ellipse(cx, cy - s * 0.4, s * 0.16, s * 0.2, 0, 0, 7); g.fill(); break;   // a cobra
+  }
+}
+function hieroStone(o) {
+  const base = oldStone(o), S = 256, c = document.createElement('canvas');
+  c.width = c.height = S;
+  const g = c.getContext('2d'), rnd = rng(o.seed + 99);
+  g.imageSmoothingEnabled = false; g.drawImage(base.image, 0, 0, S, S);
+  g.lineCap = 'round'; g.lineJoin = 'round';
+  const paint = o.signs || ['#2b5a8e', '#a8432a', '#c9a43c'];
+  for (const y0 of o.regs || [18, 142]) {
+    g.lineWidth = 2; g.strokeStyle = 'rgba(30,18,8,.55)';            // the lines that bound a register
+    g.beginPath(); g.moveTo(0, y0 - 6); g.lineTo(S, y0 - 6); g.moveTo(0, y0 + 56); g.lineTo(S, y0 + 56); g.stroke();
+    for (let x = 18; x < S - 8; x += 36) {
+      if (rnd() < 0.12) continue;                                     // a gap, where the paint has flaked away
+      const kind = Math.floor(rnd() * 11), col = paint[Math.floor(rnd() * paint.length)];
+      for (const [ox, oy, style, a] of [[1.5, 1.5, 'rgb(22,14,8)', 0.75], [0, 0, col, 0.9]]) {
+        g.save(); g.globalAlpha = a; g.strokeStyle = g.fillStyle = style; g.lineWidth = 3;
+        glyph(g, kind, x + ox, y0 + 25 + oy, 28);
+        g.restore();
+      }
+    }
+  }
+  const t = new THREE.CanvasTexture(c);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping; t.colorSpace = THREE.SRGBColorSpace;
+  t.magFilter = THREE.NearestFilter; t.minFilter = THREE.NearestMipmapLinearFilter;
+  return t;
+}
+
 export function standinMaterials() {
   const lam = map => new THREE.MeshLambertMaterial({ map });
   return {
@@ -104,6 +152,8 @@ export function standinMaterials() {
       paint: [[40, 5, [52, 82, 120]], [46, 2, [150, 74, 44]]] })),
     floor: lam(oldStone({ seed: 23, rgb: [138, 116, 80], rows: [32, 32, 32, 32], minW: 26, maxW: 40, cracks: 4, sand: true })),
     ceil: lam(oldStone({ seed: 37, rgb: [98, 84, 64], rows: [42, 43, 43], minW: 40, maxW: 64, cracks: 3, dark: true })),
+    hiero: lam(hieroStone({ seed: 41, rgb: [168, 138, 96], rows: [22, 18, 26, 16, 24, 22], regs: [18, 142], minW: 22, maxW: 46, cracks: 5 })),
+    hiero2: lam(hieroStone({ seed: 53, rgb: [150, 124, 92], rows: [32, 32, 32, 32], regs: [72], signs: ['#8a1d14', '#c9a43c', '#2b5a8e'], minW: 26, maxW: 40, cracks: 4 })),
     water: new THREE.MeshLambertMaterial({
       color: 0x2a8c96, transparent: true, opacity: 0.6, side: THREE.DoubleSide, depthWrite: false,
     }),
@@ -124,7 +174,7 @@ export function standinDoor(open) {
 }
 
 // A wall torch: bracket and flame.
-export function standinTorch() {
+export function standinTorch(colour = 0xffb040) {
   const g = new THREE.Group();
   const bracket = new THREE.Mesh(
     new THREE.CylinderGeometry(0.03, 0.05, 0.4, 6),
@@ -132,7 +182,7 @@ export function standinTorch() {
   bracket.position.y = -0.25;
   const flame = new THREE.Mesh(
     new THREE.ConeGeometry(0.07, 0.24, 6),
-    new THREE.MeshBasicMaterial({ color: 0xffb040, fog: false }));
+    new THREE.MeshBasicMaterial({ color: colour, fog: false }));
   flame.position.y = 0.05;
   g.add(bracket, flame);
   g.userData.flame = flame;

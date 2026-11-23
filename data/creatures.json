@@ -12,48 +12,267 @@
     "fleeAt: it runs away once when its health falls below this part (0.35 = 35%).",
     "wade: the deepest water it will walk into, in metres.",
     "xp: experience for killing it (not used yet). drops: [item id, chance 0..1] pairs left when it dies.",
-    "look: stand-in picture. shape: biped or beast. colour, eyes: hex colours. detail: wraps or bones. weapon: spear or none."
+    "look: stand-in picture. shape: biped or beast. colour, eyes: hex colours. detail: wraps or bones. weapon: spear or none.",
+    "weak.fire: how badly it burns. 0 = it cannot be set alight; leave it out for 1. A lit torch (weapon with fire:true) sets a creature alight for a few seconds, and it loses health fast while it burns.",
+    "boss:true marks a guardian that holds something (the colossus of Ptah guards the gem). detail 'stone' draws a thick, blocky body."
   ],
   "creatures": {
     "jackal": {
-      "name": "Black jackal", "text": "A black jackal with red eyes.", "kind": "beast",
-      "skin": { "item": "jackal_hide", "verb": "skin", "label": "SKINNING", "done": "You skin the jackal." },
-      "health": 12, "speed": 4.2, "radius": 0.42, "height": 1.25, "wide": 1.65, "deadSize": 1.5,
-      "sense": "sight", "sight": 12, "hearing": 9,
-      "attack": { "damage": 3, "type": "stab", "reach": 1.1, "windup": 0.6, "recover": 1.1 },
-      "weak": { "cut": 1, "stab": 1, "crush": 1 },
-      "fleeAt": 0.4, "wade": 0.45, "xp": 5, "drops": [],
-      "look": { "shape": "beast", "colour": "#b98a4a", "eyes": "#ffe14a" }
+      "name": "Black jackal",
+      "text": "A black jackal with red eyes.",
+      "kind": "beast",
+      "skin": {
+        "item": "jackal_hide",
+        "verb": "skin",
+        "label": "SKINNING",
+        "done": "You skin the jackal."
+      },
+      "health": 12,
+      "speed": 4.2,
+      "radius": 0.42,
+      "height": 1.25,
+      "wide": 1.65,
+      "deadSize": 1.5,
+      "sense": "sight",
+      "sight": 12,
+      "hearing": 9,
+      "attack": {
+        "damage": 3,
+        "type": "stab",
+        "reach": 1.1,
+        "windup": 0.6,
+        "recover": 1.1
+      },
+      "weak": {
+        "cut": 1,
+        "stab": 1,
+        "crush": 1
+      },
+      "fleeAt": 0.4,
+      "wade": 0.45,
+      "xp": 5,
+      "drops": [],
+      "look": {
+        "shape": "beast",
+        "colour": "#b98a4a",
+        "eyes": "#ffe14a"
+      }
     },
     "bone_guard": {
-      "name": "Bone guard", "text": "A skeleton with a spear. It guards this place.", "kind": "dead",
-      "skin": { "item": "bone", "verb": "pull a bone from", "label": "PULLING A BONE", "done": "You pull a leg bone from the bone guard." },
-      "health": 30, "speed": 2.5, "radius": 0.32, "height": 1.85, "wide": 1.25, "deadSize": 1.68,
-      "sense": "life", "sight": 10, "hearing": 5,
-      "attack": { "damage": 5, "type": "stab", "reach": 1.9, "windup": 0.9, "recover": 1.3 },
-      "weak": { "cut": 0.08, "stab": 0.05, "crush": 2, "bare": 0.15 },
-      "wade": 1.0, "xp": 12, "drops": [["spear", 1]],
-      "look": { "shape": "biped", "colour": "#d8cfb0", "eyes": "#3ea098", "detail": "bones", "weapon": "spear" }
+      "name": "Bone guard",
+      "text": "A skeleton with a spear. It guards this place.",
+      "kind": "dead",
+      "skin": {
+        "item": "bone",
+        "verb": "pull a bone from",
+        "label": "PULLING A BONE",
+        "done": "You pull a leg bone from the bone guard."
+      },
+      "health": 30,
+      "speed": 2.5,
+      "radius": 0.32,
+      "height": 1.85,
+      "wide": 1.25,
+      "deadSize": 1.68,
+      "sense": "life",
+      "sight": 10,
+      "hearing": 5,
+      "attack": {
+        "damage": 7,
+        "type": "stab",
+        "reach": 1.9,
+        "windup": 0.9,
+        "recover": 1.3
+      },
+      "weak": {
+        "cut": 0.08,
+        "stab": 0.05,
+        "crush": 2,
+        "bare": 0.15,
+        "fire": 0
+      },
+      "wade": 1.0,
+      "xp": 12,
+      "drops": [
+        [
+          "spear",
+          1
+        ]
+      ],
+      "look": {
+        "shape": "biped",
+        "colour": "#d8cfb0",
+        "eyes": "#3ea098",
+        "detail": "bones",
+        "weapon": "spear"
+      }
     },
     "wrapped_dead": {
-      "name": "Wrapped dead", "text": "A dead man in linen wrappings.", "kind": "dead",
-      "skin": { "item": "bandage", "verb": "unwrap", "label": "UNWRAPPING", "done": "You strip the wrappings from the dead man." },
-      "health": 34, "speed": 1.5, "radius": 0.36, "height": 1.95, "wide": 1.3, "deadSize": 1.35,
-      "sense": "life", "sight": 8, "hearing": 0,
-      "attack": { "damage": 8, "type": "crush", "reach": 1.3, "windup": 1.1, "recover": 1.6 },
-      "weak": { "cut": 1.3, "stab": 0.6, "crush": 0.9 },
-      "still": true, "wake": 3.2, "wade": 1.1, "xp": 25, "drops": [["lapis_amulet", 0.5]],
-      "look": { "shape": "biped", "colour": "#bfae82", "eyes": "#9ad63a", "detail": "wraps" }
+      "name": "Wrapped dead",
+      "text": "A dead man in linen wrappings.",
+      "kind": "dead",
+      "skin": {
+        "item": "bandage",
+        "verb": "unwrap",
+        "label": "UNWRAPPING",
+        "done": "You strip the wrappings from the dead man."
+      },
+      "health": 34,
+      "speed": 1.5,
+      "radius": 0.36,
+      "height": 1.95,
+      "wide": 1.3,
+      "deadSize": 1.35,
+      "sense": "life",
+      "sight": 8,
+      "hearing": 0,
+      "attack": {
+        "damage": 8,
+        "type": "crush",
+        "reach": 1.3,
+        "windup": 1.1,
+        "recover": 1.6
+      },
+      "weak": {
+        "cut": 2.0,
+        "stab": 0.6,
+        "crush": 0.9,
+        "fire": 3.0
+      },
+      "still": true,
+      "wake": 3.2,
+      "wade": 1.1,
+      "xp": 25,
+      "drops": [
+        [
+          "lapis_amulet",
+          0.5
+        ]
+      ],
+      "look": {
+        "shape": "biped",
+        "colour": "#bfae82",
+        "eyes": "#9ad63a",
+        "detail": "wraps"
+      }
     },
     "rotting_dead": {
-      "name": "Rotting dead", "text": "A dead man, half rotted away. It is quick.", "kind": "dead",
-      "skin": { "item": "bandage", "verb": "unwrap", "label": "UNWRAPPING", "done": "You strip a bandage from the rotting dead." },
-      "health": 16, "speed": 3.4, "radius": 0.34, "height": 1.85, "wide": 1.25, "deadSize": 1.4,
-      "sense": "life", "sight": 11, "hearing": 6,
-      "attack": { "damage": 4, "type": "cut", "reach": 1.2, "windup": 0.7, "recover": 1.1 },
-      "weak": { "cut": 1.3, "stab": 0.7, "crush": 1.1 },
-      "wade": 1.0, "xp": 10, "drops": [],
-      "look": { "shape": "biped", "colour": "#7d8a5a", "eyes": "#d63a3a", "detail": "wraps" }
+      "name": "Rotting dead",
+      "text": "A dead man, half rotted away. It is quick.",
+      "kind": "dead",
+      "skin": {
+        "item": "bandage",
+        "verb": "unwrap",
+        "label": "UNWRAPPING",
+        "done": "You strip a bandage from the rotting dead."
+      },
+      "health": 16,
+      "speed": 3.4,
+      "radius": 0.34,
+      "height": 1.85,
+      "wide": 1.25,
+      "deadSize": 1.4,
+      "sense": "life",
+      "sight": 11,
+      "hearing": 6,
+      "attack": {
+        "damage": 6,
+        "type": "cut",
+        "reach": 1.2,
+        "windup": 0.7,
+        "recover": 1.1
+      },
+      "weak": {
+        "cut": 2.0,
+        "stab": 0.7,
+        "crush": 1.1,
+        "fire": 1.5
+      },
+      "wade": 1.0,
+      "xp": 10,
+      "drops": [],
+      "look": {
+        "shape": "biped",
+        "colour": "#7d8a5a",
+        "eyes": "#d63a3a",
+        "detail": "wraps"
+      }
+    },
+    "scarab_beetle": {
+      "name": "Sacred scarab",
+      "text": "A beetle as big as a dog, with a shell like blue stone. Blades bounce off it.",
+      "kind": "myth",
+      "health": 22,
+      "speed": 3.2,
+      "radius": 0.4,
+      "height": 0.7,
+      "wide": 1.7,
+      "deadSize": 1.3,
+      "sense": "sight",
+      "sight": 10,
+      "hearing": 7,
+      "attack": {
+        "damage": 5,
+        "type": "cut",
+        "reach": 1.0,
+        "windup": 0.7,
+        "recover": 1.2
+      },
+      "weak": {
+        "cut": 0.15,
+        "stab": 0.1,
+        "crush": 2.4,
+        "bare": 0.2,
+        "fire": 0
+      },
+      "wade": 0.5,
+      "xp": 14,
+      "drops": [],
+      "look": {
+        "shape": "beetle",
+        "colour": "#2f6f86",
+        "eyes": "#ff5a2a"
+      }
+    },
+    "ptah_colossus": {
+      "name": "Colossus of Ptah",
+      "text": "A giant of black stone, the maker's own guardian. Its fists are hammers.",
+      "kind": "myth",
+      "boss": true,
+      "health": 170,
+      "speed": 2.4,
+      "radius": 0.85,
+      "height": 3.4,
+      "wide": 1.15,
+      "deadSize": 1.0,
+      "sense": "sight",
+      "sight": 14,
+      "hearing": 10,
+      "attack": {
+        "damage": 15,
+        "type": "crush",
+        "reach": 2.5,
+        "windup": 1.3,
+        "recover": 1.5
+      },
+      "weak": {
+        "cut": 0.12,
+        "stab": 0.06,
+        "crush": 1.4,
+        "fire": 0,
+        "bare": 0.1
+      },
+      "still": true,
+      "wake": 7,
+      "wade": 0.2,
+      "xp": 100,
+      "drops": [],
+      "look": {
+        "shape": "biped",
+        "colour": "#5a5448",
+        "eyes": "#ff3a1a",
+        "detail": "stone"
+      }
     }
   }
 }

@@ -27,7 +27,7 @@ class Pix {
 // A figure standing upright, seen from the front. 32 x 48.
 function biped(look, pose) {
   const p = new Pix(32, 48), c = hex(look.colour), dk = shade(c, 0.55), eye = hex(look.eyes || '#ffffff');
-  const bones = look.detail === 'bones', lw = bones ? 2 : 4, aw = bones ? 2 : 3, wood = [120, 84, 44], metal = [150, 170, 150];
+  const bones = look.detail === 'bones', stone = look.detail === 'stone', lw = bones ? 2 : stone ? 6 : 4, aw = bones ? 2 : stone ? 5 : 3, wood = [120, 84, 44], metal = [150, 170, 150];
   if (pose === 'dead') {
     p.r(4, 43, 22, 4, c); p.r(25, 41, 5, 5, c); p.r(26, 43, 1, 1, INK);
     if (bones) for (let x = 6; x < 24; x += 3) p.r(x, 43, 1, 4, null);
@@ -102,10 +102,33 @@ function beast(look, pose) {
   return p.canvas();
 }
 
+// A big beetle coming toward you, a domed shell and mandibles. 32 x 24.
+function beetle(look, pose) {
+  const p = new Pix(32, 24), c = hex(look.colour), dk = shade(c, 0.55), lt = shade(c, 1.35), eye = hex(look.eyes || '#ff5a2a');
+  const dome = (cy, ry, rx, col) => { for (let y = cy - ry; y <= cy + ry; y++) { const w = Math.round(rx * Math.sqrt(Math.max(0, 1 - ((y - cy) / ry) ** 2))); p.r(16 - w, y, w * 2, 1, col); } };
+  if (pose === 'dead') {                                   // on its back, legs curled
+    dome(17, 4, 12, dk); dome(16, 3, 9, c);
+    for (const x of [5, 9, 13, 18, 22, 26]) p.r(x, 8 + (x % 3), 1, 7, c);
+    return p.canvas();
+  }
+  const up = pose === 'windup', big = pose === 'strike', step = pose === 'step', lift = up ? 3 : 0;
+  for (const side of [0, 1]) for (let i = 0; i < 3; i++) {                  // legs
+    const x = side ? 25 + (step && i % 2 ? 1 : 0) : 2 - (step && i % 2 ? 1 : 0), y = 11 + i * 3 - lift;
+    p.r(x, y, 5, 1, dk); p.r(side ? x + 4 : x - 1, y + 1, 1, 4, dk);
+  }
+  dome(11 - lift, 7, 13, c);                               // the shell
+  p.r(15, 5 - lift, 2, 12, lt);                            // the seam
+  dome(19 - (big ? 1 : 0), 3, 5, dk);                      // the head
+  p.r(12, 18, 2, 2, eye); p.r(18, 18, 2, 2, eye);
+  const open = big ? 4 : up ? 2 : 0;                       // mandibles
+  p.r(10 - open, 20, 3, 3, [215, 205, 175]); p.r(19 + open, 20, 3, 3, [215, 205, 175]);
+  return p.canvas();
+}
+
 const cache = {};
 export function creatureFrames(def) {
   if (cache[def.id]) return cache[def.id];
-  const look = def.look || { shape: 'biped', colour: '#999999' }, draw = look.shape === 'beast' ? beast : biped, out = {};
+  const look = def.look || { shape: 'biped', colour: '#999999' }, draw = look.shape === 'beast' ? beast : look.shape === 'beetle' ? beetle : biped, out = {};
   for (const pose of ['idle', 'step', 'windup', 'strike', 'dead']) out[pose] = draw(look, pose);
   return (cache[def.id] = out);
 }

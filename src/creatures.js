@@ -180,6 +180,7 @@ export class Creatures {
     this.hunting = 0;
     for (const c of this.list) {
       const def = c.def;
+      if (c.burn > 0 && c.state !== 'dead') { c.burn -= dt; this.hurt(c, 5 * dt, 'fire', c.x, c.z, 0); c.flash = 0.16; }       // set alight by a torch
       c.flash = Math.max(0, c.flash - dt);
       if (c.state === 'dead') { this.draw(c, dt, P, brightnessAt); continue; }
       const dx = P.x - c.x, dz = P.z - c.z, dist = Math.hypot(dx, dz), dy = P.y - c.y;

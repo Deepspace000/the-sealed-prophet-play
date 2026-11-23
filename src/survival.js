@@ -10,12 +10,12 @@ const REST_TIME = 70 * 60;      // seconds of play from rested to worn out
 const low = s => s.toLowerCase();
 const FUEL = { paraffin: 'paraffin', oil: 'oil' };
 
-export const usable = def => !!(def.food || def.drinks || def.light || def.fuel || def.sleep || def.potion || def.count || def.map || def.bandage);
+export const usable = def => !!(def.food || def.drinks || def.light || def.fuel || def.sleep || def.potion || def.count || def.refill || def.map || def.bandage);
 // What using a thing does, in a word or two, for the button. '' if there is nothing to do with it.
 export function verb(it) {
   const d = it.def;
   return d.map ? 'OPEN THE MAP' : d.bandage ? 'BIND' : d.food ? 'EAT' : d.potion ? 'DRINK' : d.drinks ? (it.n > 0 ? 'DRINK' : 'FILL') : d.light ? (it.lit ? 'PUT OUT' : 'LIGHT')
-    : d.count ? 'LIGHT YOUR LAMP' : d.fuel ? 'FILL THE LAMP' : d.sleep ? 'SLEEP' : it.inside ? 'OPEN' : '';
+    : d.refill ? 'REFILL MATCHES' : d.count ? 'LIGHT YOUR LAMP' : d.fuel ? 'FILL THE LAMP' : d.sleep ? 'SLEEP' : it.inside ? 'OPEN' : '';
 }
 
 export class Survival {
@@ -67,6 +67,12 @@ export class Survival {
   use(it, inWater) {
     const d = it.def, name = low(d.name), F = this.fight;
     if (d.map) this.onMap();
+    else if (d.refill) {             // a bundle of matches fills the box again
+      const box = [...this.inv.all()].map(e => e[0]).find(x => x.def.id === d.refill && x.n < x.def.count);
+      if (!box) { this.ui.say(this.inv.all && [...this.inv.all()].some(e => e[0].def.id === d.refill) ? 'Your box of matches is full.' : 'You have no box to put them in.'); return; }
+      box.n = box.def.count; this.inv.remove(it); this.inv.version++;
+      this.ui.say('You fill your box of matches.');
+    }
     else if (d.bandage) {
       if (F.hp >= F.hpMax) { this.ui.say('You are not hurt.'); return; }
       F.hp = Math.min(F.hpMax, F.hp + d.bandage.heal);

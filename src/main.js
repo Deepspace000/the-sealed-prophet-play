@@ -17,6 +17,7 @@ import { loadArt } from './art.js';
 import { play } from './sound.js';
 import { buildProps, strikeUrn } from './props.js';
 import { loadModels } from './models.js';
+import { Gates, Fireballs, buildSpikes, onSpikes } from './hazards.js';
 import { getRun, setRun, clearRun, writeSlot, readSlot, newest, toFile, fromFile } from './save.js';
 
 const LOAD = window.loading || { set() {}, name() {}, finish: async () => {} };      // the loading page (see index.html)
@@ -81,6 +82,8 @@ LOAD.set(0.66);
 const level = new Level(data);
 if (data.fog != null) scene.fog.density = DARK.density = data.fog;      // how fast things fade into the dark
 scene.add(level.build(standinMaterials()));
+buildSpikes(scene, level);                 // beds of spikes (cells with "spikes": true)
+const TORCH = data.torchColor ? parseInt(data.torchColor.slice(1), 16) : null;      // a level may light its torches another colour ("torchColor": "#ff2a1a")
 
 // Light: a faint glow everywhere, the lamp you carry, and the nearest wall torches.
 scene.add(new THREE.AmbientLight(0x8090b0, data.ambient ?? 0.06));
@@ -89,23 +92,28 @@ lamp.position.set(0.25, -0.2, 0);
 camera.add(lamp);
 
 const torches = level.torchPositions().map(pos => {
-  const mesh = standinTorch();
+  const mesh = standinTorch(TORCH ?? undefined);
   mesh.position.set(pos.x, pos.y, pos.z);
   scene.add(mesh);
   return { ...pos, mesh, phase: Math.random() * 10 };
 });
 const torchLights = [];
 for (let i = 0; i < Math.min(TORCH_LIGHTS, torches.length); i++) {
-  const l = new THREE.PointLight(0xff9a3c, 0, 12, 2);
+  const l = new THREE.PointLight(TORCH ?? 0xff9a3c, 0, 12, 2);
   scene.add(l);
   torchLights.push(l);
 }
 
+for (const l of data.lights || []) {          // fixed lights: { cell, y, color, power, range }, e.g. the glow of a gem
+  const pl = new THREE.PointLight(parseInt((l.color || '#ffcc88').slice(1), 16), l.power ?? 20, l.range ?? 16, 2);
+  pl.position.set((l.cell[0] + 0.5) * level.size, l.y, (l.cell[1] + 0.5) * level.size);
+  scene.add(pl);
+}
 LOAD.set(0.75);
 await loadModels((data.props || []).filter(p => p.id === 'model').map(p => p.name));
 const props = buildProps(scene, level, data.props || [], run && run.levels && run.levels[LEVEL] && run.levels[LEVEL].urns);      // big clay urns: you walk round them
 for (const f of props.fires) {      // a fire on a brazier burns and gives light like a wall torch
-  const mesh = standinTorch();
+  const mesh = standinTorch(TORCH ?? undefined);
   mesh.position.set(f.x, f.y - 0.3, f.z);
   mesh.scale.setScalar(2.4);
   scene.add(mesh);
@@ -144,6 +152,11 @@ if (saved) {
   world.place(thing, (it.cell[0] + at[0]) * level.size, (it.cell[1] + at[1]) * level.size);
 }
 const ui = new UI(inv, () => dropHeld(), it => useThing(it));
+// Doors that need keys, levers, doors that slide, and fireballs from the walls (see hazards.js).
+const gates = new Gates({ scene, level, gates: data.gates, levers: data.levers, saved: saved && saved.gates, say: t => ui.say(t),
+  findKey: id => [...inv.all()].map(e => e[0]).find(it => it.def.key === id) || null, takeKey: it => inv.remove(it) });
+const fireballs = new Fireballs({ scene, level, shooters: data.shooters });
+const USE = { keys: 'Press E to use it.', pad: 'Press X to use it.', touch: 'Tap to use it.' };
 // The great seal in the hall has a socket for the relic of each realm. Carry one back and set it in. Which are set is kept in the save.
 const placed = new Set(run && run.relics || []);
 if (props.seal) for (const god of placed) props.seal.fill(god, defs['relic_' + god] && defs['relic_' + god].icon[0]);
@@ -238,7 +251,7 @@ const fade = (to, sec) => {
 // Dying takes you back to your newest save.
 fight.onDeath = (c, cause) => {
   leaving = true;
-  document.getElementById('dead').textContent = cause === 'drowned' ? 'YOU DROWNED' : 'YOU ARE DEAD';
+  document.getElementById('dead').textContent = { drowned: 'YOU DROWNED', impaled: 'YOU WERE IMPALED', burned: 'YOU WERE BURNED' }[cause] || 'YOU ARE DEAD';
   document.getElementById('black').style.opacity = 0;
   fade(1, 2);
   document.getElementById('dead').style.display = 'flex';
@@ -252,7 +265,7 @@ function capture() {
   const levels = { ...(run && run.levels) };
   levels[LEVEL] = {
     items: world.list.map(e => ({ ...pack(e.item), x: e.x, z: e.z })),
-    urns: props.solid.filter(u => u.smashed).map(u => u.n),
+    urns: props.solid.filter(u => u.smashed).map(u => u.n), gates: gates.pack(),
     creatures: creatures.list.map(c => ({ x: c.x, y: c.y, z: c.z, hp: c.hp, dead: c.state === 'dead', skinned: c.skinned || undefined, fled: c.fled, awake: c.state !== 'still' })),
   };
   return {
@@ -443,6 +456,7 @@ function dirAt(px, py) {            // the direction through a point on the scre
 function pickUp(dir, tol) {          // returns true if there was something there to pick up
   const e = world.target(camera.position, dir, 2.6, tol);
   if (!e) return false;
+  if (e.item.def.relic && creatures.list.some(c => c.def.boss && c.state !== 'dead')) { ui.say('The colossus stands between you and the gem.'); return true; }
   const where = inv.add(e.item), name = e.item.def.name;
   if (!where) { ui.say(`You have nowhere to put the ${name.toLowerCase()}.`); return true; }
   world.remove(e);
@@ -498,27 +512,34 @@ let clickUsed = false;
 // How a creature looks to be doing, in plain words.
 const health = c => c.state === 'dead' ? (c.def.skin && !c.skinned ? `It is dead. Hold a button to ${c.def.skin.verb} it.` : 'It is dead.') : c.hp < c.def.health * 0.35 ? 'It is badly hurt.'
   : c.hp < c.def.health * 0.8 ? 'It is hurt.' : (c.state === 'idle' || c.state === 'still') ? c.def.text : '';
+// The controls text: one row per kind of thing, each in its own colour. [Key] becomes a key cap.
+const HG = rows => rows.map(([c, l, t]) => `<div class="hg ${c}"><b class="hl">${l}</b><span>${t.replace(/\[([^\]]+)\]/g, '<kbd>$1</kbd>')}</span></div>`).join('');
 const HELP = {
-  keys: 'Mouse: hold the right button and move to look &nbsp; add the left button to walk forward &nbsp; Wheel: look up / down<br>'
-    + 'Keys: W forward &nbsp; S stop, then back &nbsp; A D sidestep &nbsp; Q E turn &nbsp; Shift run &nbsp; '
-    + 'Space jump / swim up &nbsp; F lamp &nbsp; H hides this &nbsp; L next level<br>'
-    + 'Things: look at one and press E, or click it, to pick it up &nbsp; Tab pack &nbsp; '
-    + 'click a thing you carry to see what you can do with it, then an empty place to move it there &nbsp; G or click the room to drop<br>'
-    + 'Hands: the right button strikes with your right hand and the left button with your left: hold still, then let go. '
-    + 'Longer hold, harder blow. A shield guards instead, and a hand holding a light lets the other hand strike &nbsp; pointer high = overhead, middle = slash, low = thrust &nbsp; '
-    + 'R strikes and C guards too &nbsp; V, or tap A, D or S twice, to dodge &nbsp; T locks your view on to an enemy<br>'
-    + 'Staying alive: F lights or puts out your light &nbsp; click food to eat it &nbsp; click the notebook, or press M, for the map &nbsp; '
-    + 'B sleep &nbsp; Esc or SETTINGS: save, load, leave',
-  pad: 'Move: left stick &nbsp; Look: right stick &nbsp; Run: LB &nbsp; Jump / swim up: A &nbsp; Lamp: RB<br>'
-    + 'Things: X pick up &nbsp; Y pack &nbsp; in the pack: D-pad choose a place, A take or put, X what you can do with it, B close<br>'
-    + 'Fighting: hold the right trigger, then let go, to strike &nbsp; push forward for a thrust, pull back for an overhead blow &nbsp; '
-    + 'left trigger blocks &nbsp; B dodges &nbsp; press the right stick to lock on to an enemy<br>'
-    + 'Staying alive: RB lights or puts out your light &nbsp; in the pack, X on food eats it &nbsp; '
-    + 'View map &nbsp; Start menu: sleep, save and load (D-pad chooses, A presses, B closes)',
-  touch: 'Move: drag on the left &nbsp; Look: drag on the right &nbsp; Push the stick fully to run<br>'
-    + 'Things: tap one to pick it up &nbsp; tap a thing you carry to see what you can do with it, then an empty place to move it there &nbsp; tap the room to drop<br>'
-    + 'Fighting: hold HIT, then let go, to strike &nbsp; hold BLOCK to block &nbsp; DODGE steps away &nbsp; TARGET locks on to an enemy<br>'
-    + 'Staying alive: LAMP lights or puts out your light &nbsp; tap food to eat it &nbsp; MAP &nbsp; MENU: sleep, save and load',
+  keys: HG([
+    ['c-move', 'MOVE', '[W] forward &nbsp; [S] back &nbsp; [A] [D] sidestep &nbsp; [Q] [E] turn &nbsp; [Shift] run &nbsp; [Space] jump, swim up'],
+    ['c-look', 'LOOK', 'Hold [Right button] and move the mouse &nbsp; add [Left button] to walk forward &nbsp; [Wheel] tilts the view'],
+    ['c-thing', 'THINGS', '[E] or click: pick up &nbsp; [Tab] pack &nbsp; click what you carry for options &nbsp; [G] drop'],
+    ['c-fight', 'FIGHT', '[Right button] right hand, [Left button] left hand: hold, then let go &nbsp; longer = harder &nbsp; aim high, middle, low: overhead, slash, thrust'],
+    ['c-fight', '', '[C] guard &nbsp; [V] dodge &nbsp; [T] lock on'],
+    ['c-live', 'SURVIVE', '[F] lamp &nbsp; click food to eat &nbsp; [M] map &nbsp; [B] sleep'],
+    ['c-game', 'GAME', '[Esc] menu &nbsp; [F5] quicksave &nbsp; [H] hide this'],
+  ]),
+  pad: HG([
+    ['c-move', 'MOVE', 'Left stick walk &nbsp; [LB] run &nbsp; [A] jump, swim up'],
+    ['c-look', 'LOOK', 'Right stick'],
+    ['c-thing', 'THINGS', '[X] pick up &nbsp; [Y] pack &nbsp; in the pack: D-pad choose, [A] take or put, [X] options, [B] close'],
+    ['c-fight', 'FIGHT', 'Hold [RT], then let go &nbsp; forward = thrust, back = overhead &nbsp; [LT] block &nbsp; [B] dodge &nbsp; press right stick: lock on'],
+    ['c-live', 'SURVIVE', '[RB] lamp &nbsp; [X] on food: eat &nbsp; View: map'],
+    ['c-game', 'GAME', 'Start: menu, sleep, save, load'],
+  ]),
+  touch: HG([
+    ['c-move', 'MOVE', 'Drag on the left &nbsp; push fully to run'],
+    ['c-look', 'LOOK', 'Drag on the right'],
+    ['c-thing', 'THINGS', 'Tap to pick up &nbsp; tap what you carry for options &nbsp; tap the room to drop'],
+    ['c-fight', 'FIGHT', 'Hold [HIT], then let go &nbsp; [BLOCK] &nbsp; [DODGE] &nbsp; [TARGET]'],
+    ['c-live', 'SURVIVE', '[LAMP] &nbsp; tap food to eat &nbsp; [MAP]'],
+    ['c-game', 'GAME', '[MENU]: sleep, save, load'],
+  ]),
 };
 // The control text can be put away with its button (or H). On a phone it starts put away, as it would fill the screen.
 let helpOn = !document.documentElement.classList.contains('phone'), time = 0, shownDevice = '';
@@ -584,6 +605,9 @@ function step(dt, forced) {
   if (cut && (inp.pressed.has('use') || inp.pressed.has('jump') || inp.pressed.has('back') || (inp.clicks && inp.clicks.length))) cut.t = cut.dur;      // E, Space, B or a click skips the cutscene
   if (cut) { inp.attackHeld = inp.blockHeld = inp.mouseAttack = inp.handR = inp.handL = false; inp.mx = inp.mz = inp.lookX = inp.lookY = 0; inp.jumpHeld = false; inp.pressed.clear(); inp.clicks = []; }
   player.update(dt, inp);
+  gates.update(dt, player);
+  fireballs.update(dt, player, dmg => { ui.say('A fireball burns you.'); fight.harm(dmg, 'burned'); });
+  if (!fight.dead && onSpikes(level, player)) { ui.say('The spikes take you.'); fight.harm(9999, 'impaled'); }
   if (inp.pressed.has('target') && !ui.open && !fight.dead) {
     const r = target.toggle();
     ui.say(r === 'on' ? `Locked on to the ${target.c.def.name.toLowerCase()}.` : r === 'off' ? 'Lock let go.' : 'Nothing to lock on to.');
@@ -616,7 +640,7 @@ function step(dt, forced) {
     if (inp.pressed.has('back')) { if (ui.opts) ui.closeOpts(); else ui.toggle(); }
   } else {
     if (inp.pressed.has('use')) {
-      if (setRelics()) { /* gems set in the seal */ } else if (inv.held) dropHeld(); else if (!pickUp(viewDir, 0.3) && spot && spot.to && !spot.auto) travel(spot.to);
+      if (setRelics()) { /* gems set in the seal */ } else if (inv.held) dropHeld(); else if (!pickUp(viewDir, 0.3) && !gates.use(player) && spot && spot.to && !spot.auto) travel(spot.to);
     }
     if (inp.pressed.has('back')) inp.pressed.add('dodge');          // B dodges when the pack is shut
   }
@@ -624,7 +648,7 @@ function step(dt, forced) {
   // A click picks up, drops or goes through a door. If it did none of those, it is the start of a blow.
   for (const [cx, cy] of inp.clicks || []) {
     if (inv.held) { dropHeld(); clickUsed = true; }
-    else if (pickUp(dirAt(cx, cy), 0.14) || setRelics()) clickUsed = true;
+    else if (pickUp(dirAt(cx, cy), 0.14) || setRelics() || gates.use(player)) clickUsed = true;
     else if (spot && spot.to && !spot.auto && (input.device === 'touch' || !creatures.hunting)) { travel(spot.to); clickUsed = true; }
   }
   if (!inp.handL) clickUsed = false;
@@ -688,8 +712,10 @@ function step(dt, forced) {
   prophetTick(dt);
   const seen = world.target(camera.position, viewDir, 2.6, 0.3);
   const beast = seen ? null : creatures.target(camera.position, viewDir);
+  const gateWords = seen || beast ? '' : gates.look(player, USE[input.device]);
   ui.setLook(seen ? seen.item.def.name : beast ? beast.def.name + '. ' + health(beast)
     : corpse ? (skinning.c ? '' : `${corpse.def.name}. It is dead. Hold a button to ${corpse.def.skin.verb} it.`)
+    : gateWords ? gateWords
     : spot && spot.seal ? `A great seal is set in the stone. ${placed.size} of its eight sockets hold a gem.` + (relicsCarried().length && nearSeal() ? ' ' + SET[input.device] : '')
     : spot && spot.text ? spot.text + (spot.to && !spot.auto ? ' ' + GO[input.device] : '') : '');
   ui.update(dt, pad);
@@ -743,7 +769,7 @@ function step(dt, forced) {
   if (shownDevice !== input.device + helpOn) {
     shownDevice = input.device + helpOn;
     hud.help.innerHTML = helpOn ? HELP[input.device] + (input.device === 'keys'
-      ? ` &nbsp; - and = picture detail (now ${RES} lines)` : '') : '';
+      ? HG([['c-game', 'VIEW', `[-] [=] picture detail (now ${RES} lines)`]]) : '') : '';
     document.getElementById('helpBtn').textContent = helpOn ? 'HIDE CONTROLS' : 'CONTROLS';
   }
 
@@ -796,4 +822,4 @@ function frame(now) {
 requestAnimationFrame(frame);
 
 // For testing from the console.
-window.game = { THREE, scene, camera, renderer, level, player, input, lamp, torches, step, inv, world, ui, make, creatures, fight, life, menu, capture, sleep, map, openMap, target, scenes };
+window.game = { gates, fireballs, unlockRealm, travel, THREE, scene, camera, renderer, level, player, input, lamp, torches, step, inv, world, ui, make, creatures, fight, life, menu, capture, sleep, map, openMap, target, scenes };
