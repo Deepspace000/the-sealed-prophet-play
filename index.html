@@ -263,9 +263,13 @@
   #journal, .paper { clip-path: polygon(14px 0, calc(100% - 14px) 0, 100% 14px, 100% calc(100% - 14px), calc(100% - 14px) 100%,
                                         14px 100%, 0 calc(100% - 14px), 0 14px); }
   #journal { display: none; position: absolute; left: 4vw; top: 50%; transform: translateY(-50%); width: min(720px, calc(90vw / var(--z)));
-             zoom: var(--z); padding: 2px; background: #b8923a; box-sizing: border-box; }
+             zoom: var(--z); padding: 2px; box-sizing: border-box; }
+  /* the gold line round the page: only the rim is filled, so the page itself can be seen through */
+  #journal::before { content: ''; position: absolute; inset: 0; padding: 2px; background: #b8923a; pointer-events: none;
+                     -webkit-mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+                     mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0); }
   .paper { position: relative; min-height: min(620px, calc(88vh / var(--z))); box-sizing: border-box; padding: 34px 54px 58px; color: #2a1d10;
-           background: linear-gradient(165deg, #efe2bc, #d9c48e); box-shadow: inset 0 0 44px rgba(90,61,18,.55);
+           background: linear-gradient(165deg, rgba(239,226,188,.74), rgba(217,196,142,.74)); box-shadow: inset 0 0 44px rgba(90,61,18,.5);      /* a little see-through: on a small screen the page covers the aeroplane, and this lets it show through */
            overflow: hidden; transition: filter 5s; }
   .paper::before { content: ''; position: absolute; inset: 8px; border: 1px solid #b8923a; pointer-events: none; }
   .paper::after { content: ''; position: absolute; left: 50%; bottom: -150px; width: 600px; height: 300px; transform: translateX(-50%);
