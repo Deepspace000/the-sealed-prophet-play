@@ -62,10 +62,14 @@
   "prophet": {"cell": [13, 8], "at": [0.5, 0.5]},
   "carry": ["lantern", "pocket_knife", "matches", "notebook"],
   "items": [
+    {"id": "knapsack", "cell": [8, 9], "at": [0.7, 0.6], "inside": ["paraffin_tin"], "spare": true},
+    {"id": "skull", "cell": [8, 9], "at": [0.3, 0.4]},
     {"id": "honey", "cell": [13, 13], "at": [0.3, 0.3]},
     {"id": "torch", "cell": [13, 13], "at": [0.7, 0.35]}
   ],
+  "scenes": [{"id": "hub_note", "area": [7, 8, 9, 10]}],
   "props": [
+    {"id": "remains", "cell": [8, 9], "at": [0.5, 0.45], "kind": "bones"},
     {"id": "model", "name": "cgb_column_painted_tall", "cell": [9, 7], "at": [0.5, 0.5], "size": 9, "wide": 0.8, "turn": 0.0},
     {"id": "model", "name": "cgb_column_painted_tall", "cell": [11, 7], "at": [0.5, 0.5], "size": 9, "wide": 0.8, "turn": 0.25},
     {"id": "model", "name": "cgb_column_painted_tall", "cell": [15, 7], "at": [0.5, 0.5], "size": 9, "wide": 0.8, "turn": 0.5},

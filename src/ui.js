@@ -131,7 +131,7 @@ export class UI {
       return;
     }
     if (it) {
-      if (it.def.map && e && e.pointerType === 'mouse' && e.button !== 2) { this.closeOpts(); return this.onUse(it); }
+      if ((it.def.map || it.def.refill) && e && e.pointerType === 'mouse' && e.button !== 2) { this.closeOpts(); return this.onUse(it); }       // one click: open the map, or refill the matches
       if (o && o.it === it) return this.closeOpts();
       return this.showOpts(slotEl, it);
     }

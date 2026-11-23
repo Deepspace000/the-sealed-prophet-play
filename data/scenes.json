@@ -4,7 +4,8 @@
     "enemy: the first living beast you see. skeleton: the first walking skeleton. walking_dead: the first other dead thing that walks.",
     "body: the first human remains you see. water: the first water you come to. secret: the first hidden room you get into.",
     "The words are the player's own thoughts, in the voice of the opening journal. Keep them plain. {name} is the creature's name.",
-    "A level can name hidden rooms that have no false wall: \"scenes\": [{ \"id\": \"secret\", \"area\": [x0, z0, x1, z1] }] (cells, both ends included)."
+    "A level can name hidden rooms that have no false wall: \"scenes\": [{ \"id\": \"secret\", \"area\": [x0, z0, x1, z1] }] (cells, both ends included).",
+    "hub_note: the surveyor's note beside the spare knapsack in the great hall. Any scene named in a level's \"scenes\" areas is shown once, the first time you walk into the area."
   ],
   "scenes": {
     "enemy": {
@@ -59,6 +60,17 @@
         "This room was hidden. From outside there was no sign of it at all.",
         "The builders did not want anyone to find it.",
         "If there is one hidden room, there will be others. From now on I will check the walls and the water."
+      ]
+    },
+    "hub_note": {
+      "title": "A note under a stone",
+      "lines": [
+        "A page torn from a survey book, held down with a stone. The pencil is faint, but the writing is neat.",
+        "\"To whoever comes after me. I am Oswin Teague, surveyor. I came down the well on the third day after the roof fell, with a lantern and not much else.\"",
+        "\"I fell on these steps in the dark and my leg is broken. I can still hear the old man in the stone box to the north. He talks to me. I stopped answering.\"",
+        "\"There are eight doors in this hall and eight sockets in the floor. I do not think they open by force. Take my pack. I have no use for it now. There is a tin of paraffin in it.\"",
+        "\"Margaret, if this reaches you: I was not afraid at the end. I was only tired.\"",
+        "He is lying with his hand on the strap of the pack. I will take it, and I will not forget his name."
       ]
     }
   }

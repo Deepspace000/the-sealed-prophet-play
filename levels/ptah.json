@@ -327,7 +327,7 @@
   "shooters": [
     {"cell": [30, 10], "wall": "E", "h": 0.8, "every": 4.5, "phase": 0, "speed": 7, "dmg": 12},
     {"cell": [29, 10], "wall": "W", "h": 0.8, "every": 4.5, "phase": 2.25, "speed": 7, "dmg": 12},
-    {"cell": [29, 16], "wall": "W", "h": 0.8, "every": 5, "phase": 1, "speed": 7, "dmg": 12},
+    {"cell": [29, 13], "wall": "W", "h": 0.8, "every": 5, "phase": 1, "speed": 7, "dmg": 12},
     {"cell": [10, 40], "wall": "W", "h": 0.8, "every": 4, "phase": 0, "speed": 7, "dmg": 12},
     {"cell": [11, 41], "wall": "E", "h": 0.8, "every": 4, "phase": 2, "speed": 7, "dmg": 12},
     {"cell": [10, 47], "wall": "W", "h": 0.8, "every": 3.5, "phase": 1, "speed": 8, "dmg": 12},
@@ -336,16 +336,16 @@
     {"cell": [30, 58], "wall": "E", "h": 0.8, "every": 3.5, "phase": 1, "speed": 8, "dmg": 12}
   ],
   "items": [
-    {"id": "key_ptah_gold", "cell": [26, 5], "at": [0.5, 0.5]},
+    {"id": "key_ptah_gold", "cell": [12, 5], "at": [0.5, 0.5]},
     {"id": "curved_sword", "cell": [6, 10]},
     {"id": "torch", "cell": [4, 10]},
     {"id": "torch", "cell": [4, 11]},
     {"id": "bandage", "cell": [5, 11]},
     {"id": "match_bundle", "cell": [4, 9]},
-    {"id": "skull", "cell": [27, 16], "at": [0.4, 0.4]},
-    {"id": "club", "cell": [27, 16], "at": [0.75, 0.7]},
-    {"id": "paraffin_tin", "cell": [27, 17], "at": [0.3, 0.6]},
-    {"id": "match_bundle", "cell": [27, 17], "at": [0.7, 0.4]},
+    {"id": "skull", "cell": [28, 16], "at": [0.4, 0.4]},
+    {"id": "club", "cell": [28, 16], "at": [0.75, 0.7]},
+    {"id": "paraffin_tin", "cell": [28, 17], "at": [0.3, 0.6]},
+    {"id": "match_bundle", "cell": [28, 17], "at": [0.7, 0.4]},
     {"id": "key_ptah_silver", "cell": [35, 34]},
     {"id": "key_ptah_green", "cell": [6, 42]},
     {"id": "match_bundle", "cell": [8, 42]},
@@ -369,7 +369,7 @@
     {"id": "red_bottle", "cell": [10, 62]}
   ],
   "props": [
-    {"id": "remains", "cell": [27, 16], "at": [0.55, 0.5], "kind": "bones"},
+    {"id": "remains", "cell": [28, 16], "at": [0.55, 0.5], "kind": "bones"},
     {"id": "model", "name": "tomb_brazier", "cell": [14, 4], "at": [0.5, 0.5], "size": 1.0, "turn": 0, "solid": 0.35, "fire": true},
     {"id": "model", "name": "yan_statue_osiris", "cell": [15, 7], "at": [0.5, 0.5], "size": 2.3, "turn": 0.5, "solid": 0.6},
     {"id": "model", "name": "tomb_brazier", "cell": [19, 4], "at": [0.5, 0.5], "size": 1.0, "turn": 0, "solid": 0.35, "fire": true},

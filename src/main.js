@@ -146,6 +146,7 @@ if (saved) {
   for (const o of saved.items) { const it = unpack(o); if (it) world.place(it, o.x, o.z); }
 } else for (const it of data.items || []) {
   if (it.starter && run) continue;              // starter things are only there if you arrive with nothing
+  if (it.spare && [...inv.all()].some(e => e[0].def.id === it.id)) continue;      // a spare is only there if you do not have one already (the knapsack in the hall)
   const at = it.at || [0.5, 0.5];
   const thing = make(it.id);
   (it.inside || []).forEach((id, i) => { if (thing.inside && i < thing.inside.length) thing.inside[i] = make(id); });     // what is in a bag

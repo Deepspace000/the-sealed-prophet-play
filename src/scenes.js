@@ -70,6 +70,11 @@ export class Scenes {
         if (this.inView(wx, w + 0.1, wz, 5)) return this.show('water');
       }
     }
+    for (const a of this.areas) {            // a note or a place with its own words: shown once, when you walk into its area
+      if (a.id === 'secret' || !this.due(a.id) || P.underwater || !P.onGround) continue;
+      const S = L.size, cx = Math.floor(P.pos.x / S), cz = Math.floor(P.pos.z / S);
+      if (cx >= a.area[0] && cx <= a.area[2] && cz >= a.area[1] && cz <= a.area[3]) return this.show(a.id);
+    }
     if (this.due('secret') && !P.underwater && P.onGround) {
       const S = L.size, cx = Math.floor(P.pos.x / S), cz = Math.floor(P.pos.z / S);
       const inArea = this.areas.some(a => a.id === 'secret' && cx >= a.area[0] && cx <= a.area[2] && cz >= a.area[1] && cz <= a.area[3]);
