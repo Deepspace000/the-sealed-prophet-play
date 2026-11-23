@@ -558,9 +558,9 @@ const HELP = {
   ]),
 };
 // The control text can be put away with its button (or H). On a phone it starts put away, as it would fill the screen.
-let helpOn = !document.documentElement.classList.contains('phone'), time = 0, shownDevice = '';
-try { const v = localStorage.getItem('tsp_help'); if (v) helpOn = v === '1'; } catch (e) {}
-const setHelp = on => { helpOn = on; if (params.get('nosave') !== '1') try { localStorage.setItem('tsp_help', on ? '1' : '0'); } catch (e) {} };
+let helpOn = false, time = 0, shownDevice = '';        // the controls start put away; the CONTROLS button (or H) shows them
+try { const v = localStorage.getItem('tsp_help2'); if (v) helpOn = v === '1'; } catch (e) {}      // (a new name, so an old "shown" choice does not carry over)
+const setHelp = on => { helpOn = on; if (params.get('nosave') !== '1') try { localStorage.setItem('tsp_help2', on ? '1' : '0'); } catch (e) {} };
 document.getElementById('helpBtn').addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); setHelp(!helpOn); });
 
 function step(dt, forced) {
