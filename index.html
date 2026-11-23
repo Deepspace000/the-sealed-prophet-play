@@ -236,8 +236,12 @@
                background: radial-gradient(ellipse 62% 80% at 50% 50%, rgba(18,10,5,.82) 0%, rgba(18,10,5,.55) 55%, rgba(18,10,5,0) 100%); }
   .arch, .archIn { clip-path: polygon(0 100%, 0 34%, 8% 34%, 8% 22%, 18% 22%, 18% 11%, 30% 11%, 30% 0, 70% 0, 70% 11%,
                                       82% 11%, 82% 22%, 92% 22%, 92% 34%, 100% 34%, 100% 100%); }
-  .arch { width: min(540px, calc(90vw / var(--z))); padding: 2px; background: #d9b65a; box-sizing: border-box; zoom: var(--z); }
-  .archIn { padding: 26px 30px 32px; text-align: center; background: linear-gradient(rgba(26,16,8,.9), rgba(10,6,3,.8)); }
+  /* the frame is hammered gold, and the slab inside it is old stone: rough grain lit from the upper left, darker blotches of damp, and shadow gathering at its edges */
+  .arch { width: min(540px, calc(90vw / var(--z))); padding: 4px; box-sizing: border-box; zoom: var(--z);
+          background: linear-gradient(135deg, rgba(255,236,170,.55), rgba(120,84,26,.5) 38%, rgba(246,214,128,.5) 62%, rgba(96,66,20,.6)), url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='g' x='0' y='0' width='100%' height='100%'><feTurbulence type='fractalNoise' baseFrequency='0.5' numOctaves='3' seed='5'/><feDiffuseLighting lighting-color='%23ffe9a8' surfaceScale='1.6'><feDistantLight azimuth='225' elevation='60'/></feDiffuseLighting></filter><rect width='200' height='200' filter='url(%23g)'/></svg>"), #c9a44c; background-blend-mode: normal, multiply, normal; }
+  .archIn { padding: 26px 30px 32px; text-align: center;
+            background: radial-gradient(ellipse 80% 70% at 50% 42%, rgba(0,0,0,0) 30%, rgba(0,0,0,.62) 100%), linear-gradient(rgba(34,20,9,.58), rgba(8,5,3,.74)), url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='600' height='600'><filter id='b' x='0' y='0' width='100%' height='100%'><feTurbulence type='fractalNoise' baseFrequency='0.011' numOctaves='3' seed='11'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -1.6 1.05'/></filter><rect width='600' height='600' filter='url(%23b)'/></svg>"), url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='320' height='320'><filter id='n' x='0' y='0' width='100%' height='100%'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' seed='7'/><feDiffuseLighting lighting-color='%23c49a62' surfaceScale='2.4'><feDistantLight azimuth='235' elevation='52'/></feDiffuseLighting></filter><rect width='320' height='320' filter='url(%23n)'/></svg>"), #3a2a18;
+            background-blend-mode: normal, normal, multiply, normal; box-shadow: inset 0 0 0 1px rgba(0,0,0,.55), inset 0 2px 3px rgba(255,220,150,.12); }
   #titleCard .fan { width: 180px; height: 90px; }
   /* the title alone is ghastly; everything around it stays Deco */
   /* the title is drawn in src/title.js, as if in blood */

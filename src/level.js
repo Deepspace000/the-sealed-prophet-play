@@ -135,6 +135,10 @@ export class Level {
         const f = (u, v) => Level.floorIn(c, u, v);
         fl.quad(P(0, 0, f(0, 0)), P(0, 1, f(0, 1)), P(1, 1, f(1, 1)), P(1, 0, f(1, 0)), true);
       }
+      if (c.deck) {                                 // the underside of a bridge
+        const u = (a, b) => Level.floorIn(c, a, b) - c.deck;
+        wl.quad(P(0, 0, u(0, 0)), P(1, 0, u(1, 0)), P(1, 1, u(1, 1)), P(0, 1, u(0, 1)), true);
+      }
       // ceiling
       geo(c.ceilTex || 'ceil').quad(P(0, 0, c.ceil), P(1, 0, c.ceil), P(1, 1, c.ceil), P(0, 1, c.ceil), true);
       // water surface
@@ -164,7 +168,8 @@ export class Level {
             nb = Level.floorIn(n, B[0] - o[0], B[1] - o[1]);
           }
           na = Math.min(na, c.ceil); nb = Math.min(nb, c.ceil);
-          if (na > fa + EPS || nb > fb + EPS) wall(fa, fb, Math.max(fa, na), Math.max(fb, nb));
+          // "deck": the neighbour is a bridge that many metres thick: its side is drawn only that deep, with open air under it
+          if (na > fa + EPS || nb > fb + EPS) wall(n.deck ? Math.max(fa, na - n.deck) : fa, n.deck ? Math.max(fb, nb - n.deck) : fb, Math.max(fa, na), Math.max(fb, nb));
           if (n.ceil < c.ceil - EPS) wall(Math.max(n.ceil, fa), Math.max(n.ceil, fb), c.ceil, c.ceil);
         }
       }

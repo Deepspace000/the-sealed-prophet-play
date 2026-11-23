@@ -536,12 +536,12 @@ const HG = rows => rows.map(([c, l, t]) => `<div class="hg ${c}"><b class="hl">$
 const HELP = {
   keys: HG([
     ['c-move', 'MOVE', '[W] forward &nbsp; [S] back &nbsp; [A] [D] sidestep &nbsp; [Q] [E] turn &nbsp; [Shift] run &nbsp; [Space] jump, swim up &nbsp; both mouse buttons: walk forward'],
-    ['c-look', 'LOOK', 'Move the mouse (click the view once to take the pointer) &nbsp; [Tab] or [Esc] gives the pointer back'],
+    ['c-look', 'LOOK', 'Move the mouse (click the view once to take the pointer) &nbsp; [Esc] gives the pointer back'],
     ['c-thing', 'THINGS', '[F] or left click: pick up what you look at &nbsp; [Tab] pack &nbsp; click what you carry for options &nbsp; [G] drop'],
     ['c-fight', 'FIGHT', '[Right button] right hand, [Left button] left hand: hold, then let go &nbsp; longer = harder &nbsp; [Wheel] chooses overhead, slash or thrust'],
     ['c-fight', '', '[C] guard &nbsp; [V] dodge &nbsp; [T] lock on'],
     ['c-live', 'SURVIVE', '[L] lamp &nbsp; click food to eat &nbsp; [M] map &nbsp; [B] sleep'],
-    ['c-game', 'GAME', '[Esc] menu &nbsp; [F5] quicksave &nbsp; [H] hide this'],
+    ['c-game', 'GAME', '[Esc] twice, or SETTINGS: menu &nbsp; [F5] quicksave &nbsp; [H] hide this'],
   ]),
   pad: HG([
     ['c-move', 'MOVE', 'Left stick walk &nbsp; [LB] run &nbsp; [A] jump, swim up'],

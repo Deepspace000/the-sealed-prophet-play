@@ -29,9 +29,9 @@ export class Input {
       if (typing(e)) return;
       if (!e.repeat) {
         this.keys.add(e.code);
-        if (e.code === 'Escape') {                       // (the browser may also take Esc to free the pointer: count it once)
+        if (e.code === 'Escape') {                       // with the pointer held, Esc only gives it back; pressed again (or SETTINGS clicked) it opens the menu
           const now = performance.now();
-          if (now - this.lockLostAt < 400) return;
+          if (this.locked() || now - this.lockLostAt < 400) return;
           this.escAt = now;
         }
         if (KEY_ACTION[e.code]) this.pressed.add(KEY_ACTION[e.code]);
@@ -49,7 +49,7 @@ export class Input {
     // Mouse. Moving the mouse turns your head: the first click on the picture takes the pointer (it is hidden and
     // held, so you can keep turning), and from then on the buttons are your hands: right button, right hand; left button,
     // left hand; both together walk you forward. The pointer is given back while your pack, the map, the menu or a text
-    // is open (uiOpen, set by the game), and Esc frees it and opens the menu. The wheel chooses the kind of blow.
+    // is open (uiOpen, set by the game). Esc frees it too, with no menu: a click on the picture takes it again, and Esc again (or SETTINGS) opens the menu. The wheel chooses the kind of blow.
     // Where the pointer cannot be held (some embedded views), holding the right button and moving looks instead.
     this.mouse = { right: false, left: false };
     this.uiOpen = () => false;     // set by the game: something that needs the pointer is open
@@ -64,9 +64,7 @@ export class Input {
       this.mouse.right = this.mouse.left = false;
       if (this.selfExit) { this.selfExit = false; return; }
       if (this.uiOpen()) return;                        // something else freed it (a text scene)
-      const now = performance.now();
-      this.lockLostAt = now;
-      if (now - this.escAt > 400) this.pressed.add('menu');      // Esc went to the browser to free the pointer: it still opens the menu
+      this.lockLostAt = performance.now();              // Esc freed the pointer: you have the cursor now, and the game goes on. No menu.
     });
     canvas.addEventListener('mousedown', e => {
       if (this.device === 'touch') return;
