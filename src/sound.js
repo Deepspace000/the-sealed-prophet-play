@@ -49,6 +49,28 @@ const SOUNDS = {
   death: v => { tone(0.4 * v, 110, 30, 1.6, 'sawtooth'); },
 };
 
+// Stone moving deep in a wall, then water running into a space behind it: used by the button in the tomb.
+function rumble(v) {
+  const t = ac.currentTime, dur = 3.4;
+  const s = ac.createBufferSource(), f = ac.createBiquadFilter(), g = ac.createGain();
+  s.buffer = noise; s.loop = true; f.type = 'lowpass'; f.frequency.value = 140;
+  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.7 * v, t + 0.6); g.gain.setValueAtTime(0.7 * v, t + 2.2); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+  s.connect(f); f.connect(g); g.connect(ac.destination); s.start(t); s.stop(t + dur + 0.05);
+  const o = ac.createOscillator(), og = ac.createGain(), l = ac.createOscillator(), lg = ac.createGain();
+  o.type = 'sawtooth'; o.frequency.value = 38; l.frequency.value = 7; lg.gain.value = 6; l.connect(lg); lg.connect(o.frequency);
+  og.gain.setValueAtTime(0, t); og.gain.linearRampToValueAtTime(0.14 * v, t + 0.8); og.gain.exponentialRampToValueAtTime(0.001, t + dur);
+  o.connect(og); og.connect(ac.destination); o.start(t); l.start(t); o.stop(t + dur + 0.05); l.stop(t + dur + 0.05);
+}
+function gurgle(v) {
+  hiss(0.28 * v, 500, 300, 3.2, 0.8, 'lowpass');                       // the run of water
+  for (let i = 0; i < 26; i++) {                                        // and bubbles in it
+    const at = 150 + i * 105 + Math.random() * 80, f = 220 + Math.random() * 420;
+    setTimeout(() => ac && tone(0.1 * v, f, f * (1.5 + Math.random()), 0.06 + Math.random() * 0.05, 'sine'), at);
+  }
+}
+SOUNDS.rumble = rumble;
+SOUNDS.gurgle = gurgle;
+
 export function play(name, far = 0) {
   if (!ctx() || ac.state !== 'running' || !SOUNDS[name]) return;
   const v = Math.max(0, 1 - far / 22);

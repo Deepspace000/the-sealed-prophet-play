@@ -18,6 +18,7 @@
     "spots: places that say something when you stand there. 'wall' puts a door picture on that wall. 'to' is the level it leads to.",
     "  auto:true = no door: you go to that level as soon as you enter the cell (a flooded passage). 'face' is the way you look when you arrive there.",
     "props: scenery that stands in the level. id 'urn' = a big clay urn; kind: whole, broken or tipped; size = height in metres; 'at' as for items.",
+    "gates + buttons: a gate with mode 'button' is drawn as plain wall. A button (cell, wall, h, opens) works the gate with that id once: rumbling and water, then the gate slides back for good.",
     "start: cell [column, row] and the way the player faces."
   ],
   "cell": 2,
@@ -51,7 +52,7 @@
     "#........#######Q..#",
     "#........#######...#",
     "#...wwwww##vkv######",
-    "#...wwwwwuuxkx######",
+    "#...wwwwwuuxkxuuuxk#",
     "#...wwwww##vkv######",
     "#........###########",
     "####################"
@@ -89,7 +90,13 @@
     { "cell": [9, 1], "text": "A burial, broken open long ago. The bones were thrown about." },
     { "cell": [18, 6], "text": "A dead jackal. The others have been at it." },
     { "cell": [12, 10], "text": "Someone died here, a long time after the tomb was shut." },
-    { "cell": [12, 11], "auto": true, "delay": 2.5, "face": "W", "text": "", "to": "shaft" }
+    { "cell": [18, 11], "auto": true, "delay": 1.2, "face": "W", "text": "", "to": "shaft" }
+  ],
+  "gates": [
+    { "cell": [14, 11], "run": "EW", "mode": "button", "id": "seal", "slide": "side" }
+  ],
+  "buttons": [
+    { "cell": [13, 10], "wall": "E", "h": 1.8, "opens": "seal" }
   ],
   "torches": [
     { "cell": [2, 1], "wall": "N", "h": 2.2 },

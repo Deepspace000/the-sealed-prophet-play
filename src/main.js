@@ -89,7 +89,8 @@ await loadArt(p => LOAD.set(0.1 + 0.55 * p));
 LOAD.set(0.66);
 const level = new Level(data);
 if (data.fog != null) scene.fog.density = DARK.density = data.fog;      // how fast things fade into the dark
-scene.add(level.build(standinMaterials()));
+const MATS = standinMaterials();
+scene.add(level.build(MATS));
 buildSpikes(scene, level);                 // beds of spikes (cells with "spikes": true)
 const TORCH = data.torchColor ? parseInt(data.torchColor.slice(1), 16) : null;      // a level may light its torches another colour ("torchColor": "#ff2a1a")
 
@@ -163,7 +164,7 @@ if (saved) {
 const ui = new UI(inv, () => dropHeld(), it => useThing(it));
 if (rebuilt) setTimeout(() => ui.say('This place has been rebuilt since you were last here. You start it again from its door.'), 1500);
 // Doors that need keys, levers, doors that slide, and fireballs from the walls (see hazards.js).
-const gates = new Gates({ scene, level, gates: data.gates, levers: data.levers, saved: saved && saved.gates, say: t => ui.say(t),
+const gates = new Gates({ scene, level, gates: data.gates, levers: data.levers, buttons: data.buttons, wallMat: MATS.wall, saved: saved && saved.gates, say: t => ui.say(t),
   findKey: id => [...inv.all()].map(e => e[0]).find(it => it.def.key === id) || null, takeKey: it => inv.remove(it) });
 const fireballs = new Fireballs({ scene, level, shooters: data.shooters });
 const USE = { keys: 'Press F to use it.', pad: 'Press X to use it.', touch: 'Tap to use it.' };
@@ -630,7 +631,7 @@ function step(dt, forced) {
     if (player.fits(nx, nz, player.pos.y, 0.25)) { player.pos.x = nx; player.pos.z = nz; }
   }
 
-  camera.position.set(player.pos.x, player.eyeY, player.pos.z);
+  camera.position.set(player.pos.x + (Math.random() - 0.5) * 0.04 * gates.shake, player.eyeY + (Math.random() - 0.5) * 0.04 * gates.shake, player.pos.z);
   camera.rotation.set(player.pitch, player.yaw, 0);
   camera.updateMatrixWorld();
   camera.getWorldDirection(viewDir);

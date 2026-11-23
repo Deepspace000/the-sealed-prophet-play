@@ -3,6 +3,8 @@
 //   gates    "gates": a door that fills one cell. mode "key" opens once with the matching key item (item "key" = the gate's "key"),
 //            "lever" opens and shuts with a lever, "timed" opens and shuts by itself, "auto" slides open as you come near.
 //            Gates with the same "id" are one door (a wide passage needs a gate in each of its cells).
+//   buttons  "buttons": a round stone button in a wall (cell, wall, h). Pressed once: rumbling and running water, then the gate named
+//            in "opens" (a gate with mode "button", drawn as plain wall) slides back for good. It stays open in the save.
 //   levers   "levers": a lever on a wall that works the gates it "opens". "hold": seconds before they shut again (0 = they stay open).
 //   shooters "shooters": a carved mouth in a wall that spits fireballs along the passage.
 import * as THREE from 'three';
@@ -73,15 +75,23 @@ function gateTex(mode, colour) {
   });
 }
 
+// The slab of a gate that is drawn as plain wall: the level's own wall stone, repeated so it matches.
+function plainWall(mat, w, h) {
+  const m = mat.clone();
+  if (m.map) { m.map = m.map.clone(); m.map.repeat.set(w / 2, h / 2); m.map.needsUpdate = true; }
+  return m;
+}
+
 export class Gates {
   // cfg: { scene, level, gates, levers, saved (indexes of gates already opened), say(text), findKey(id) -> item|null, takeKey(item) }
-  constructor({ scene, level, gates = [], levers = [], saved = [], say, findKey, takeKey }) {
+  constructor({ scene, level, gates = [], levers = [], buttons = [], saved = [], say, findKey, takeKey, wallMat }) {
     Object.assign(this, { scene, level, say, findKey, takeKey });
+    this.shake = 0;
     this.time = 0;
     this.list = gates.map((g, n) => {
       const c = level.cell(g.cell[0], g.cell[1]);
       const h = c.ceil - c.floor, s = level.size;
-      const slab = new THREE.Mesh(new THREE.BoxGeometry(s, h, 0.45), new THREE.MeshLambertMaterial({ map: gateTex(g.mode, g.colour) }));
+      const slab = new THREE.Mesh(new THREE.BoxGeometry(s, h, 0.45), g.mode === 'button' && wallMat ? plainWall(wallMat, s, h) : new THREE.MeshLambertMaterial({ map: gateTex(g.mode, g.colour) }));
       slab.rotation.y = g.run === 'EW' ? Math.PI / 2 : 0;
       const gate = { ...g, n, id: g.id ?? 'g' + n, mesh: slab, h, floor: c.floor, t: 1, want: 1, x: (g.cell[0] + 0.5) * s, z: (g.cell[1] + 0.5) * s,
         index: g.cell[1] * level.w + g.cell[0], slide: g.slide || (g.mode === 'auto' || g.mode === 'timed' ? 'side' : 'up') };
@@ -89,7 +99,21 @@ export class Gates {
       return gate;
     });
     this.opened = new Set(saved);
-    for (const g of this.list) if (this.opened.has(g.id) && g.mode === 'key') { g.t = 0; g.want = 0; }
+    for (const g of this.list) if (this.opened.has(g.id) && (g.mode === 'key' || g.mode === 'button')) { g.t = 0; g.want = 0; }
+    this.buttons = buttons.map(b => {
+      const s = level.size, c = level.cell(b.cell[0], b.cell[1]), o = OFF[b.wall];
+      const grp = new THREE.Group();
+      const plate = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.3, 0.06), new THREE.MeshLambertMaterial({ color: 0x4a3c28 }));
+      const knob = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.085, 0.07, 14), new THREE.MeshLambertMaterial({ color: 0xc9a44c }));
+      knob.rotation.x = Math.PI / 2;
+      grp.add(plate, knob);
+      grp.position.set((b.cell[0] + 0.5 + o[0] * 0.49) * s, c.floor + (b.h ?? 1.2), (b.cell[1] + 0.5 + o[1] * 0.49) * s);
+      grp.rotation.y = TURN[b.wall];
+      scene.add(grp);
+      const on = this.opened.has(b.opens);
+      knob.position.z = on ? 0.02 : 0.07;
+      return { ...b, grp, knob, on, timer: 0, x: (b.cell[0] + 0.5) * s, z: (b.cell[1] + 0.5) * s, y: c.floor + (b.h ?? 1.2) };
+    });
     this.levers = levers.map(l => {
       const s = level.size, c = level.cell(l.cell[0], l.cell[1]), o = OFF[l.wall];
       const grp = new THREE.Group();
@@ -144,6 +168,15 @@ export class Gates {
         else if (d > 5 && g.want !== 1 && !this.bodyIn(g, P)) g.want = 1;
       } else if (g.pending && !this.bodyIn(g, P)) { g.pending = false; g.want = 1; }
     }
+    let shaking = 0;
+    for (const b of this.buttons) {
+      b.knob.position.z += ((b.on ? 0.02 : 0.07) - b.knob.position.z) * Math.min(1, dt * 10);
+      if (b.timer > 0) {
+        b.timer -= dt; shaking = Math.max(shaking, Math.min(1, b.timer / 1.5 + 0.4));
+        if (b.timer <= 0) { this.setGroup(b.opens, true); play('groan', 0); }
+      }
+    }
+    this.shake = shaking;
     for (const l of this.levers) {
       if (l.on && l.hold > 0) { l.timer -= dt; if (l.timer <= 0) this.pull(l, P, true); }
       const want = l.on ? -0.9 : 0.9;
@@ -162,6 +195,13 @@ export class Gates {
     }
     return best;
   }
+  press(b) {
+    if (b.on) { this.say('The button is pressed in. It does not move.'); return; }
+    b.on = true; b.timer = 3.4;
+    this.opened.add(b.opens);
+    play('chip'); play('rumble'); play('gurgle');
+    this.say(b.text || 'The button sinks into the wall. Stone rumbles and water gurgles somewhere behind it.');
+  }
   pull(l, P, quiet) {
     l.on = !l.on; l.timer = l.hold || 0;
     this.setGroup(l.opens, l.on, P);
@@ -170,6 +210,8 @@ export class Gates {
   }
   // F pressed. Returns true if it did something.
   use(P) {
+    const bt = this.nearest(P, this.buttons);
+    if (bt) { this.press(bt); return true; }
     const l = this.nearest(P, this.levers);
     const g = this.nearest(P, this.list.filter(x => x.mode === 'key' && x.t > 0.05));
     if (l && (!g || Math.hypot(l.x - P.pos.x, l.z - P.pos.z) <= Math.hypot(g.x - P.pos.x, g.z - P.pos.z))) { this.pull(l, P); return true; }
@@ -185,6 +227,8 @@ export class Gates {
   }
   // words for the screen when you look at a door or a lever
   look(P, hasKeyHint) {
+    const bt = this.nearest(P, this.buttons);
+    if (bt) return bt.on ? 'A round stone button, pressed in.' : 'A round stone button set in the wall. ' + hasKeyHint;
     const l = this.nearest(P, this.levers);
     if (l) return 'A lever, worn smooth by hands. ' + hasKeyHint;
     const g = this.nearest(P, this.list.filter(x => x.mode === 'key' && x.t > 0.05));
