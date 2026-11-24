@@ -6,6 +6,8 @@ const STEP = 0.55;    // tallest step walked up without jumping
 const G = 22;         // gravity
 const JUMP = 6.6;
 const WALK = 3.2, RUN = 5.6, SWIM = 2.4;
+const LEAP = 1.15;    // a running jump goes this much faster than running
+const COYOTE = 0.1;   // seconds after stepping off an edge in which a jump still works
 const FLOAT = 1.3;    // when swimming, feet stay at least this far under the surface
 
 export class Player {
@@ -65,7 +67,8 @@ export class Player {
     this.swimming = water != null && depth > FLOAT && p.y + 1.2 < water;
     const wading = water != null && !this.swimming && p.y < water - 0.3;
 
-    const speed = (this.swimming ? SWIM : (inp.run ? RUN : WALK) * (wading ? 0.6 : 1)) * (inp.slow ?? 1);
+    // A jump made at a run (Shift) is a leap: it carries a little further than running does, so a wide gap can be cleared.
+    const speed = (this.swimming ? SWIM : (inp.run ? RUN * (this.leap && !this.onGround ? LEAP : 1) : WALK) * (wading ? 0.6 : 1)) * (inp.slow ?? 1);
     const sin = Math.sin(this.yaw), cos = Math.cos(this.yaw);
     const flat = this.swimming ? Math.cos(this.pitch) : 1;
     const tx = (-sin * inp.mz * flat + cos * inp.mx) * speed;
@@ -96,11 +99,18 @@ export class Player {
       this.onGround = false;
     } else {
       const wasOnGround = this.onGround;
-      if (wasOnGround && inp.pressed.has('jump')) { this.vy = JUMP; this.onGround = false; }
+      this.offFor = wasOnGround ? 0 : (this.offFor || 0) + dt;
+      // A jump still works for a moment after walking off an edge (COYOTE), as long as you were not already jumping or falling far.
+      const canJump = wasOnGround || (this.offFor < COYOTE && this.vy <= 0 && !this.jumping);
+      if (canJump && inp.pressed.has('jump')) {
+        this.vy = JUMP; this.onGround = false; this.jumping = true;
+        this.leap = !!inp.run && Math.hypot(this.vx, this.vz) > WALK + 0.5;
+        if (this.leap) { this.vx *= LEAP; this.vz *= LEAP; }
+      }
       this.vy -= G * dt;
       p.y += this.vy * dt;
       if (p.y <= g) {
-        p.y = g; this.vy = 0; this.onGround = true;
+        p.y = g; this.vy = 0; this.onGround = true; this.jumping = false; this.leap = false;
       } else if (wasOnGround && this.onGround && p.y - g < STEP) {
         p.y = g; this.vy = 0;            // stay on the ground going down slopes and stairs
       } else {

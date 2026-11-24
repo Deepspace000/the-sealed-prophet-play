@@ -553,8 +553,8 @@ const HG = rows => rows.map(([c, l, t]) => `<div class="hg ${c}"><b class="hl">$
 const HELP = {
   keys: HG([
     ['c-move', 'MOVE', '[W] forward &nbsp; [S] back &nbsp; [A] [D] sidestep &nbsp; [Q] [E] turn &nbsp; [Shift] run &nbsp; [Space] jump, swim up &nbsp; both mouse buttons: walk forward'],
-    ['c-look', 'LOOK', 'Move the mouse (click the view once to take the pointer) &nbsp; [Esc] gives the pointer back'],
-    ['c-thing', 'THINGS', '[F] or left click: pick up what you look at &nbsp; [Tab] pack &nbsp; click what you carry for options &nbsp; [G] drop'],
+    ['c-look', 'LOOK', 'Move the mouse (click the view once to take the pointer) &nbsp; [Tab] switches between the cursor and the camera &nbsp; [Esc] gives the cursor back'],
+    ['c-thing', 'THINGS', '[F] or left click: pick up what you look at &nbsp; [I] pack &nbsp; click what you carry for options &nbsp; [G] drop'],
     ['c-fight', 'FIGHT', '[Right button] right hand, [Left button] left hand: hold, then let go &nbsp; longer = harder &nbsp; [Wheel] chooses overhead, slash or thrust'],
     ['c-fight', '', '[C] guard &nbsp; [V] dodge &nbsp; [T] lock on'],
     ['c-live', 'SURVIVE', '[L] lamp &nbsp; click food to eat &nbsp; [M] map &nbsp; [B] sleep'],
@@ -674,6 +674,7 @@ function step(dt, forced) {
     if (autoStay >= (spot.delay || 0)) { travel(spot.to); return; }
   }
   if (inp.pressed.has('bag')) ui.toggle();
+  if (inp.pressed.has('mode')) ui.onMode();             // Tab: the cursor or the camera, like the switch above PACK
   if (pad && ui.open) {
     if (inp.pressed.has('left')) ui.nav(-1);
     if (inp.pressed.has('right')) ui.nav(1);
