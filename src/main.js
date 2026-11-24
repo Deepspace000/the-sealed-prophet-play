@@ -17,7 +17,7 @@ import { loadArt } from './art.js';
 import { play } from './sound.js';
 import { buildProps, strikeUrn } from './props.js';
 import { loadModels } from './models.js';
-import { Gates, Fireballs, buildSpikes, onSpikes } from './hazards.js';
+import { Gates, Fireballs, Lifts, buildSpikes, onSpikes } from './hazards.js';
 import { getRun, setRun, clearRun, writeSlot, readSlot, newest, toFile, fromFile } from './save.js';
 
 const LOAD = window.loading || { set() {}, name() {}, finish: async () => {} };      // the loading page (see index.html)
@@ -169,6 +169,8 @@ if (rebuilt) setTimeout(() => ui.say('This place has been rebuilt since you were
 const gates = new Gates({ scene, level, gates: data.gates, levers: data.levers, buttons: data.buttons, wallMat: MATS.wall, saved: saved && saved.gates, say: t => ui.say(t),
   findKey: id => [...inv.all()].map(e => e[0]).find(it => it.def.key === id) || null, takeKey: it => inv.remove(it) });
 const fireballs = new Fireballs({ scene, level, shooters: data.shooters });
+const lifts = new Lifts({ scene, level, lifts: data.lifts, mat: MATS.wall });        // platforms that rise and sink in a void
+player.extraFloor = (x, z) => lifts.topAt(x, z);
 const USE = { keys: 'Press F to use it.', pad: 'Press X to use it.', touch: 'Tap to use it.' };
 // The great seal in the hall has a socket for the relic of each realm. Carry one back and set it in. Which are set is kept in the save.
 const placed = new Set(run && run.relics || []);
@@ -190,10 +192,13 @@ function setRelics() {            // returns true if it set any
 if (run && run.pos) {
   Object.assign(player.pos, { x: run.pos.x, y: run.pos.y, z: run.pos.z });
   player.yaw = run.pos.yaw; player.pitch = run.pos.pitch;
+  const lift = lifts.topAt(run.pos.x, run.pos.z);                 // saved standing on a lift: you are set down on it, wherever it now is
+  if (lift > -Infinity) player.pos.y = Math.max(lift, level.floorAt(run.pos.x, run.pos.z));
 } else if (run && run.from) {
   const door = (data.spots || []).find(sp => sp.to === run.from);
   if (door) {
-    const c = level.cellCentre(door.cell[0], door.cell[1]);
+    const at = door.arrive || door.cell;                 // "arrive": where you come in, if not the door's own cell (a flooded passage: past the water)
+    const c = level.cellCentre(at[0], at[1]);
     Object.assign(player.pos, { x: c.x, y: level.floorAt(c.x, c.z), z: c.z });
     if (door.wall) player.yaw = { N: Math.PI, S: 0, E: Math.PI / 2, W: -Math.PI / 2 }[door.wall];      // your back to the door
     else player.yaw = { N: 0, W: Math.PI / 2, S: Math.PI, E: -Math.PI / 2 }[door.face] ?? player.yaw;   // a flooded passage: the way it says
@@ -641,6 +646,7 @@ function step(dt, forced) {
   if (fight.dead || asleep > 0) { inp.attackHeld = inp.blockHeld = inp.mouseAttack = inp.handR = inp.handL = false; inp.mx = inp.mz = inp.lookX = inp.lookY = 0; inp.jumpHeld = false; inp.pressed.clear(); inp.clicks = []; }
   if (cut && (inp.pressed.has('use') || inp.pressed.has('jump') || inp.pressed.has('back') || (inp.clicks && inp.clicks.length))) cut.t = cut.dur;      // F, Space, B or a click skips the cutscene
   if (cut) { inp.attackHeld = inp.blockHeld = inp.mouseAttack = inp.handR = inp.handL = false; inp.mx = inp.mz = inp.lookX = inp.lookY = 0; inp.jumpHeld = false; inp.pressed.clear(); inp.clicks = []; }
+  lifts.update(dt);
   player.update(dt, inp);
   gates.update(dt, player);
   fireballs.update(dt, player, dmg => { ui.say('A fireball burns you.'); fight.harm(dmg, 'burned'); });
@@ -871,4 +877,4 @@ function frame(now) {
 requestAnimationFrame(frame);
 
 // For testing from the console.
-window.game = { gates, fireballs, unlockRealm, travel, THREE, scene, camera, renderer, level, player, input, lamp, torches, step, inv, world, ui, make, creatures, fight, life, menu, capture, sleep, map, openMap, target, scenes };
+window.game = { gates, fireballs, lifts, unlockRealm, travel, THREE, scene, camera, renderer, level, player, input, lamp, torches, step, inv, world, ui, make, creatures, fight, life, menu, capture, sleep, map, openMap, target, scenes };

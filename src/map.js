@@ -222,7 +222,9 @@ export class GameMap {
     g.stroke();
 
     // the name of the place, and which way is north
-    const hand = px => `${px}px Quill, Georgia, serif`;
+    // the words on the map are in the game's book face (index.html --book), in italic, a little smaller than the old handwriting
+    const book = getComputedStyle(document.documentElement).getPropertyValue('--book') || 'Georgia, serif';
+    const hand = px => `italic ${Math.round(px * 0.8)}px ${book}`;
     g.fillStyle = '#2b2a28'; g.textBaseline = 'alphabetic'; g.textAlign = 'left';
     g.font = hand(small ? 24 : 32);
     g.fillText(p.name, bind + 16, top - 16);

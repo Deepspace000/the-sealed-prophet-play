@@ -56,6 +56,39 @@ export function onSpikes(level, player) {
   return false;
 }
 
+// ---- lifts ----
+// "lifts": stone platforms that float in a void and slowly rise and sink. cell: the north-west cell of it, w and d: how many cells
+// wide (east) and deep (south), hi and lo: the heights its top goes between, period: seconds for one trip down and back up,
+// phase: where in that trip it starts (0 to 1), thick: how thick the slab is. You can stand on them (the body asks topAt) but
+// they are not walls: a lift only ever holds you up.
+export class Lifts {
+  constructor({ scene, level, lifts = [], mat }) {
+    const s = level.size;
+    this.time = 0;
+    this.list = lifts.map(l => {
+      const w = (l.w || 1) * s, d = (l.d || 1) * s, th = l.thick || 1.1;
+      const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, th, d), mat ? plainWall(mat, w, th) : new THREE.MeshLambertMaterial({ color: 0x7b6644 }));
+      scene.add(mesh);
+      return { ...l, mesh, th, top: l.hi, x0: l.cell[0] * s, z0: l.cell[1] * s, x1: (l.cell[0] + (l.w || 1)) * s, z1: (l.cell[1] + (l.d || 1)) * s };
+    });
+    this.update(0);
+  }
+  update(dt) {
+    this.time += dt;
+    for (const l of this.list) {
+      const k = 0.5 - 0.5 * Math.cos((this.time / (l.period || 10) + (l.phase || 0)) * Math.PI * 2);      // 0 at the top of its trip, 1 at the bottom, easing at each end
+      l.top = l.hi + (l.lo - l.hi) * k;
+      l.mesh.position.set((l.x0 + l.x1) / 2, l.top - l.th / 2, (l.z0 + l.z1) / 2);
+    }
+  }
+  // The top of a lift at this point, or -Infinity if there is none.
+  topAt(x, z) {
+    let t = -Infinity;
+    for (const l of this.list) if (x >= l.x0 && x <= l.x1 && z >= l.z0 && z <= l.z1 && l.top > t) t = l.top;
+    return t;
+  }
+}
+
 // ---- gates and levers ----
 function gateTex(mode, colour) {
   return canvasTex(64, 96, (g, w, h) => {

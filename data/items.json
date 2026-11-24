@@ -59,7 +59,7 @@
     "rag": { "name": "Rotten cloth", "text": "A scrap of old linen. It is falling apart.", "weight": 0.05, "size": 1, "icon": ["#bfae82", "box"] },
     "cracked_jar": { "name": "Cracked jar", "text": "A clay jar with a crack down its side. It holds nothing.", "weight": 0.8, "size": 2, "icon": ["#b5653a", "bottle"] },
     "red_bottle": { "name": "Small bottle", "text": "A small glass bottle of dark red liquid. Drinking it heals you.", "weight": 0.2, "size": 1, "potion": { "heal": 25 }, "icon": ["#a02a2a", "bottle"] },
-    "key_ptah_gold": { "name": "Golden key", "text": "A key of gold, the bow shaped like a scarab. It fits a lock in the tower of Ptah.", "weight": 0.2, "size": 1, "key": "ptah_gold", "icon": ["#e2b93b", "ring"] },
+    "key_ptah_gold": { "name": "Golden key", "text": "A key of gold, the bow shaped like a scarab. It fits a lock in the tower of Ptah.", "weight": 0.2, "size": 1, "key": "ptah_gold", "icon": ["#e2b93b", "ring"], "floor": 0.62, "glow": "#ffcf5a" },
     "key_ptah_silver": { "name": "Silver key", "text": "A key of tarnished silver, the bow shaped like a scarab. It fits a lock in the tower of Ptah.", "weight": 0.2, "size": 1, "key": "ptah_silver", "icon": ["#c4cdd4", "ring"] },
     "key_ptah_green": { "name": "Green key", "text": "A key of green stone, the bow shaped like a scarab. It fits a lock in the tower of Ptah.", "weight": 0.2, "size": 1, "key": "ptah_green", "icon": ["#3a9a6a", "ring"] },
     "key_ptah_blue": { "name": "Blue key", "text": "A key of blue stone, the bow shaped like a scarab. It fits a lock in the tower of Ptah.", "weight": 0.2, "size": 1, "key": "ptah_blue", "icon": ["#2f5fb0", "ring"] },

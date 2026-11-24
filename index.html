@@ -75,7 +75,8 @@
   .mode b { position: relative; flex: 1; display: flex; align-items: center; justify-content: center; color: #a89868; transition: color .18s; }
   .mode b svg { width: calc(14px * var(--k)); height: calc(14px * var(--k)); }
   .mode:not(.cam) .cur, .mode.cam .eye { color: #17120a; }
-  body.touch .mode { display: none; }
+  body.touch .mode, body.touch .modeKey { display: none; }
+  .group label.modeKey { font-size: calc(8px * var(--t)); letter-spacing: .25em; margin-bottom: -1px; }      /* the key that works the switch, small, above it */
   .opener { position: absolute; right: -1px; bottom: -1px; width: calc(16px * var(--k)); height: calc(15px * var(--k)); font-size: calc(11px * var(--k)); line-height: calc(15px * var(--k));
             text-align: center; color: #17120a; background: #d9b65a; }
   .opener.on { background: #ffe39a; }
@@ -121,7 +122,7 @@
   #mapTop button:hover { background: #d9b65a; color: #17120a; }
   #mapPage { position: relative; width: min(96vw, 1040px); flex: 0 1 740px; min-height: 0; box-shadow: 0 10px 40px #000; }
   #mapCanvas { position: absolute; inset: 0; width: 100%; height: 100%; cursor: crosshair; }
-  #mapNote { display: none; position: absolute; width: 190px; box-sizing: border-box; padding: 0 4px; font: 21px Quill, Georgia, serif;
+  #mapNote { display: none; position: absolute; width: 190px; box-sizing: border-box; padding: 0 4px; font: italic 17px var(--book);
              color: #2b2a28; background: rgba(255,255,255,.45); border: 0; border-bottom: 1px solid #6b665c; outline: 0;
              user-select: text; -webkit-user-select: text; }
   #mapHint { max-width: 94vw; font-size: calc(12px * var(--t)); line-height: 1.4; text-align: center; color: #c9bb8e; }
@@ -174,7 +175,7 @@
              background: linear-gradient(rgba(26,16,8,.96), rgba(10,6,3,.96)); border: 1px solid #d9b65a; box-shadow: 0 10px 40px #000; }
   #sceneTitle { margin: 0 0 10px; font-weight: normal; font-size: 13px; letter-spacing: .3em; text-transform: uppercase; color: #ecc96c; }
   #sceneLines { text-align: left; }
-  #sceneLines p { margin: 0 0 calc(7px * var(--u)); font-family: Quill, Georgia, serif; font-size: calc(20px * var(--u)); line-height: 1.25; color: #efe4c0;
+  #sceneLines p { margin: 0 0 calc(7px * var(--u)); font-family: var(--book); font-size: calc(18px * var(--u)); line-height: 1.4; color: #efe4c0;
                   opacity: 0; animation: sceneLine .7s ease-out forwards; }
   @keyframes sceneLine { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: none; } }
   #sceneGo { margin-top: 8px; font: inherit; font-size: 11px; letter-spacing: .2em; color: #e8d9a8; background: #17120a; border: 1px solid #d9b65a;
@@ -233,6 +234,8 @@
   @keyframes wake { 0% { opacity: 1; } 22% { opacity: .55; } 34% { opacity: .96; } 58% { opacity: .35; } 68% { opacity: .7; } 100% { opacity: 0; } }
   #intro { display: none; position: fixed; inset: 0; z-index: 50; background: #000; cursor: pointer; }
   #introBg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 72% 50%; }
+  /* In the game (notes, the map) the words are set in an elegant book face, easy to read; the handwriting is kept for the opening journal. */
+  :root { --book: "Palatino Linotype", Palatino, "Book Antiqua", "Iowan Old Style", "URW Palladio L", Georgia, serif; }
   /* a pen-and-ink hand: La Belle Aurore (fonts/, see CREDITS.md), which comes with the game so it is the same on every device.
      size-adjust sets its size once here, rather than at every place it is used. */
   @font-face { font-family: Quill; size-adjust: 96%; src: url("fonts/LaBelleAurore.ttf") format("truetype"), local("Gabriola"), local("Apple Chancery"), local("Palatino Linotype Italic"),
@@ -394,7 +397,7 @@
   <div id="mapPage"><canvas id="mapCanvas"></canvas><input id="mapNote" maxlength="36" autocomplete="off" spellcheck="false"></div>
   <div id="mapHint"></div>
 </div>
-<div id="title">THE SEALED PROPHET <span class="ver">v0.2.2</span><small><span id="levelName"></span> &middot; <span id="state">Walking</span></small></div>
+<div id="title">THE SEALED PROPHET <span class="ver">v0.2.3</span><small><span id="levelName"></span> &middot; <span id="state">Walking</span></small></div>
 <button id="helpBtn">HIDE CONTROLS</button>
 <div id="help"></div>
 <div id="look"></div>
@@ -455,7 +458,7 @@ window.loading = (() => {
       <div class="fan"></div>
       <h1 id="bloodTitle">THE SEALED<br>PROPHET</h1>
       <div class="sub">A JOURNAL &middot; 1924</div>
-      <div class="ver" style="margin-top:8px;text-align:center">v0.2.2</div>
+      <div class="ver" style="margin-top:8px;text-align:center">v0.2.3</div>
       <div class="rule"></div>
       <button id="continueBtn" style="display:none">CONTINUE</button>
       <button id="beginBtn">BEGIN</button>

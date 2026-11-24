@@ -44,6 +44,8 @@ export class Player {
     for (const [sx, sz] of this.samples(x, z)) {
       const f = this.level.floorAt(sx, sz);
       if (f <= y + stepUp && f > g) g = f;
+      const e = this.extraFloor ? this.extraFloor(sx, sz) : -Infinity;      // a lift (see hazards.js) holds you up too
+      if (e <= y + stepUp && e > g) g = e;
     }
     return g;
   }
@@ -110,7 +112,12 @@ export class Player {
       this.vy -= G * dt;
       p.y += this.vy * dt;
       if (p.y <= g) {
-        p.y = g; this.vy = 0; this.onGround = true; this.jumping = false; this.leap = false;
+        p.y = g; this.vy = 0; this.onGround = true; this.jumping = false;
+        if (this.leap) {                                 // landing from a leap: back to running speed, so you do not skid off a small platform
+          const v = Math.hypot(this.vx, this.vz);
+          if (v > RUN) { this.vx *= RUN / v; this.vz *= RUN / v; }
+          this.leap = false;
+        }
       } else if (wasOnGround && this.onGround && p.y - g < STEP) {
         p.y = g; this.vy = 0;            // stay on the ground going down slopes and stairs
       } else {

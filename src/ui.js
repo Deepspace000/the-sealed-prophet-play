@@ -269,7 +269,7 @@ export class UI {
     const inv = this.inv;
     let bar = GROUPS.map(([area, title]) => this.grid(area, title)).join('');
     // The switch between the cursor (the mouse points at things) and the camera (the mouse turns your head), above PACK.
-    const mode = `<div class="mode${this.camera() ? ' cam' : ''}" data-btn="mode" title="Cursor or camera [Tab]">`
+    const mode = `<label class="modeKey">Tab</label><div class="mode${this.camera() ? ' cam' : ''}" data-btn="mode" title="Cursor or camera [Tab]">`
       + `<span class="knob"></span><b class="cur">${CURSOR_ICON}</b><b class="eye">${CAMERA_ICON}</b></div>`;
     bar += `<div class="group">${mode}${inv.back[0] ? `<button data-btn="pack">${this.open ? 'CLOSE' : 'PACK'}</button>` : ''}</div>`;
     this.bar.innerHTML = bar;

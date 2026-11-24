@@ -157,6 +157,15 @@ const urlCache = {};
 export const hasArt = def => !!art.items[def.id];
 export const iconURL = def => hasArt(def) ? art.items[def.id].src : urlCache[def.id] || (urlCache[def.id] = iconCanvas(def).toDataURL());
 
+let halo = null;                               // a soft round glow, made once
+const haloTex = () => halo || (halo = (() => {
+  const c = document.createElement('canvas'); c.width = c.height = 64;
+  const g = c.getContext('2d'), r = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+  r.addColorStop(0, 'rgba(255,255,255,.9)'); r.addColorStop(0.25, 'rgba(255,255,255,.35)'); r.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = r; g.fillRect(0, 0, 64, 64);
+  return new THREE.CanvasTexture(c);
+})());
+
 export class WorldItems {
   constructor(scene, level) { this.scene = scene; this.level = level; this.list = []; }
   place(item, x, z) {
@@ -164,12 +173,19 @@ export class WorldItems {
     tex.magFilter = THREE.NearestFilter;
     tex.minFilter = real ? THREE.LinearMipmapLinearFilter : THREE.NearestFilter;
     tex.colorSpace = THREE.SRGBColorSpace;
-    const spr = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, fog: true, alphaTest: real ? 0.4 : 0 }));
+    const glow = item.def.glow;              // "glow": a colour. The thing shines: no fog dims it, a soft halo and a little light round it
+    const spr = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, fog: !glow, alphaTest: real ? 0.4 : 0 }));
     // bigger things look bigger; a long thing gives the size of its picture in metres as "floor"
     const big = item.def.floor || (real ? 0.34 + 0.1 * Math.min(3, item.def.size || 1) : 0.46);
     const y = this.level.floorAt(x, z) + big * 0.5;
     spr.scale.set(big, big, 1);
     spr.position.set(x, y, z);
+    if (glow) {
+      const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: haloTex(), color: glow, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false }));
+      halo.scale.set(2.6, 2.6, 1); halo.position.z = -0.01; halo.renderOrder = -1;
+      const light = new THREE.PointLight(glow, 2.2, 4.5, 2);
+      spr.add(halo, light);
+    }
     this.scene.add(spr);
     const e = { item, spr, x, y, z };
     this.list.push(e);

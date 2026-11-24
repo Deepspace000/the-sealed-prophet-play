@@ -124,7 +124,7 @@
     {"id": "rotting_dead", "cell": [11, 18]}
   ],
   "spots": [
-    {"cell": [21, 12], "auto": true, "face": "N", "text": "", "to": "test"},
+    {"cell": [21, 12], "auto": true, "face": "N", "text": "", "to": "test", "arrive": [21, 9]},
     {"cell": [19, 7], "text": "The bones of a man. His boots and his pack are not old."},
     {"cell": [13, 8], "text": "A robber. He fell a long way."},
     {"cell": [2, 15], "wall": "W", "text": "A low doorway. Cold air comes up from below.", "to": "hub"}
