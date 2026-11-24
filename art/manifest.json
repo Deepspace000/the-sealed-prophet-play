@@ -1,5 +1,5 @@
 {
- "v": 1795491769,
+ "v": 1795502042,
  "items": [
   "bandage",
   "bedroll",
@@ -82,6 +82,11 @@
   "rotting_dead_step",
   "rotting_dead_strike",
   "rotting_dead_windup",
+  "scarab_beetle_dead",
+  "scarab_beetle_idle",
+  "scarab_beetle_step",
+  "scarab_beetle_strike",
+  "scarab_beetle_windup",
   "wrapped_dead_dead",
   "wrapped_dead_idle",
   "wrapped_dead_step",
