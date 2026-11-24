@@ -34,6 +34,7 @@ export class GameMap {
   // o: { id, level, data, pages (from a save), order (level ids in the order of their pages), load(id) -> Promise of { level, data } }
   constructor(o) {
     this.id = o.id; this.order = o.order; this.load = o.load;
+    this.realName = o.realName; this.nameOf = o.nameOf || ((id, name) => name);     // the heading of a page: its name, if you know it yet
     this.pages = o.pages ? JSON.parse(JSON.stringify(o.pages)) : {};
     this.world = { [o.id]: { level: o.level, data: o.data } };
     this.seen = {};
@@ -70,7 +71,9 @@ export class GameMap {
   page(id) {
     const L = this.world[id].level, n = L.w * L.h;
     let p = this.pages[id];
-    if (!p || p.w !== L.w || p.h !== L.h) p = this.pages[id] = { name: L.data.name || id, w: L.w, h: L.h, seen: '', notes: (p && p.notes) || [] };
+    const real = (id === this.id && this.realName) || L.data.name || id;
+    if (!p || p.w !== L.w || p.h !== L.h) p = this.pages[id] = { name: real, w: L.w, h: L.h, seen: '', notes: (p && p.notes) || [] };
+    p.name = real;
     const a = this.seen[id] = new Uint8Array(n);
     for (let i = 0; i < n && i < p.seen.length; i++) a[i] = p.seen[i] === '1' ? 1 : 0;
   }
@@ -227,8 +230,9 @@ export class GameMap {
     const hand = px => `italic ${Math.round(px * 0.8)}px ${book}`;
     g.fillStyle = '#2b2a28'; g.textBaseline = 'alphabetic'; g.textAlign = 'left';
     g.font = hand(small ? 24 : 32);
-    g.fillText(p.name, bind + 16, top - 16);
-    line(g, bind + 14, top - 9, bind + 22 + g.measureText(p.name).width, top - 10, 1.3, FAINT, 901);
+    const title = this.nameOf(this.view, p.name);
+    g.fillText(title, bind + 16, top - 16);
+    line(g, bind + 14, top - 9, bind + 22 + g.measureText(title).width, top - 10, 1.3, FAINT, 901);
     const nx = W - (small ? 22 : 34), ny = top - 8;
     line(g, nx, ny, nx, ny - 20, 1.3, PENCIL, 902);
     line(g, nx, ny - 20, nx - 4, ny - 13, 1.3, PENCIL, 903); line(g, nx, ny - 20, nx + 4, ny - 13, 1.3, PENCIL, 904);

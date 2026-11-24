@@ -136,8 +136,10 @@ const SHAPES = {
   tool: (x, y) => (Math.abs(x + y) < 0.2 && Math.abs(x - y) < 1.3) || (Math.abs(x - y - 1.0) < 0.26 && Math.abs(x + y) < 1.0),
 };
 const iconCache = {};
+// "art" in data/items.json: the thing uses the pictures of another (an old, worn sword drawn as the curved sword)
+export const artId = def => def.art || def.id;
 export function iconCanvas(def) {
-  if (art.items[def.id]) return art.items[def.id];        // a real picture
+  if (art.items[artId(def)]) return art.items[artId(def)];        // a real picture
   if (iconCache[def.id]) return iconCache[def.id];
   const S = 16, c = document.createElement('canvas');
   c.width = c.height = S;
@@ -154,8 +156,8 @@ export function iconCanvas(def) {
   return (iconCache[def.id] = c);
 }
 const urlCache = {};
-export const hasArt = def => !!art.items[def.id];
-export const iconURL = def => hasArt(def) ? art.items[def.id].src : urlCache[def.id] || (urlCache[def.id] = iconCanvas(def).toDataURL());
+export const hasArt = def => !!art.items[artId(def)];
+export const iconURL = def => hasArt(def) ? art.items[artId(def)].src : urlCache[def.id] || (urlCache[def.id] = iconCanvas(def).toDataURL());
 
 let halo = null;                               // a soft round glow, made once
 const haloTex = () => halo || (halo = (() => {

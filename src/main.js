@@ -68,12 +68,21 @@ if (run && run.levels && run.levels[LEVEL] && (run.levels[LEVEL].rev || 0) !== R
   run = { ...run, levels, pos: null, from: run.from || 'hub' };
   rebuilt = true;
 }
-LOAD.name((data.name || LEVEL).toUpperCase());
 // The hall's false doors are for the eight realms. A spot with a "realm" becomes a real door as soon as levels/<realm>.json exists,
 // so each realm can be added by dropping its level file in, with no change to the hall.
 // The Sealed Prophet's ghost opens them one at a time (see data/prophet.json); which are open is kept in the save.
 const unlocked = new Set(run && run.prophet && run.prophet.unlocked || []);
 let heard = run && run.prophet ? run.prophet.heard : 0;           // how many of his visits have been told
+// Names of places. The first time you come to a place you do not know what it is called: it is an "Unknown area". Come back to
+// it, and it has its name. The realms the ghost opens are named by him, so you know those from the start. (visits: how many
+// times you have arrived in each place, kept in the save. An older save without them: the places in it keep their names.)
+const visits = run && run.visits ? { ...run.visits } : Object.fromEntries(Object.keys((run && run.levels) || {}).map(k => [k, 2]));
+if (!run || !run.pos) visits[LEVEL] = (visits[LEVEL] || 0) + 1;      // a new game, or you came in through a door: one more visit
+const known = id => unlocked.has(id) || (visits[id] || 0) >= 2;
+const REAL_NAME = data.name || LEVEL;
+data.name = known(LEVEL) ? REAL_NAME : 'Unknown area';
+for (const s of data.spots || []) if (s.to && s.textUnknown && !known(s.to)) s.text = s.textUnknown;     // a door that would name a place you do not know yet
+LOAD.name(data.name.toUpperCase());
 const setDoor = s => {
   const name = s.realm[0].toUpperCase() + s.realm.slice(1);
   if (!unlocked.has(s.realm)) return;
@@ -227,7 +236,9 @@ const creatures = new Creatures(scene, level, kinds, {
   const cr = creatures.spawn(c.id, was ? was.x : (c.cell[0] + at[0]) * level.size, was ? was.z : (c.cell[1] + at[1]) * level.size, n,
     !!(was && was.dead));
   if (was) {
-    cr.y = was.y; cr.hp = was.hp; cr.fled = !!was.fled; cr.skinned = !!was.skinned;
+    // health is kept as a share of the most it can have, so a creature made tougher since the save is tougher in it too
+    // (an older save has no "max": a creature in it is taken to have been unhurt)
+    cr.y = was.y; cr.hp = was.dead ? 0 : was.max ? Math.min(cr.def.health, was.hp / was.max * cr.def.health) : cr.def.health; cr.fled = !!was.fled; cr.skinned = !!was.skinned;
     if (!was.dead && was.awake && cr.state === 'still') cr.state = 'idle';
   }
 });
@@ -284,13 +295,13 @@ function capture() {
   levels[LEVEL] = {
     rev: REV, items: world.list.map(e => ({ ...pack(e.item), x: e.x, z: e.z })),
     urns: props.solid.filter(u => u.smashed).map(u => u.n), gates: gates.pack(),
-    creatures: creatures.list.map(c => ({ x: c.x, y: c.y, z: c.z, hp: c.hp, dead: c.state === 'dead', skinned: c.skinned || undefined, fled: c.fled, awake: c.state !== 'still' })),
+    creatures: creatures.list.map(c => ({ x: c.x, y: c.y, z: c.z, hp: c.hp, max: c.def.health, dead: c.state === 'dead', skinned: c.skinned || undefined, fled: c.fled, awake: c.state !== 'still' })),
   };
   return {
     v: 1, level: LEVEL, from: null,
     pos: { x: player.pos.x, y: player.pos.y, z: player.pos.z, yaw: player.yaw, pitch: player.pitch },
     inv: { hands: inv.hands.map(pack), belt: inv.belt.map(pack), back: inv.back.map(pack) },
-    relics: [...placed], prophet: { heard, unlocked: [...unlocked] }, hp: fight.hp, food: life.food, rest: life.rest, played, levels, maps: map.pack(), seen: scenes.pack(),
+    relics: [...placed], prophet: { heard, unlocked: [...unlocked] }, hp: fight.hp, food: life.food, rest: life.rest, played, levels, maps: map.pack(), seen: scenes.pack(), visits,
   };
 }
 const loadRun = r => { leaving = true; setRun(r); fade(1, 0.5); setTimeout(go, 550); };
@@ -321,6 +332,7 @@ document.getElementById('settingsBtn').addEventListener('pointerdown', e => {
 // The map in your notebook: a page for each level.
 const map = new GameMap({
   id: LEVEL, level, data, pages: run && run.maps, order: [...LEVELS, ...REALMS],
+  realName: REAL_NAME, nameOf: (id, real) => known(id) ? real : 'Unknown area',          // a page is headed with the place's name only once you know it
   load: async id => { const d = await (await fetch(`levels/${id}.json`)).json(); return { level: new Level(d), data: d }; },
 });
 let bookAt = -1, book = false;

@@ -128,7 +128,7 @@
     {"cell": [10, 23], "wall": "S", "text": "The false door of Osiris. It is sealed.", "realm": "osiris"},
     {"cell": [3, 16], "wall": "W", "text": "The false door of Sobek. It is sealed.", "realm": "sobek"},
     {"cell": [3, 10], "wall": "W", "text": "The false door of Ra. It is sealed.", "realm": "ra"},
-    {"cell": [7, 7], "wall": "N", "text": "The stair back up to the well.", "to": "shaft"},
+    {"cell": [7, 7], "wall": "N", "text": "The stair back up to the well.", "to": "shaft", "textUnknown": "The stair back up, the way you came."},
     {"cell": [13, 13], "seal": true, "text": "A great seal is set in the stone. Eight empty sockets are cut into it."}
   ],
   "torches": [

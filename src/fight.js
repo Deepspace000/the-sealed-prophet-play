@@ -284,7 +284,8 @@ export class Fight {
       const H = this.h[i], it = hands[i], side = i === 1 ? 1 : -1;
       const acting = this.hand === i && (this.swing > 0 || this.winding), guarding = this.blocking && blockHand === i;
       if (!it && i === 0 && !acting && !guarding) { H.mesh.visible = false; H.pose[1] = -0.7; continue; }
-      const lit = it && it.lit && art.held[it.def.id + '_lit'], own = it ? (lit || art.held[it.def.id]) : fist;
+      const pic = it && (it.def.art || it.def.id);       // an item may borrow another's pictures ("art" in data/items.json)
+      const lit = it && it.lit && art.held[pic + '_lit'], own = it ? (lit || art.held[pic]) : fist;
       const key = (it ? it.def.id : 'fist') + (lit ? ':lit' : '') + (own ? '' : ':fist');
       const map = this.tex(key, own || fist);
       if (H.mesh.material.map !== map) { H.mesh.material.map = map; H.mesh.material.needsUpdate = true; }
