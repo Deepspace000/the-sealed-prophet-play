@@ -205,7 +205,19 @@ export class UI {
       if (act === 'drop') this.onDrop();
     }
   }
-  toggle() { this.open = !this.open; this.seen = ''; }
+  // The pack button, and every other way of shutting things: closing shuts the pack AND any sack or bag opened from it.
+  // A sack left open with the pack already shut (it is shown by itself) is shut by the same button, never the pack opened.
+  toggle() {
+    if (this.open || this.inv.open) this.closeAll();
+    else this.open = true;
+    this.seen = '';
+  }
+  closeAll() {
+    this.closeOpts();
+    this.open = false;
+    if (this.inv.open) { this.inv.open = null; this.inv.version++; }
+    this.focus = -1;
+  }
   say(text) { this.msgEl.textContent = text; this.msgEl.style.opacity = 1; this.msgT = 2.6; }
   setLook(text) { if (this.lookEl.textContent !== text) this.lookEl.textContent = text; }
 
@@ -271,7 +283,7 @@ export class UI {
     // The switch between the cursor (the mouse points at things) and the camera (the mouse turns your head), above PACK.
     const mode = `<label class="modeKey">Tab</label><div class="mode${this.camera() ? ' cam' : ''}" data-btn="mode" title="Cursor or camera [Tab]">`
       + `<span class="knob"></span><b class="cur">${CURSOR_ICON}</b><b class="eye">${CAMERA_ICON}</b></div>`;
-    bar += `<div class="group">${mode}${inv.back[0] ? `<button data-btn="pack">${this.open ? 'CLOSE' : 'PACK'}</button>` : ''}</div>`;
+    bar += `<div class="group">${mode}${inv.back[0] ? `<button data-btn="pack">${this.open || inv.open ? 'CLOSE' : 'PACK'}</button>` : ''}</div>`;
     this.bar.innerHTML = bar;
 
     let panel = '';
@@ -281,7 +293,8 @@ export class UI {
       panel += `<div class="weight">Carrying ${kg(inv.weight)} of ${kg(inv.capacity)}</div>`
         + `<div class="group"><button data-btn="pack">CLOSE</button></div>`;       // the pack closes from the pack itself too
     } else if (inv.open) {
-      panel += this.grid('bag', inv.open.def.name);
+      panel += this.grid('bag', inv.open.def.name)
+        + `<div class="group"><button data-btn="pack">CLOSE</button></div>`;       // a sack open on its own has the master close too
     }
     this.panel.innerHTML = panel;
     this.panel.style.display = panel ? 'flex' : 'none';

@@ -343,7 +343,7 @@ const hasBook = () => {              // the notebook is the map: without it noth
 function openMap() {
   if (fight.dead || asleep > 0 || leaving || menu.open) return;
   if (!hasBook()) return ui.say('You need your notebook to see the map.');
-  if (ui.open) ui.toggle();
+  ui.closeAll();
   map.show({ x: player.pos.x / level.size, z: player.pos.z / level.size, yaw: player.yaw }, input.device);
 }
 
@@ -360,7 +360,7 @@ function sleep() {
     return ui.say('You cannot sleep. Something is moving close by.');
   }
   asleep = 3.4;
-  if (ui.open) ui.toggle();
+  ui.closeAll();
   document.getElementById('black').style.opacity = 0;
   fade(1, 0.9);
   setTimeout(() => {
@@ -465,7 +465,7 @@ function prophetTick(dt) {
       scenes.show('prophet_' + i);
     }
   } else if (pend && d < 3 && Math.abs(turnTo(player.yaw, Math.atan2(player.pos.x - pw.x, player.pos.z - pw.z))) < 0.45 && !scenes.open && !fight.dead && !creatures.hunting && asleep <= 0 && !leaving && !map.open && !menu.open) {
-    if (ui.open) ui.toggle();
+    ui.closeAll();
     cut = { t: 0, id: heard, dur: heard === 0 ? 4.6 : 2.6 };         // the first meeting is the longer one
     document.getElementById('cutBars').classList.add('on');
     play('groan');
@@ -474,7 +474,7 @@ function prophetTick(dt) {
 document.getElementById('cutSkip').addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); if (cut) cut.t = cut.dur; });
 let leaving = false;
 // The mouse turns your head while the pointer is held; these are the times it is given back (see input.js).
-input.uiOpen = () => ui.open || menu.open || map.open || !!scenes.open || fight.dead || leaving;
+input.uiOpen = () => ui.open || !!inv.open || menu.open || map.open || !!scenes.open || fight.dead || leaving;
 // The cursor/camera switch above PACK. It shows which one the mouse is doing; pressed with the cursor, it closes the pack and
 // takes the pointer back for the camera. (With the camera on the cursor is hidden, so Esc is the way back to it.)
 ui.camera = () => input.locked();
@@ -482,7 +482,7 @@ ui.camera = () => input.locked();
 input.holdHere = (x, y) => !fight.dead && !cut && !!creatures.skinnable(camera.position, dirAt(x, y));
 ui.onMode = () => {
   if (input.locked()) { input.selfExit = false; document.exitPointerLock(); return; }
-  if (ui.open) ui.toggle();
+  ui.closeAll();
   if (menu.open || map.open || scenes.open || fight.dead || leaving) return;
   input.engaged = true; input.relock();
 };
