@@ -5,6 +5,7 @@ the creatures are posed and rendered to pictures by `tools/blender/creatures.py`
 
 | What | Author | Licence | Source |
 |---|---|---|---|
+| The Sealed Prophet's ghost (art/prophet_ghost.png) | Made with Google Gemini for this game, black keyed out by tools/make_ghost.py | Made for this game | https://gemini.google.com |
 | Egyptian tomb asset pack (pillars, obelisk, wall panels and other tomb pieces) | dreadwolf_entertainment | CC Attribution 4.0 | https://sketchfab.com/3d-models/egyptian-tomb-asset-pack-00849e5ba3004841963146512c3a09a1 |
 | Egyptian Temple (painted temple) | CG BANG! | CC Attribution 4.0 | https://sketchfab.com/3d-models/egyptian-temple-c46e7c4460ab4bea9628823a037068ed |
 | Egyptian Temples | yanix | CC Attribution 4.0 | https://sketchfab.com/3d-models/egyptian-temples-ab516f7795684d6683188680dcb100ee |

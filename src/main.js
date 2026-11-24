@@ -404,6 +404,12 @@ if (prophetStages) {
   const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace;
   ghost = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, opacity: 0, depthWrite: false, fog: false }));
   ghost.scale.set(1.5, 2.25, 1); ghost.visible = false;
+  // His picture (art/prophet_ghost.png, made in Google Gemini, see tools/make_ghost.py). The drawn hood above stands in until it loads.
+  new THREE.TextureLoader().load('art/prophet_ghost.png', t => {
+    t.colorSpace = THREE.SRGBColorSpace;
+    ghost.material.map = t; ghost.material.needsUpdate = true;
+    const h = 2.6; ghost.scale.set(h * t.image.width / t.image.height, h, 1);
+  });
   scene.add(ghost);
 }
 const turnTo = (a, b) => { let d = (b - a) % (Math.PI * 2); if (d > Math.PI) d -= Math.PI * 2; if (d < -Math.PI) d += Math.PI * 2; return d; };
