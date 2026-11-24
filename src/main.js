@@ -238,7 +238,7 @@ const creatures = new Creatures(scene, level, kinds, {
   if (was) {
     // health is kept as a share of the most it can have, so a creature made tougher since the save is tougher in it too
     // (an older save has no "max": a creature in it is taken to have been unhurt)
-    cr.y = was.y; cr.hp = was.dead ? 0 : was.max ? Math.min(cr.def.health, was.hp / was.max * cr.def.health) : cr.def.health; cr.fled = !!was.fled; cr.skinned = !!was.skinned;
+    cr.y = was.y; cr.hp = was.dead ? 0 : was.max ? Math.min(cr.max, was.hp / was.max * cr.max) : cr.max; cr.fled = !!was.fled; cr.skinned = !!was.skinned;
     if (!was.dead && was.awake && cr.state === 'still') cr.state = 'idle';
   }
 });
@@ -295,7 +295,7 @@ function capture() {
   levels[LEVEL] = {
     rev: REV, items: world.list.map(e => ({ ...pack(e.item), x: e.x, z: e.z })),
     urns: props.solid.filter(u => u.smashed).map(u => u.n), gates: gates.pack(),
-    creatures: creatures.list.map(c => ({ x: c.x, y: c.y, z: c.z, hp: c.hp, max: c.def.health, dead: c.state === 'dead', skinned: c.skinned || undefined, fled: c.fled, awake: c.state !== 'still' })),
+    creatures: creatures.list.map(c => ({ x: c.x, y: c.y, z: c.z, hp: c.hp, max: c.max, dead: c.state === 'dead', skinned: c.skinned || undefined, fled: c.fled, awake: c.state !== 'still' })),
   };
   return {
     v: 1, level: LEVEL, from: null,
@@ -563,8 +563,8 @@ const hud = {
 };
 let clickUsed = false;
 // How a creature looks to be doing, in plain words.
-const health = c => c.state === 'dead' ? (c.def.skin && !c.skinned ? `It is dead. Hold a button to ${c.def.skin.verb} it.` : 'It is dead.') : c.hp < c.def.health * 0.35 ? 'It is badly hurt.'
-  : c.hp < c.def.health * 0.8 ? 'It is hurt.' : (c.state === 'idle' || c.state === 'still') ? c.def.text : '';
+const health = c => c.state === 'dead' ? (c.def.skin && !c.skinned ? `It is dead. Hold a button to ${c.def.skin.verb} it.` : 'It is dead.') : c.hp < c.max * 0.35 ? 'It is badly hurt.'
+  : c.hp < c.max * 0.8 ? 'It is hurt.' : (c.state === 'idle' || c.state === 'still') ? c.def.text : '';
 // The controls text: one row per kind of thing, each in its own colour. [Key] becomes a key cap.
 const HG = rows => rows.map(([c, l, t]) => `<div class="hg ${c}"><b class="hl">${l}</b><span>${t.replace(/\[([^\]]+)\]/g, '<kbd>$1</kbd>')}</span></div>`).join('');
 const HELP = {

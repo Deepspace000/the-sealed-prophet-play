@@ -71,7 +71,7 @@ export class Target {
       this.footEl.textContent = [this.locked ? 'LOCKED' : '', warn ? 'IT STRIKES' : near ? 'IN REACH' : ''].filter(Boolean).join(' · ');
     }
     if (this.name !== c.def.name) this.nameEl.textContent = this.name = c.def.name;
-    this.barEl.style.width = Math.max(0, c.hp / c.def.health * 100) + '%';
+    this.barEl.style.width = Math.max(0, c.hp / c.max * 100) + '%';
   }
 
   // Words or a number that rise from a creature and fade.

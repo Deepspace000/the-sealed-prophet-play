@@ -30,6 +30,14 @@ export class Creatures {
   // The picture for a pose: one made in Blender if there is one, or else the stand-in.
   frame(def, pose) { return art.creatures[def.id + '_' + pose] || art.creatures[def.id + '_idle'] || creatureFrames(def)[pose]; }
 
+  // The deeper a creature lives, the tougher it is: up to half as much health again and a third more bite, at 50 m down and
+  // below. A level's boss is left as it was made ("boss" in its kind).
+  static might(def, y) {
+    if (def.boss) return { hp: 1, hit: 1 };
+    const k = Math.max(0, Math.min(1, -y / 50));
+    return { hp: 1 + 0.5 * k, hit: 1 + 0.33 * k };
+  }
+
   spawn(id, x, z, n, dead) {
     const def = this.defs[id];
     if (!def) throw new Error(`No creature called "${id}"`);
@@ -38,8 +46,9 @@ export class Creatures {
     spr.center.set(0.5, 0);
     this.scene.add(spr);
     const frame = this.frame(def, 'idle');
+    const y0 = this.level.floorAt(x, z), might = Creatures.might(def, y0);
     const c = {
-      def, n, x, z, y: this.level.floorAt(x, z), vy: 0, hp: def.health, state: def.still ? 'still' : 'idle', t: 0,
+      def, n, x, z, y: y0, vy: 0, hp: def.health * might.hp, max: def.health * might.hp, hit: might.hit, state: def.still ? 'still' : 'idle', t: 0,
       home: { x, z }, path: null, pathT: 0, seen: 99, last: null, pose: 'idle', flash: 0, kx: 0, kz: 0,
       anim: Math.random() * 4, fled: false, moving: false, wanderT: 1 + Math.random() * 3, goal: null, spr,
       aspect: frame.width / frame.height,
@@ -170,7 +179,7 @@ export class Creatures {
       this.hooks.onDeath(c);
       return { real, weak, killed: true };
     }
-    if (real >= c.def.health * 0.15) this.stagger(c, 0.55);       // a hard blow stops what it was doing
+    if (real >= c.max * 0.15) this.stagger(c, 0.55);       // a hard blow stops what it was doing
     else if (!HUNTING.has(c.state)) this.rouse(c, d);
     return { real, weak, killed: false };
   }
@@ -242,7 +251,7 @@ export class Creatures {
         case 'chase':
           if (!P.alive) { c.state = 'home'; c.pathT = 0; break; }
           if (c.seen > 5) { c.state = 'search'; c.t = 9; c.pathT = 0; break; }
-          if (def.fleeAt && !c.fled && c.hp < def.health * def.fleeAt) { c.fled = true; c.state = 'flee'; c.t = 4; break; }
+          if (def.fleeAt && !c.fled && c.hp < c.max * def.fleeAt) { c.fled = true; c.state = 'flee'; c.t = 4; break; }
           if (los && dist < reach - 0.2 && Math.abs(dy) < 1.3) { c.state = 'windup'; c.t = def.attack.windup; break; }
           if (c.last) want = this.toward(c, c.last.x, c.last.z, dt, los && dist < 3 && Math.abs(dy) < 0.8);
           break;
@@ -251,7 +260,7 @@ export class Creatures {
             c.state = 'strike'; c.t = 0.28;
             play(def.kind === 'beast' ? 'bite' : 'swing', dist);
             if (P.alive && los && dist < reach + 0.35 && Math.abs(dy) < 1.4) {
-              this.hooks.onStrike(c, def.attack.damage * (0.85 + Math.random() * 0.3), def.attack.type);
+              this.hooks.onStrike(c, def.attack.damage * c.hit * (0.85 + Math.random() * 0.3), def.attack.type);
             }
           }
           break;

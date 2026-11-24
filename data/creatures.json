@@ -235,6 +235,7 @@
       }
     },
     "ptah_colossus": {
+      "boss": true,
       "name": "Colossus of Ptah",
       "text": "A giant of black stone, the maker's own guardian. Its fists are hammers.",
       "kind": "myth",
