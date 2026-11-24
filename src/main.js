@@ -452,6 +452,15 @@ document.getElementById('cutSkip').addEventListener('pointerdown', e => { e.prev
 let leaving = false;
 // The mouse turns your head while the pointer is held; these are the times it is given back (see input.js).
 input.uiOpen = () => ui.open || menu.open || map.open || !!scenes.open || fight.dead || leaving;
+// The cursor/camera switch above PACK. It shows which one the mouse is doing; pressed with the cursor, it closes the pack and
+// takes the pointer back for the camera. (With the camera on the cursor is hidden, so Esc is the way back to it.)
+ui.camera = () => input.locked();
+ui.onMode = () => {
+  if (input.locked()) { input.selfExit = false; document.exitPointerLock(); return; }
+  if (ui.open) ui.toggle();
+  if (menu.open || map.open || scenes.open || fight.dead || leaving) return;
+  input.engaged = true; input.relock();
+};
 const SKIN_TIME = 1.8;            // seconds to hold a button to take something from a corpse
 const skinning = { c: null, t: 0 };
 let autoArmed = false, autoStay = 0;           // a flooded passage takes you on only after you have been somewhere else first

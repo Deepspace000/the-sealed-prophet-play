@@ -10,6 +10,8 @@ const GROUPS = [
 const $ = id => document.getElementById(id);
 const SHORT = { 'OPEN THE MAP': 'MAP', 'LIGHT YOUR LAMP': 'LIGHT LAMP', 'FILL THE LAMP': 'FILL LAMP' };      // short words for the buttons
 const kg = w => (Math.round(w * 10) / 10) + ' kg';
+const CURSOR_ICON = '<svg viewBox="0 0 16 16"><path d="M4 1.5v12l3.2-3 2.3 5 2-.9-2.3-5H13z" fill="currentColor"/></svg>';
+const CAMERA_ICON = '<svg viewBox="0 0 16 16"><path d="M1 8s2.6-5 7-5 7 5 7 5-2.6 5-7 5-7-5-7-5z" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="8" cy="8" r="2.4" fill="currentColor"/></svg>';
 
 export class UI {
   constructor(inv, onDrop, onUse) {
@@ -24,6 +26,8 @@ export class UI {
     this.bar = $('bar'); this.panel = $('panel'); this.info = $('info');
     this.msgEl = $('msg'); this.lookEl = $('look'); this.heldEl = $('heldIcon');
     this.optsEl = $('opts'); this.opts = null;      // the small list of what you can do with a thing
+    this.camera = () => false;     // set by the game: is the mouse turning your head (the pointer held)
+    this.onMode = () => {};        // set by the game: the cursor/camera switch was pressed
 
     const root = $('inv');
     root.addEventListener('pointerdown', e => {
@@ -38,6 +42,7 @@ export class UI {
       if (btn && btn.dataset.btn === 'drop') this.onDrop();
       else if (btn && btn.dataset.btn === 'use') { if (this.inv.held) this.onUse(this.inv.held); }
       else if (btn && btn.dataset.btn === 'pack') this.toggle();
+      else if (btn && btn.dataset.btn === 'mode') this.onMode();
     });
     root.addEventListener('pointerover', e => {            // the pointer on a thing shows what it is, and nothing more
       const slot = e.target.closest('.slot');
@@ -229,6 +234,8 @@ export class UI {
     if (this.opts && this.inv.version !== this.opts.at) this.closeOpts();
     if (!usingPad && this.focus >= 0) { this.focus = -1; this.seen = ''; }
     this.fuelLines();
+    const sw = this.bar.querySelector('.mode');
+    if (sw) sw.classList.toggle('cam', this.camera());
     const key = this.inv.version + '|' + this.open + '|' + this.focus;
     if (key === this.seen) return;
     this.seen = key;
@@ -261,7 +268,10 @@ export class UI {
   render() {
     const inv = this.inv;
     let bar = GROUPS.map(([area, title]) => this.grid(area, title)).join('');
-    if (inv.back[0]) bar += `<div class="group"><button data-btn="pack">${this.open ? 'CLOSE' : 'PACK'}</button></div>`;
+    // The switch between the cursor (the mouse points at things) and the camera (the mouse turns your head), above PACK.
+    const mode = `<div class="mode${this.camera() ? ' cam' : ''}" data-btn="mode" title="Cursor or camera (Esc gives the cursor back)">`
+      + `<span class="knob"></span><b class="cur">${CURSOR_ICON}</b><b class="eye">${CAMERA_ICON}</b></div>`;
+    bar += `<div class="group">${mode}${inv.back[0] ? `<button data-btn="pack">${this.open ? 'CLOSE' : 'PACK'}</button>` : ''}</div>`;
     this.bar.innerHTML = bar;
 
     let panel = '';

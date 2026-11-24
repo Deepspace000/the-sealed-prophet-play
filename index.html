@@ -65,6 +65,17 @@
   .slot.sel { border-color: #ffe39a; background: #2a2110; box-shadow: inset 0 0 0 2px #d9b65a; }
   body.touch #bar button { padding: calc(15px * var(--k)) calc(16px * var(--k)); font-size: calc(13px * var(--t)); }      /* the one PACK button, beside the hot bar, big enough for a finger */
   #inv #opts button:not(.off):hover, #inv #opts button.focus { background: #d9b65a; color: #17120a; }
+  /* the cursor / camera switch above PACK: the gold knob sits under the one in use */
+  .mode { position: relative; display: flex; width: calc(64px * var(--k)); height: calc(24px * var(--k)); background: #17120a; border: 1px solid #7d6a3c;
+          border-radius: calc(12px * var(--k)); cursor: pointer; }
+  .mode:hover { border-color: #ffe39a; }
+  .mode .knob { position: absolute; top: 2px; bottom: 2px; left: 2px; width: calc(50% - 2px); border-radius: calc(10px * var(--k)); background: #d9b65a;
+                transition: transform .18s; }
+  .mode.cam .knob { transform: translateX(100%); }
+  .mode b { position: relative; flex: 1; display: flex; align-items: center; justify-content: center; color: #a89868; transition: color .18s; }
+  .mode b svg { width: calc(14px * var(--k)); height: calc(14px * var(--k)); }
+  .mode:not(.cam) .cur, .mode.cam .eye { color: #17120a; }
+  body.touch .mode { display: none; }
   .opener { position: absolute; right: -1px; bottom: -1px; width: calc(16px * var(--k)); height: calc(15px * var(--k)); font-size: calc(11px * var(--k)); line-height: calc(15px * var(--k));
             text-align: center; color: #17120a; background: #d9b65a; }
   .opener.on { background: #ffe39a; }
