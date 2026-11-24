@@ -222,8 +222,9 @@
   @keyframes wake { 0% { opacity: 1; } 22% { opacity: .55; } 34% { opacity: .96; } 58% { opacity: .35; } 68% { opacity: .7; } 100% { opacity: 0; } }
   #intro { display: none; position: fixed; inset: 0; z-index: 50; background: #000; cursor: pointer; }
   #introBg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 72% 50%; }
-  /* a pen-and-ink hand, from whatever the device has */
-  @font-face { font-family: Quill; src: local("Gabriola"), local("Apple Chancery"), local("Palatino Linotype Italic"),
+  /* a pen-and-ink hand: La Belle Aurore (fonts/, see CREDITS.md), which comes with the game so it is the same on every device.
+     size-adjust sets its size once here, rather than at every place it is used. */
+  @font-face { font-family: Quill; size-adjust: 96%; src: url("fonts/LaBelleAurore.ttf") format("truetype"), local("Gabriola"), local("Apple Chancery"), local("Palatino Linotype Italic"),
                local("Palatino-Italic"), local("Palatino Italic"), local("Book Antiqua Italic"), local("Georgia Italic"); }
   .deco { font-family: "Broadway", "Bernard MT Condensed", "Century Gothic", "Gill Sans MT", "Futura", "Trebuchet MS", sans-serif; }
   .fan { width: 200px; height: 100px; margin: 0 auto 16px; border-radius: 100px 100px 0 0;
