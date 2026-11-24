@@ -554,7 +554,7 @@ const hud = {
   state: document.getElementById('state'),
   help: document.getElementById('help'),
   tint: document.getElementById('tint'),
-  hp: document.getElementById('hpBar'), st: document.getElementById('stBar'), hurt: document.getElementById('hurt'),
+  hp: document.getElementById('hpBar'), st: document.getElementById('stBar'), hurt: document.getElementById('hurt'), hit: document.getElementById('hit'),
   food: document.getElementById('foodBar'), rest: document.getElementById('restBar'), light: document.getElementById('lightBar'),
   air: document.getElementById('airBar'), airRow: document.getElementById('airRow'),
   skin: document.getElementById('skin'), skinBar: document.getElementById('skinBar'), skinName: document.getElementById('skinName'),
@@ -676,7 +676,10 @@ function step(dt, forced) {
   }
 
   camera.position.set(player.pos.x + (Math.random() - 0.5) * 0.04 * gates.shake, player.eyeY + (Math.random() - 0.5) * 0.04 * gates.shake, player.pos.z);
-  camera.rotation.set(player.pitch, player.yaw, 0);
+  // a blow knocks the head: it snaps aside and back from where the blow came, shakes, and settles in a third of a second
+  const kick = fight.kick, wob = kick * Math.sin(fight.kickT * 38);
+  camera.rotation.set(player.pitch + 0.05 * kick + 0.02 * wob, player.yaw + 0.07 * kick * fight.kickSide, 0.11 * kick * (fight.kickSide || 1) + 0.03 * wob);
+  camera.position.y -= 0.06 * kick;
   camera.updateMatrixWorld();
   camera.getWorldDirection(viewDir);
 
@@ -717,12 +720,13 @@ function step(dt, forced) {
   // Hunger, tiredness, and the light you carry.
   life.update(dt, { underwater: player.underwater, hunting: creatures.hunting });
   const glow = life.light();
-  lamp.visible = !!glow;
+  // The lamp is dimmed to nothing rather than hidden: a light that comes and goes makes three.js rebuild every shader,
+  // and the game would freeze for half a second each time the lantern is lit or put out.
   if (glow) {
     const flick = glow.flicker ? 0.85 + 0.15 * Math.sin(time * 11) * Math.sin(time * 6.1) : 1;
     const low = glow.left < 0.08 ? 0.55 + 0.45 * Math.sin(time * 13) ** 2 : 1;        // it gutters when nearly out
     lamp.intensity = glow.power * flick * low; lamp.distance = glow.range;
-  }
+  } else lamp.intensity = 0;
   if (hasBook()) map.explore(player.pos.x, player.pos.z, player.eyeY, !!glow || torches.some(t => t.d < 9));
 
   // Creatures and the fight.
@@ -799,6 +803,7 @@ function step(dt, forced) {
   const needClick = input.device === 'keys' && !input.locked() && !input.noLock && !input.uiOpen() && !cut;
   if (hud.lockHint.style.display !== (needClick ? 'block' : 'none')) hud.lockHint.style.display = needClick ? 'block' : 'none';
   hud.hurt.style.opacity = fight.dead ? 1 : Math.min(1, fight.hurtT * 2) * 0.9 + (fight.hp < fight.hpMax * 0.25 ? 0.25 : 0);
+  hud.hit.style.opacity = fight.dead ? 0 : fight.kick * 0.55;           // the whole view flashes red for a moment
   hud.skin.style.opacity = skinning.c ? 1 : 0;
   if (skinning.c) { hud.skinBar.style.width = Math.min(100, skinning.t / SKIN_TIME * 100) + '%'; hud.skinName.textContent = skinning.c.def.skin.label; }
   hud.wind.style.opacity = fight.winding ? 1 : 0;

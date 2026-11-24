@@ -191,6 +191,8 @@
   #wind i { display: block; height: 100%; width: 0; background: #d9b65a; }
   #hurt { position: fixed; inset: 0; opacity: 0; pointer-events: none;
           background: radial-gradient(ellipse at center, rgba(150,20,10,0) 35%, rgba(150,20,10,.75) 100%); }
+  #hit { position: fixed; inset: 0; opacity: 0; pointer-events: none;            /* the flash of a blow landing */
+         background: radial-gradient(ellipse at center, rgba(190,25,10,.35) 0%, rgba(120,10,5,.9) 100%); }
   #settingsBtn { position: fixed; right: 14px; top: 96px; z-index: 6; font: inherit; font-size: 10px; letter-spacing: .2em; color: #e8d9a8;
                  background: rgba(8,6,3,.8); border: 1px solid #d9b65a; padding: 6px 10px; cursor: pointer; }
   #settingsBtn:hover { background: #d9b65a; color: #17120a; }
@@ -374,7 +376,7 @@
 <body>
 <canvas id="view"></canvas>
 <div id="tint"></div>
-<div id="hurt"></div>
+<div id="hurt"></div><div id="hit"></div>
 <div id="cross"></div>
 <div id="tgt"><i></i><i></i><i></i><i></i><div id="tgtHead"><span id="tgtName"></span><div><b id="tgtBar"></b></div><span id="tgtFoot"></span></div></div>
 <div id="floats"></div>
@@ -397,7 +399,7 @@
   <div id="mapPage"><canvas id="mapCanvas"></canvas><input id="mapNote" maxlength="36" autocomplete="off" spellcheck="false"></div>
   <div id="mapHint"></div>
 </div>
-<div id="title">THE SEALED PROPHET <span class="ver">v0.2.11</span><small><span id="levelName"></span> &middot; <span id="state">Walking</span></small></div>
+<div id="title">THE SEALED PROPHET <span class="ver">v0.2.12</span><small><span id="levelName"></span> &middot; <span id="state">Walking</span></small></div>
 <button id="helpBtn">HIDE CONTROLS</button>
 <div id="help"></div>
 <div id="look"></div>
@@ -458,7 +460,7 @@ window.loading = (() => {
       <div class="fan"></div>
       <h1 id="bloodTitle">THE SEALED<br>PROPHET</h1>
       <div class="sub">A JOURNAL &middot; 1924</div>
-      <div class="ver" style="margin-top:8px;text-align:center">v0.2.11</div>
+      <div class="ver" style="margin-top:8px;text-align:center">v0.2.12</div>
       <div class="rule"></div>
       <button id="continueBtn" style="display:none">CONTINUE</button>
       <button id="beginBtn">BEGIN</button>

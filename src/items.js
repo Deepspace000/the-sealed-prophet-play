@@ -169,7 +169,7 @@ const haloTex = () => halo || (halo = (() => {
 })());
 
 export class WorldItems {
-  constructor(scene, level) { this.scene = scene; this.level = level; this.list = []; }
+  constructor(scene, level) { this.scene = scene; this.level = level; this.list = []; this.spare = []; }
   place(item, x, z) {
     const real = hasArt(item.def), tex = new THREE.CanvasTexture(iconCanvas(item.def));
     tex.magFilter = THREE.NearestFilter;
@@ -185,7 +185,8 @@ export class WorldItems {
     if (glow) {
       const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: haloTex(), color: glow, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false }));
       halo.scale.set(2.6, 2.6, 1); halo.position.z = -0.01; halo.renderOrder = -1;
-      const light = new THREE.PointLight(glow, 2.2, 4.5, 2);
+      const light = this.spare.pop() || new THREE.PointLight(glow, 2.2, 4.5, 2);       // a put-out one is used again if there is one
+      light.color.set(glow); light.intensity = 2.2; light.position.set(0, 0, 0);
       spr.add(halo, light);
     }
     this.scene.add(spr);
@@ -194,6 +195,9 @@ export class WorldItems {
     return e;
   }
   remove(e) {
+    // a glowing thing's light stays in the scene, put out: taking a light away makes three.js rebuild every shader (a freeze)
+    const light = e.spr.children.find(o => o.isPointLight);
+    if (light) { light.intensity = 0; light.position.copy(e.spr.position); this.scene.add(light); this.spare.push(light); }
     this.scene.remove(e.spr);
     e.spr.material.map.dispose(); e.spr.material.dispose();
     this.list.splice(this.list.indexOf(e), 1);

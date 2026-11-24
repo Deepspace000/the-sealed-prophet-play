@@ -38,6 +38,7 @@ export class Creatures {
     return { hp: 1 + 0.5 * k, hit: 1 + 0.33 * k };
   }
 
+  // "toughness" in a level: every creature in it, its boss too, has that much more health (1.4: 40% more)
   spawn(id, x, z, n, dead) {
     const def = this.defs[id];
     if (!def) throw new Error(`No creature called "${id}"`);
@@ -47,8 +48,9 @@ export class Creatures {
     this.scene.add(spr);
     const frame = this.frame(def, 'idle');
     const y0 = this.level.floorAt(x, z), might = Creatures.might(def, y0);
+    const hp = def.health * might.hp * (this.level.data.toughness || 1);
     const c = {
-      def, n, x, z, y: y0, vy: 0, hp: def.health * might.hp, max: def.health * might.hp, hit: might.hit, state: def.still ? 'still' : 'idle', t: 0,
+      def, n, x, z, y: y0, vy: 0, hp, max: hp, hit: might.hit, state: def.still ? 'still' : 'idle', t: 0,
       home: { x, z }, path: null, pathT: 0, seen: 99, last: null, pose: 'idle', flash: 0, kx: 0, kz: 0,
       anim: Math.random() * 4, fled: false, moving: false, wanderT: 1 + Math.random() * 3, goal: null, spr,
       aspect: frame.width / frame.height,

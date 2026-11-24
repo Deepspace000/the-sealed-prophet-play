@@ -36,7 +36,13 @@ export class UI {
       if (opt) { if (!opt.classList.contains('off')) this.pressOpt(+opt.dataset.opt); return; }
       if (e.target.closest('#opts')) return;
       const opener = e.target.closest('.opener'), slot = e.target.closest('.slot'), btn = e.target.closest('[data-btn]');
-      if (opener) { this.closeOpts(); this.inv.toggleOpen(this.itemAt(opener.parentElement)); this.open = true; return; }
+      if (opener) {
+        this.closeOpts();
+        const it = this.itemAt(opener.parentElement);
+        if (it === this.inv.back[0]) this.toggle();         // the knapsack on your back opens as the pack, not a second time as a bag
+        else { this.inv.toggleOpen(it); this.open = true; }
+        return;
+      }
       if (slot) return this.slotDown(slot, e);
       this.closeOpts();
       if (btn && btn.dataset.btn === 'drop') this.onDrop();
@@ -256,7 +262,7 @@ export class UI {
 
   slotHTML(area, i, it) {
     const icon = it ? `<i${hasArt(it.def) ? ' class="art"' : ''} style="background-image:url(${iconURL(it.def)})"></i>` : '';
-    const opener = it && it.inside ? `<b class="opener${this.inv.open === it ? ' on' : ''}">&#9662;</b>` : '';
+    const opener = it && it.inside ? `<b class="opener${this.inv.open === it || (it === this.inv.back[0] && this.open) ? ' on' : ''}">&#9662;</b>` : '';
     const fuel = it && it.def.light ? `<u class="fuel"><s></s></u>` : '';       // a small line under a lamp's icon that runs down as it burns
     return `<div class="slot${it && it.lit ? ' lit' : ''}" data-area="${area}" data-i="${i}">${icon}${opener}${fuel}</div>`;
   }
@@ -289,7 +295,7 @@ export class UI {
     let panel = '';
     if (this.open) {
       if (inv.back[0]) panel += this.grid('pack', inv.back[0].def.name);
-      if (inv.open) panel += this.grid('bag', inv.open.def.name);
+      if (inv.open && inv.open !== inv.back[0]) panel += this.grid('bag', inv.open.def.name);
       panel += `<div class="weight">Carrying ${kg(inv.weight)} of ${kg(inv.capacity)}</div>`
         + `<div class="group"><button data-btn="pack">CLOSE</button></div>`;       // the pack closes from the pack itself too
     } else if (inv.open) {

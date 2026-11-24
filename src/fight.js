@@ -46,6 +46,7 @@ export class Fight {
     this.hpMax = 50; this.hp = 50; this.stMax = 100; this.st = 100;
     this.winding = false; this.charge = 0; this.move = 'mid'; this.swing = 0; this.cool = 0; this.landed = true;
     this.blocking = false; this.blockT = 0; this.stWait = 0; this.dodgeCd = 0; this.hurtT = 0; this.noise = 0;
+    this.kick = 0; this.kickT = 0; this.kickSide = 0;          // being hit: see jolt()
     this.dead = false; this.calm = 0; this.told = new Set(); this.onDeath = () => {};
     this.regenMul = 1; this.stCap = 1;
     this.mesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 1),
@@ -123,6 +124,7 @@ export class Fight {
     const w = this.weapon(), wp = w.weapon;
     this.cool = Math.max(0, this.cool - dt); this.dodgeCd = Math.max(0, this.dodgeCd - dt);
     this.hurtT = Math.max(0, this.hurtT - dt); this.noise = Math.max(0, this.noise - dt * 1.5);
+    this.kickT += dt; this.kick = Math.max(0, this.kick - dt * 2.6);
 
     const wantBlock = ctl.block && this.swing <= 0 && !this.winding;
     if (wantBlock && !this.blocking) this.blockT = 0;
@@ -238,8 +240,21 @@ export class Fight {
     }
     if (dmg < 0.5) return;
     this.hp -= dmg; this.hurtT = 0.5; this.calm = 0;
+    this.jolt(-dx / d, -dz / d, dmg);
     play('hurt');
     if (this.hp <= 0) { this.hp = 0; this.dead = true; this.winding = false; play('death'); this.onDeath(c); }
+  }
+
+  // Being hit is felt: the view flashes red and is knocked away from the blow, and you are shoved back a little
+  // (never over an edge: where the floor drops away behind you, you stagger on the spot instead).
+  // kick runs from 1 down to 0; the game turns it into the flash and the jerk of the head.
+  jolt(ax, az, dmg) {
+    const k = Math.min(1, 0.45 + dmg / 15), P = this.player, L = P.level;
+    this.kick = k; this.kickT = 0;
+    // which way the head is knocked, seen from where you look: positive = the blow came from the left
+    this.kickSide = -(ax * Math.cos(P.yaw) - az * Math.sin(P.yaw));
+    const shove = 3.2 * k, bx = P.pos.x + ax * 0.7, bz = P.pos.z + az * 0.7;
+    if (!P.swimming && L.floorAt(bx, bz) > P.pos.y - 0.6) { P.vx += ax * shove; P.vz += az * shove; }
   }
 
   // The weapon in the corner of the view.

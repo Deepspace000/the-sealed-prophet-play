@@ -1,6 +1,7 @@
 {
   "name": "The Tower of Ptah",
   "rev": 5,
+  "toughness": 1.4,
   "notes": [
     "Built by tools/make_ptah.py. Change that file and run it again, rather than editing this one. Format: see levels/test.json.",
     "You go DOWN here: the way in is at the top, the gem of Ptah at the bottom.",
