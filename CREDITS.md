@@ -22,6 +22,7 @@ the creatures are posed and rendered to pictures by `tools/blender/creatures.py`
 | Golden-Eared Hound Dog (the black jackal) | iRahulRajput | CC Attribution 4.0 | https://sketchfab.com/3d-models/golden-eared-hound-dog-3d-model-free-8269f0b38a04400cad281b48696674ab |
 | Zombie_Smoke_Mummy_Character (the rotting dead) | Mehdi Shahsavan | CC Attribution 4.0 | https://sketchfab.com/3d-models/zombie-smoke-mummy-character-12-mb-855ade268167415e954f4377ed4519c5 |
 | CC0 Black Scarab Beetle, R. polita (the sacred scarab; shell tinted blue, posed and rendered by `tools/blender/creature_beetle.py`) | ffish.asia / floraZia.com | CC0 (public domain) | https://sketchfab.com/3d-models/cc0-black-scarab-beetle-r-polita-120c26e3f712449388b91021a67082d7 |
+| Volcanic Obsidian Golem Creature (the Colossus of Ptah; posed and rendered by `tools/blender/creature_colossus.py`; the author says it was made with AI-assisted 3D generation) | Pigcraft | CC Attribution 4.0 | https://sketchfab.com/3d-models/volcanic-obsidian-golem-creature-c2553e3a69864575b2fe7115e8c2d7f3 |
 | Wooden Hammer 01 (the hammer) | James Ray Cock | CC0 (public domain) | https://polyhaven.com/a/wooden_hammer_01 |
 | La Belle Aurore (the handwriting of the journal, the notes and the map) | Kimberly Geswein | SIL Open Font License 1.1 | https://fonts.google.com/specimen/La+Belle+Aurore |
 

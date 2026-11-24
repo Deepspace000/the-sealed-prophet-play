@@ -1,5 +1,5 @@
 {
- "v": 1795502480,
+ "v": 1795504519,
  "items": [
   "bandage",
   "bedroll",
@@ -76,6 +76,11 @@
   "jackal_step",
   "jackal_strike",
   "jackal_windup",
+  "ptah_colossus_dead",
+  "ptah_colossus_idle",
+  "ptah_colossus_step",
+  "ptah_colossus_strike",
+  "ptah_colossus_windup",
   "remains_dead",
   "rotting_dead_dead",
   "rotting_dead_idle",
