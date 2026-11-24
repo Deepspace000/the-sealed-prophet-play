@@ -278,7 +278,8 @@ export class UI {
     if (this.open) {
       if (inv.back[0]) panel += this.grid('pack', inv.back[0].def.name);
       if (inv.open) panel += this.grid('bag', inv.open.def.name);
-      panel += `<div class="weight">Carrying ${kg(inv.weight)} of ${kg(inv.capacity)}</div>`;
+      panel += `<div class="weight">Carrying ${kg(inv.weight)} of ${kg(inv.capacity)}</div>`
+        + `<div class="group"><button data-btn="pack">CLOSE</button></div>`;       // the pack closes from the pack itself too
     } else if (inv.open) {
       panel += this.grid('bag', inv.open.def.name);
     }

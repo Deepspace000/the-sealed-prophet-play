@@ -53,6 +53,9 @@ export class Input {
     // Where the pointer cannot be held (some embedded views), holding the right button and moving looks instead.
     this.mouse = { right: false, left: false };
     this.uiOpen = () => false;     // set by the game: something that needs the pointer is open
+    this.holdHere = () => false;   // set by the game: is there a corpse to skin under this point of the screen
+    this.pointer = [innerWidth / 2, innerHeight / 2];      // where the cursor is, when it is free
+    addEventListener('mousemove', e => { if (!this.locked()) this.pointer = [e.clientX, e.clientY]; });
     this.stance = 1;               // the kind of blow the mouse strikes with: 0 thrust, 1 slash, 2 overhead (the wheel changes it)
     this.swallow = false;          // the click that took the pointer is not a blow
     this.noLock = false;           // the pointer could not be held here
@@ -71,12 +74,13 @@ export class Input {
       this.device = 'keys';
       if (!this.locked()) {
         if (this.uiOpen()) { if (e.button === 0) this.clicks.push([e.clientX, e.clientY]); return; }      // with the pack open, a click on the room drops or picks up
-        if (!this.noLock) {                               // this click only takes the pointer
+        const work = this.holdHere(e.clientX, e.clientY);       // on a corpse: the button is held to skin it, and the cursor stays
+        if (!this.noLock && !work) {                      // this click only takes the pointer
           lock(); this.swallow = true;
           setTimeout(() => { if (!this.locked()) this.noLock = true; }, 500);
           return;
         }
-        if (e.button === 0) this.clicks.push([e.clientX, e.clientY]);
+        if (e.button === 0 && !work) this.clicks.push([e.clientX, e.clientY]);
       } else if (e.button === 0 && !this.mouse.right) this.clicks.push([innerWidth / 2, innerHeight / 2]);      // a click picks up what you are looking at
       if (e.button === 2) this.mouse.right = true;
       if (e.button === 0) this.mouse.left = true;

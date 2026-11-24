@@ -455,6 +455,8 @@ input.uiOpen = () => ui.open || menu.open || map.open || !!scenes.open || fight.
 // The cursor/camera switch above PACK. It shows which one the mouse is doing; pressed with the cursor, it closes the pack and
 // takes the pointer back for the camera. (With the camera on the cursor is hidden, so Esc is the way back to it.)
 ui.camera = () => input.locked();
+// In cursor mode a press on a corpse that can be skinned works at it, instead of taking the pointer for the camera.
+input.holdHere = (x, y) => !fight.dead && !cut && !!creatures.skinnable(camera.position, dirAt(x, y));
 ui.onMode = () => {
   if (input.locked()) { input.selfExit = false; document.exitPointerLock(); return; }
   if (ui.open) ui.toggle();
@@ -725,7 +727,9 @@ function step(dt, forced) {
   }
   // Hold any button over a dead creature that has something to take (an animal's hide, a mummy's wrappings, a skeleton's
   // bone) and you work at it instead of striking. The bar fills, and the thing is yours.
-  const corpse = !fight.dead && !ui.open && !fight.winding && fight.swing <= 0 ? creatures.skinnable(camera.position, viewDir) : null;
+  // With the cursor free, the corpse is the one under the cursor; with the camera, the one you look at.
+  const skinDir = input.device === 'keys' && !input.locked() ? dirAt(...input.pointer).clone() : viewDir;
+  const corpse = !fight.dead && !ui.open && !fight.winding && fight.swing <= 0 ? creatures.skinnable(camera.position, skinDir) : null;
   if (corpse && (strikeHand >= 0 || guardNow)) {
     strikeHand = -1; guardNow = false;
     if (skinning.c !== corpse) { skinning.c = corpse; skinning.t = 0; }
