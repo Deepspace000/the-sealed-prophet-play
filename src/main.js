@@ -914,7 +914,7 @@ addEventListener('pagehide', () => {
 
 let last = performance.now();
 function frame(now) {
-  const dt = Math.max(0, Math.min(0.05, (now - last) / 1000));
+  const dt = Math.max(0, Math.min(0.05, (now - last) / 1000)) || 0;      // (|| 0: never a frame of NaN time)
   last = now;
   step(dt);
   requestAnimationFrame(frame);

@@ -127,6 +127,7 @@ export class Player {
     }
 
     const target = p.y + EYE;
+    if (!Number.isFinite(this.eyeY)) this.eyeY = target;      // never let the view get lost
     if (this.onGround || this.swimming) this.eyeY += (target - this.eyeY) * Math.min(1, dt * 14);
     else this.eyeY = target;
     this.underwater = water != null && this.eyeY < water;
