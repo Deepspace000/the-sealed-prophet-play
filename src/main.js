@@ -244,6 +244,7 @@ const creatures = new Creatures(scene, level, kinds, {
   onStrike: (c, dmg, type) => fight.takeHit(c, dmg, type),
   onDeath: () => {},
   drop: (id, x, z) => world.place(make(id), x, z),
+  extraFloor: (x, z, lim) => player.extraFloor(x, z, lim),       // walkers can stand on beams and lifts too
   pushPlayer: (dx, dz) => {
     const p = player.pos;
     if (!player.fits(p.x + dx, p.z + dz, p.y, 0.25)) return false;
@@ -255,7 +256,7 @@ const creatures = new Creatures(scene, level, kinds, {
   const at = c.at || [0.5, 0.5];
   const was = saved && saved.creatures[n];
   const cr = creatures.spawn(c.id, was ? was.x : (c.cell[0] + at[0]) * level.size, was ? was.z : (c.cell[1] + at[1]) * level.size, n,
-    !!(was && was.dead));
+    !!(was && was.dead), c.y);         // y: a height to put it at (a flyer, or one on top of a cap); without it, the floor
   if (was) {
     // health is kept as a share of the most it can have, so a creature made tougher since the save is tougher in it too
     // (an older save has no "max": a creature in it is taken to have been unhurt)
@@ -568,7 +569,8 @@ function dropHeld() {
   ui.say(`Dropped: ${it.def.name}.`);
 }
 function brightnessAt(x, y, z) {    // roughly how well lit a spot is, for flat pictures that light does not reach
-  let b = 0.07;
+  // under an open sky it is daylight (a little less in a room); otherwise a faint glow, the lamp and the torches
+  let b = data.sky ? (level.cellAt(x, z).ceilTex === 'sky' || y >= level.cellAt(x, z).ceil ? 1.0 : 0.8) : 0.07;
   const add = (l, power, range) => {
     const d2 = (x - l.x) ** 2 + (y - l.y) ** 2 + (z - l.z) ** 2;
     b += power / (Math.PI * (d2 + 0.5)) * Math.max(0, 1 - Math.sqrt(d2) / range);

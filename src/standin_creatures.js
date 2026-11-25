@@ -27,7 +27,7 @@ class Pix {
 // A figure standing upright, seen from the front. 32 x 48.
 function biped(look, pose) {
   const p = new Pix(32, 48), c = hex(look.colour), dk = shade(c, 0.55), eye = hex(look.eyes || '#ffffff');
-  const bones = look.detail === 'bones', stone = look.detail === 'stone', lw = bones ? 2 : stone ? 6 : 4, aw = bones ? 2 : stone ? 5 : 3, wood = [120, 84, 44], metal = [150, 170, 150];
+  const bones = look.detail === 'bones', thin = bones || look.detail === 'thin', stone = look.detail === 'stone', lw = thin ? 2 : stone ? 6 : 4, aw = thin ? 2 : stone ? 5 : 3, wood = [120, 84, 44], metal = [150, 170, 150];
   if (pose === 'dead') {
     p.r(4, 43, 22, 4, c); p.r(25, 41, 5, 5, c); p.r(26, 43, 1, 1, INK);
     if (bones) for (let x = 6; x < 24; x += 3) p.r(x, 43, 1, 4, null);
@@ -125,10 +125,50 @@ function beetle(look, pose) {
   return p.canvas();
 }
 
+// A winged lizard seen from the front: a narrow body and long leather wings, up in one frame and down in the next. 48 x 24.
+function wings(look, pose) {
+  const p = new Pix(48, 24), c = hex(look.colour), dk = shade(c, 0.6), lt = shade(c, 1.3), eye = hex(look.eyes || '#ffcc33');
+  if (pose === 'dead') {                                   // a heap of wing on the ground
+    for (let x = 6; x < 42; x++) p.r(x, 18 + Math.round(Math.abs(x - 24) / 10), 1, 3, x % 4 ? dk : c);
+    p.r(20, 15, 8, 4, c); p.r(28, 16, 6, 2, lt);
+    return p.canvas();
+  }
+  const up = pose === 'step' || pose === 'windup', dive = pose === 'strike';
+  for (const side of [-1, 1]) for (let i = 0; i < 20; i++) {                 // each wing: a leading edge from the shoulder out, the skin under it
+    const x = 24 + side * (3 + i), lift = up ? -Math.round(i * 0.45) : Math.round(i * (dive ? 0.5 : 0.2));
+    const y = 10 + lift, depth = Math.max(1, 6 - Math.round(i / 4));
+    p.r(x, y, 1, 1, dk); p.r(x, y + 1, 1, depth, i % 5 === 4 ? dk : c);
+  }
+  p.r(21, 7, 6, 11, c); p.r(22, 8, 4, 9, lt);               // the body
+  p.r(22, 3 + (dive ? 2 : 0), 4, 5, c); p.r(23, 1 + (dive ? 2 : 0), 2, 3, dk);      // the head and its crest
+  p.r(22, 5 + (dive ? 2 : 0), 1, 1, eye); p.r(25, 5 + (dive ? 2 : 0), 1, 1, eye);
+  p.r(23, 8 + (dive ? 2 : 0), 2, 3 + (pose === 'windup' ? 2 : 0), [215, 200, 160]);   // the beak
+  p.r(22, 18, 1, 3, dk); p.r(25, 18, 1, 3, dk);           // the legs
+  return p.canvas();
+}
+
+// A jelly hanging in the air: a glassy bell and long threads under it, the bell squeezing and opening as it pulses. 24 x 40.
+function jelly(look, pose) {
+  const p = new Pix(24, 40), c = hex(look.colour), dk = shade(c, 0.6), lt = shade(c, 1.35);
+  if (pose === 'dead') {                                   // a flat puddle of jelly with threads across it
+    p.r(2, 35, 20, 4, c); p.r(5, 34, 14, 1, lt); for (const x of [3, 8, 13, 18]) p.r(x, 37, 4, 1, dk);
+    return p.canvas();
+  }
+  const squeeze = pose === 'step' || pose === 'windup', reach = pose === 'strike';
+  const rx = squeeze ? 7 : 9, ry = squeeze ? 8 : 6;
+  for (let y = 0; y <= ry; y++) { const w = Math.round(rx * Math.sqrt(1 - ((ry - y) / ry) ** 2)); p.r(12 - w, 2 + y, w * 2, 1, y < 2 ? lt : c); }
+  p.r(12 - rx, 2 + ry, rx * 2, 1, dk);                     // the bell's rim
+  for (let i = 0; i < 5; i++) {                            // the threads, waving
+    const x0 = 12 - rx + 2 + i * Math.round((rx * 2 - 4) / 4);
+    for (let y = 3 + ry; y < (reach ? 39 : 34); y++) p.r(x0 + Math.round(Math.sin(y * 0.4 + i + (squeeze ? 1 : 0)) * 1.2), y, 1, 1, i % 2 ? dk : c);
+  }
+  return p.canvas();
+}
+
 const cache = {};
 export function creatureFrames(def) {
   if (cache[def.id]) return cache[def.id];
-  const look = def.look || { shape: 'biped', colour: '#999999' }, draw = look.shape === 'beast' ? beast : look.shape === 'beetle' ? beetle : biped, out = {};
+  const look = def.look || { shape: 'biped', colour: '#999999' }, draw = { beast, beetle, wings, jelly }[look.shape] || biped, out = {};
   for (const pose of ['idle', 'step', 'windup', 'strike', 'dead']) out[pose] = draw(look, pose);
   return (cache[def.id] = out);
 }

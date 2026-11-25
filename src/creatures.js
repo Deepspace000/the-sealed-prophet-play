@@ -16,6 +16,7 @@ export class Creatures {
   constructor(scene, level, defs, hooks) {
     this.scene = scene; this.level = level; this.defs = defs; this.hooks = hooks;
     this.list = []; this.edges = new Map(); this.tex = {}; this.hunting = 0;
+    this.step = Math.max(STEP, level.data.step ?? STEP);       // the tallest step it walks up (a level may allow taller ones)
   }
 
   texture(def, pose) {
@@ -39,7 +40,7 @@ export class Creatures {
   }
 
   // "toughness" in a level: every creature in it, its boss too, has that much more health (1.4: 40% more)
-  spawn(id, x, z, n, dead) {
+  spawn(id, x, z, n, dead, y) {
     const def = this.defs[id];
     if (!def) throw new Error(`No creature called "${id}"`);
     if (this.level.cellAt(x, z).solid) throw new Error(`Creature ${n} (${id}) is placed inside solid rock`);
@@ -47,11 +48,11 @@ export class Creatures {
     spr.center.set(0.5, 0);
     this.scene.add(spr);
     const frame = this.frame(def, 'idle');
-    const y0 = this.level.floorAt(x, z), might = Creatures.might(def, y0);
+    const y0 = y ?? this.level.floorAt(x, z) + (def.fly ? def.fly.cruise ?? 2 : 0), might = Creatures.might(def, y0);
     const hp = def.health * might.hp * (this.level.data.toughness || 1);
     const c = {
       def, n, x, z, y: y0, vy: 0, hp, max: hp, hit: might.hit, state: def.still ? 'still' : 'idle', t: 0,
-      home: { x, z }, path: null, pathT: 0, seen: 99, last: null, pose: 'idle', flash: 0, kx: 0, kz: 0,
+      home: { x, y: y0, z }, path: null, pathT: 0, seen: 99, last: null, pose: 'idle', flash: 0, kx: 0, kz: 0,
       anim: Math.random() * 4, fled: false, moving: false, wanderT: 1 + Math.random() * 3, goal: null, spr,
       aspect: frame.width / frame.height,
     };
@@ -66,9 +67,11 @@ export class Creatures {
     for (const [sx, sz] of [[x, z], [x - r, z - r], [x + r, z - r], [x - r, z + r], [x + r, z + r]]) {
       const cell = L.cellAt(sx, sz);
       if (cell.solid || cell.secret) return false;
-      const f = L.floorAt(sx, sz);
-      if (f > y + STEP || f < y - DROP) return false;
-      if (cell.ceil - Math.max(f, y) < c.def.height) return false;
+      let f = L.floorAt(sx, sz, y);
+      const e = this.hooks.extraFloor ? this.hooks.extraFloor(sx, sz, y + this.step) : -Infinity;      // a beam or a lift under it
+      if (e > f) f = e;
+      if (f > y + this.step || f < y - DROP) return false;
+      if (L.ceilAt(sx, sz, y) - Math.max(f, y) < c.def.height) return false;
       if (cell.water != null && cell.water - f > (c.def.wade ?? 0.8)) return false;
     }
     return true;
@@ -77,8 +80,10 @@ export class Creatures {
     const L = this.level, r = c.def.radius;
     let g = -Infinity;
     for (const [sx, sz] of [[c.x, c.z], [c.x - r, c.z - r], [c.x + r, c.z - r], [c.x - r, c.z + r], [c.x + r, c.z + r]]) {
-      const f = L.floorAt(sx, sz);
-      if (f <= c.y + STEP && f > g) g = f;
+      let f = L.floorAt(sx, sz, c.y);
+      const e = this.hooks.extraFloor ? this.hooks.extraFloor(sx, sz, c.y + this.step) : -Infinity;
+      if (e > f) f = e;
+      if (f <= c.y + this.step && f > g) g = f;
     }
     return g;
   }
@@ -94,15 +99,15 @@ export class Creatures {
 
   // ---- finding the way: which neighbouring cells this kind of creature can walk between
   edgeOK(c, ax, az, bx, bz) {
-    const key = c.def.id + ':' + ax + ',' + az + ',' + bx + ',' + bz;
+    const key = c.def.id + ':' + ax + ',' + az + ',' + bx + ',' + bz + ':' + Math.round(c.y / 3);      // (by height: under a cap and on top of it differ)
     let ok = this.edges.get(key);
     if (ok === undefined) {
       const L = this.level, s = L.size, a = L.cell(ax, az), b = L.cell(bx, bz);
       ok = false;
       if (!b.solid && !b.secret) {
         const mx = (ax + bx + 1) / 2 * s, mz = (az + bz + 1) / 2 * s, dx = (bx - ax) * 0.06, dz = (bz - az) * 0.06;
-        const fa = L.floorAt(mx - dx, mz - dz), fb = L.floorAt(mx + dx, mz + dz), mid = L.floorAt((bx + 0.5) * s, (bz + 0.5) * s);
-        ok = fb - fa <= STEP && fa - fb <= DROP && Math.min(a.ceil, b.ceil) - Math.max(fa, fb) >= c.def.height
+        const y = c.y, fa = L.floorAt(mx - dx, mz - dz, y), fb = L.floorAt(mx + dx, mz + dz, y), mid = L.floorAt((bx + 0.5) * s, (bz + 0.5) * s, y);
+        ok = fb - fa <= this.step && fa - fb <= DROP && Math.min(L.ceilAt(mx - dx, mz - dz, y), L.ceilAt(mx + dx, mz + dz, y)) - Math.max(fa, fb) >= c.def.height
           && !(b.water != null && b.water - mid > (c.def.wade ?? 0.8));
       }
       this.edges.set(key, ok);
@@ -194,10 +199,10 @@ export class Creatures {
       if (c.burn > 0 && c.state !== 'dead') { c.burn -= dt; this.hurt(c, 5 * dt, 'fire', c.x, c.z, 0); c.flash = 0.16; }       // set alight by a torch
       c.flash = Math.max(0, c.flash - dt);
       if (c.state === 'dead') {                              // a body lies on the ground: it falls if it died in the air, and settles on to the floor under its middle
-        const g0 = this.level.surfAt(c.x, c.z);
+        const g0 = this.level.surfAt(c.x, c.z, c.y);
         let g = g0;                                          // on a stair it rests on the lowest step under it, so no end of it hangs in the air
         for (const [ox, oz] of [[0.5, 0], [-0.5, 0], [0, 0.5], [0, -0.5]]) {
-          const s = this.level.surfAt(c.x + ox, c.z + oz);
+          const s = this.level.surfAt(c.x + ox, c.z + oz, c.y);
           if (s < g && s > g0 - 0.7) g = s;
         }
         if (g !== Infinity && c.y !== g) {
@@ -205,8 +210,9 @@ export class Creatures {
         }
         this.draw(c, dt, P, brightnessAt); continue;
       }
-      const dx = P.x - c.x, dz = P.z - c.z, dist = Math.hypot(dx, dz), dy = P.y - c.y;
-      const los = dist < 30 && this.sees(c.x, c.y + def.height * 0.85, c.z, P.x, P.eyeY - 0.2, P.z);
+      const fly = def.fly;
+      const dx = P.x - c.x, dz = P.z - c.z, dy = P.y - c.y, dist = fly ? Math.hypot(dx, dz, dy + (fly.hover ?? 0.8)) : Math.hypot(dx, dz);
+      const los = dist < (fly ? 45 : 30) && this.sees(c.x, c.y + def.height * (fly ? 0.5 : 0.85), c.z, P.x, P.eyeY - 0.2, P.z);
       let aware = false;
       if (P.alive && los) {
         const range = c.state === 'still' ? def.wake : def.sense === 'life' ? def.sight : def.sight * (0.3 + 0.7 * P.lit);
@@ -240,12 +246,14 @@ export class Creatures {
           break;
         case 'search':                                       // going to where it last saw or heard you
           if (aware) { this.rouse(c, dist); break; }
+          if (fly) { c.state = 'idle'; break; }
           if (heard) c.last = { x: P.x, z: P.z };
           if (c.t <= 0 || !c.last || Math.hypot(c.last.x - c.x, c.last.z - c.z) < 0.9) { c.state = 'home'; c.pathT = 0; break; }
           want = this.toward(c, c.last.x, c.last.z, dt); speed *= 0.7;
           break;
         case 'home':
           if (aware) { this.rouse(c, dist); break; }
+          if (fly) { c.state = 'idle'; break; }
           if (heard) { c.last = { x: P.x, z: P.z }; c.state = 'search'; c.t = 9; c.pathT = 0; break; }
           if (Math.hypot(c.home.x - c.x, c.home.z - c.z) < 0.5) { c.state = 'idle'; break; }
           want = this.toward(c, c.home.x, c.home.z, dt); speed *= 0.6;
@@ -254,14 +262,14 @@ export class Creatures {
           if (!P.alive) { c.state = 'home'; c.pathT = 0; break; }
           if (c.seen > 5) { c.state = 'search'; c.t = 9; c.pathT = 0; break; }
           if (def.fleeAt && !c.fled && c.hp < c.max * def.fleeAt) { c.fled = true; c.state = 'flee'; c.t = 4; break; }
-          if (los && dist < reach - 0.2 && Math.abs(dy) < 1.3) { c.state = 'windup'; c.t = def.attack.windup; break; }
-          if (c.last) want = this.toward(c, c.last.x, c.last.z, dt, los && dist < 3 && Math.abs(dy) < 0.8);
+          if (los && dist < reach - 0.2 && Math.abs(dy + (fly ? fly.hover ?? 0.8 : 0)) < 1.3) { c.state = 'windup'; c.t = def.attack.windup; break; }
+          if (c.last && !fly) want = this.toward(c, c.last.x, c.last.z, dt, los && dist < 3 && Math.abs(dy) < 0.8);
           break;
         case 'windup':                                       // the warning before the blow
           if (c.t <= 0) {
             c.state = 'strike'; c.t = 0.28;
             play(def.kind === 'beast' ? 'bite' : 'swing', dist);
-            if (P.alive && los && dist < reach + 0.35 && Math.abs(dy) < 1.4) {
+            if (P.alive && los && dist < reach + 0.35 && Math.abs(dy + (fly ? fly.hover ?? 0.8 : 0)) < 1.4) {
               this.hooks.onStrike(c, def.attack.damage * c.hit * (0.85 + Math.random() * 0.3), def.attack.type);
             }
           }
@@ -279,6 +287,7 @@ export class Creatures {
           break;
       }
       if (HUNTING.has(c.state)) this.hunting++;
+      if (fly) { this.flyStep(c, P, dt, dist, los); this.draw(c, dt, P, brightnessAt); continue; }
 
       // moving, being knocked back, and falling
       c.moving = false;
@@ -313,18 +322,82 @@ export class Creatures {
     }
   }
 
+  // ---- flying ("fly" in its kind): it keeps off the ground and goes straight through the air.
+  //   fly.cruise: how high over its home it idles; fly.circle: the radius it circles there (0: it drifts up and down);
+  //   fly.hover: how far over your feet it holds itself to strike; fly.swoop: after a blow it climbs away before it comes again.
+  airFree(c, x, y, z) {
+    const L = this.level, cell = L.cellAt(x, z);
+    if (cell.solid) return false;
+    const f = L.floorAt(x, z, y), top = L.ceilAt(x, z, y);
+    return y > f + 0.2 && y + c.def.height < top - 0.05;
+  }
+  flyTo(c, tx, ty, tz, speed, dt) {
+    const dx = tx - c.x, dy = ty - c.y, dz = tz - c.z, d = Math.hypot(dx, dy, dz);
+    if (d < 0.05) return false;
+    const k = Math.min(d, speed * dt) / d, nx = c.x + dx * k, ny = c.y + dy * k, nz = c.z + dz * k;
+    if (this.airFree(c, nx, ny, nz)) { c.x = nx; c.y = ny; c.z = nz; return true; }
+    if (this.airFree(c, c.x, c.y + speed * dt, c.z)) { c.y += speed * dt; return true; }        // in the way: rise over it
+    if (this.airFree(c, nx, c.y, nz)) { c.x = nx; c.z = nz; return true; }
+    return false;
+  }
+  flyStep(c, P, dt, dist, los) {
+    const f = c.def.fly, sp = c.def.speed;
+    c.moving = false;
+    if (c.kx || c.kz) {                                       // knocked back through the air
+      this.flyTo(c, c.x + c.kx, c.y, c.z + c.kz, Math.hypot(c.kx, c.kz), dt);
+      const k = Math.max(0, 1 - dt * 6); c.kx *= k; c.kz *= k;
+      if (Math.abs(c.kx) + Math.abs(c.kz) < 0.05) c.kx = c.kz = 0;
+    }
+    const st = c.state;
+    if (st === 'chase' && c.last) {
+      const away = c.climb > 0;                               // a swooper climbs off after each blow, then comes round again
+      if (away) {
+        c.climb -= dt;
+        c.moving = this.flyTo(c, c.x + c.ax * 6, P.y + (f.cruise ?? 4), c.z + c.az * 6, sp, dt);
+      } else {
+        const ty = P.y + (f.hover ?? 0.8), d = Math.hypot(P.x - c.x, P.z - c.z) || 1;
+        const reach = c.def.attack.reach + c.def.radius + P.r - 0.3;
+        const tx = d > reach ? P.x : c.x, tz = d > reach ? P.z : c.z;
+        c.moving = this.flyTo(c, tx, ty, tz, sp, dt);
+      }
+    } else if (st === 'recover' && f.swoop && !(c.climb > 0)) {
+      const d = Math.hypot(c.x - P.x, c.z - P.z) || 1;
+      c.ax = (c.x - P.x) / d; c.az = (c.z - P.z) / d; c.climb = f.swoop;
+    } else if (st === 'flee') {
+      const d = Math.hypot(c.x - P.x, c.z - P.z) || 1;
+      c.moving = this.flyTo(c, c.x + (c.x - P.x) / d * 4, c.y + 1.5, c.z + (c.z - P.z) / d * 4, sp * 1.1, dt);
+    } else if (st === 'idle' || st === 'search' || st === 'home') {
+      if (st !== 'idle') { c.state = 'idle'; }
+      if (f.circle) {                                         // circling its home
+        c.orbit = (c.orbit ?? Math.random() * 6.28) + dt * sp * 0.35 / f.circle;
+        c.moving = this.flyTo(c, c.home.x + Math.cos(c.orbit) * f.circle, c.home.y, c.home.z + Math.sin(c.orbit) * f.circle, sp * 0.5, dt);
+      } else {                                                // drifting slowly up and down where it hangs
+        c.drift = (c.drift ?? Math.random() * 6.28) + dt * 0.4;
+        c.moving = this.flyTo(c, c.home.x + Math.sin(c.drift * 0.7) * 1.5, c.home.y + Math.sin(c.drift) * 1.2, c.home.z + Math.cos(c.drift * 0.5) * 1.5, sp * 0.4, dt);
+      }
+    }
+    // it and the player do not overlap
+    const min = c.def.radius + P.r, d2 = Math.hypot(P.x - c.x, P.z - c.z);
+    if (d2 < min && d2 > 0.001 && Math.abs(P.y + 0.9 - (c.y + c.def.height / 2)) < 1.2) {
+      const nx = (P.x - c.x) / d2, nz = (P.z - c.z) / d2, push = min - d2;
+      if (this.airFree(c, c.x - nx * push, c.y, c.z - nz * push)) { c.x -= nx * push; c.z -= nz * push; }
+    }
+  }
+
   draw(c, dt, P, brightnessAt) {
     let pose = 'idle', lunge = 0;
     if (c.state === 'dead') pose = 'dead';
     else if (c.state === 'windup') pose = 'windup';
     else if (c.state === 'strike') { pose = 'strike'; lunge = 0.4; }
+    else if (c.def.fly) { c.anim += dt * (c.def.fly.beat ?? 3); pose = (c.anim | 0) % 2 ? 'step' : 'idle'; }      // wings beat, a bell pulses, all the time
     else if (c.moving) { c.anim += dt * (2 + c.def.speed); pose = (c.anim | 0) % 2 ? 'step' : 'idle'; }
     if (pose !== c.pose) { c.pose = pose; c.spr.material.map = this.texture(c.def, pose); }
     const h = c.def.height * (pose === 'strike' ? 1.14 : pose === 'dead' ? (c.def.deadSize || 1) : 1);
     c.spr.scale.set(h * c.aspect, h, 1);
     const dx = P.x - c.x, dz = P.z - c.z, d = Math.hypot(dx, dz) || 1;
     const shake = c.state === 'windup' ? Math.sin(c.t * 60) * 0.015 : 0;
-    c.spr.position.set(c.x + dx / d * lunge + shake, c.y - 0.03, c.z + dz / d * lunge);
+    const bob = c.def.fly && c.state !== 'dead' ? Math.sin(c.anim * 1.7 + c.n) * (c.def.fly.bob ?? 0.15) : 0;
+    c.spr.position.set(c.x + dx / d * lunge + shake, c.y - 0.03 + bob, c.z + dz / d * lunge);
     const b = brightnessAt(c.x, c.y + c.def.height * 0.6, c.z);
     if (c.flash > 0 && c.dull) c.spr.material.color.setScalar(Math.min(1.3, b * 1.3 + 0.25));      // a blow that did little: a pale flash
     else if (c.flash > 0) c.spr.material.color.setRGB(Math.min(1.4, b * 1.6 + 0.35), b * 0.35, b * 0.3);

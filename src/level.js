@@ -91,8 +91,9 @@ export class Level {
     return Level.floorIn(c, x / s - cx, z / s - cz);
   }
   // The floor as it is drawn (a stair is stepped), for things that lie on it.
-  surfAt(x, z) {
+  surfAt(x, z, y) {
     const s = this.size, cx = Math.floor(x / s), cz = Math.floor(z / s), c = this.cell(cx, cz);
+    if (!c.solid && c.cap != null && y != null && y >= c.ceil - 0.05) return c.cap;
     return c.solid ? Infinity : Level.surfIn(c, x / s - cx, z / s - cz);
   }
   ceilAt(x, z, y) {

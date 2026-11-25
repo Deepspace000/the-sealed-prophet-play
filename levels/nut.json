@@ -1,6 +1,6 @@
 {
   "name": "The White Tower of Nut",
-  "rev": 2,
+  "rev": 3,
   "fallDamage": true,
   "step": 0.8,
   "liftTex": "whiteplain",
@@ -371,7 +371,27 @@
     {"id": "model", "name": "bm_anubis", "cell": [53, 44], "at": [0.5, 0.5], "size": 2.0, "turn": 0.5, "solid": 0.6},
     {"id": "model", "name": "bm_anubis", "cell": [57, 44], "at": [0.5, 0.5], "size": 2.0, "turn": 0.5, "solid": 0.6}
   ],
-  "creatures": [],
+  "creatures": [
+    {"id": "thin_demon", "cell": [45, 39]},
+    {"id": "thin_demon", "cell": [48, 46]},
+    {"id": "thin_demon", "cell": [55, 49]},
+    {"id": "thin_demon", "cell": [55, 35]},
+    {"id": "thin_demon", "cell": [52, 43]},
+    {"id": "thin_demon", "cell": [53, 46]},
+    {"id": "thin_demon", "cell": [57, 41], "y": 140},
+    {"id": "thin_demon", "cell": [54, 39], "y": 140},
+    {"id": "sky_lizard", "cell": [45, 30], "y": 25},
+    {"id": "sky_lizard", "cell": [63, 29], "y": 36},
+    {"id": "sky_lizard", "cell": [50, 29], "y": 62},
+    {"id": "sky_lizard", "cell": [74, 49], "y": 128},
+    {"id": "sky_lizard", "cell": [33, 46], "y": 112},
+    {"id": "sky_jelly", "cell": [55, 58], "y": 94.8},
+    {"id": "sky_jelly", "cell": [36, 42], "y": 106.8},
+    {"id": "sky_jelly", "cell": [41, 56], "y": 100},
+    {"id": "sky_jelly", "cell": [65, 36], "y": 76},
+    {"id": "sky_jelly", "cell": [49, 56], "y": 118.8},
+    {"id": "sky_jelly", "cell": [55, 39], "y": 141.2}
+  ],
   "spots": [
     {"cell": [55, 96], "wall": "S", "text": "The way back to the hall.", "to": "hub"},
     {"cell": [55, 92], "text": "Daylight, and a desert under a turquoise sky. In the middle of it stands a white tower. Its top is lost in the clouds."},
