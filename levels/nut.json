@@ -423,14 +423,14 @@
     {"cell": [56, 31], "id": "sun", "mode": "key", "key": "nut_sun", "colour": "#f0c446", "run": "EW", "h": 4.0, "text": "A gate across the stair. The lock is a golden scarab."},
     {"cell": [56, 32], "id": "sun", "mode": "key", "key": "nut_sun", "colour": "#f0c446", "run": "EW", "h": 4.0, "text": "A gate across the stair. The lock is a golden scarab."},
     {"cell": [53, 43], "id": "sky", "mode": "key", "key": "nut_sky", "colour": "#60cec8", "run": "EW", "text": "A gate. The lock is a scarab of pale turquoise."},
-    {"cell": [56, 42], "id": "wayup", "mode": "button", "h": 1.0},
-    {"cell": [57, 40], "id": "trader", "mode": "lever", "run": "NS", "h": 3.2, "text": "A gate of bronze bars. It will not move. There is a lever on the wall beside it."}
+    {"cell": [56, 42], "id": "wayup", "mode": "button", "look": "lid", "y": 140},
+    {"cell": [57, 40], "id": "trader", "mode": "lever", "look": "bars", "run": "NS", "h": 3.2, "text": "A gate of bronze bars. It will not move. There is a lever on the wall beside it."}
   ],
   "levers": [
     {"cell": [56, 41], "wall": "N", "h": 1.3, "opens": "trader", "hold": 0}
   ],
   "people": [
-    {"id": "trader", "cell": [57, 39], "at": [0.6, 0.45], "when": "caged", "reach": 5.5}
+    {"id": "trader", "cell": [57, 39], "at": [0.5, 0.78], "when": "caged", "reach": 5.5}
   ],
   "shooters": [
     {"cell": [47, 37], "wall": "E", "h": 1.0, "every": 3.5, "phase": 3.0, "speed": 8, "dmg": 12},

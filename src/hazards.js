@@ -123,6 +123,16 @@ function gateTex(mode, colour) {
   });
 }
 
+// A gate of bronze bars ("look": "bars"): you can see through it.
+function barsTex() {
+  return canvasTex(64, 96, (g, w, h) => {
+    g.clearRect(0, 0, w, h);
+    const bar = (x, y, bw, bh) => { g.fillStyle = '#4a2f10'; g.fillRect(x, y, bw, bh); g.fillStyle = '#c99a42'; g.fillRect(x + 1, y + 1, bw - 2, bh - 2); g.fillStyle = '#f0cf7a'; g.fillRect(x + 1, y + 1, 1, bh - 2); };
+    for (let x = 4; x < w; x += 12) bar(x, 0, 5, h);
+    for (const y of [2, 46, 89]) bar(0, y, w, 5);
+  });
+}
+
 // The slab of a gate that is drawn as plain wall: the level's own wall stone, repeated so it matches.
 function plainWall(mat, w, h) {
   const m = mat.clone();
@@ -139,10 +149,14 @@ export class Gates {
     this.list = gates.map((g, n) => {
       const c = level.cell(g.cell[0], g.cell[1]);
       const h = g.h ?? (c.ceilTex === 'sky' ? 4.5 : c.ceil - c.floor), s = level.size;       // h: a gate under the open sky is only so tall
-      const slab = new THREE.Mesh(new THREE.BoxGeometry(s, h, 0.45), g.mode === 'button' && wallMat ? plainWall(wallMat, s, h) : new THREE.MeshLambertMaterial({ map: gateTex(g.mode, g.colour) }));
+      // look "bars": bronze bars to see through. look "lid": a flat slab lying over the mouth of a shaft at the height "y", that slides
+      // off sideways when it opens.
+      const mat = g.look === 'bars' ? new THREE.MeshLambertMaterial({ map: barsTex(), transparent: true, alphaTest: 0.5, side: THREE.DoubleSide })
+        : (g.mode === 'button' || g.look === 'lid') && wallMat ? plainWall(wallMat, s, g.look === 'lid' ? s : h) : new THREE.MeshLambertMaterial({ map: gateTex(g.mode, g.colour) });
+      const slab = new THREE.Mesh(g.look === 'lid' ? new THREE.BoxGeometry(s, 0.35, s) : new THREE.BoxGeometry(s, h, g.look === 'bars' ? 0.12 : 0.45), mat);
       slab.rotation.y = g.run === 'EW' ? Math.PI / 2 : 0;
-      const gate = { ...g, n, id: g.id ?? 'g' + n, mesh: slab, h, floor: c.floor, t: 1, want: 1, x: (g.cell[0] + 0.5) * s, z: (g.cell[1] + 0.5) * s,
-        index: g.cell[1] * level.w + g.cell[0], slide: g.slide || (g.mode === 'auto' || g.mode === 'timed' ? 'side' : 'up') };
+      const gate = { ...g, n, id: g.id ?? 'g' + n, mesh: slab, h: g.look === 'lid' ? 0.35 : h, floor: g.y ?? c.floor, t: 1, want: 1, x: (g.cell[0] + 0.5) * s, z: (g.cell[1] + 0.5) * s,
+        index: g.cell[1] * level.w + g.cell[0], slide: g.slide || (g.look === 'lid' || g.mode === 'auto' || g.mode === 'timed' ? 'side' : 'up') };
       scene.add(slab);
       return gate;
     });
@@ -191,7 +205,7 @@ export class Gates {
       const s = L.size, k = 1 - g.t;
       if (g.slide === 'side') {
         const dx = g.run === 'EW' ? 0 : 1, dz = g.run === 'EW' ? 1 : 0;
-        g.mesh.position.set(g.x + dx * k * s * 0.98, g.floor + g.h / 2, g.z + dz * k * s * 0.98);
+        g.mesh.position.set(g.x + dx * k * s * 0.98, g.look === 'lid' ? g.floor - g.h / 2 : g.floor + g.h / 2, g.z + dz * k * s * 0.98);
       } else g.mesh.position.set(g.x, g.floor + g.h / 2 + k * g.h, g.z);
       if (g.t > 0.05) L.shut.add(g.index); else L.shut.delete(g.index);
     }

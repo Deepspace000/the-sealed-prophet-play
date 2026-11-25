@@ -9,7 +9,7 @@
       "name": "Sayed Rashid",
       "start": "caged",
       "height": 1.75,
-      "look": { "shape": "biped", "colour": "#e6dcc4", "eyes": "#2a1a0a" },
+      "look": { "shape": "biped", "colour": "#7a6448", "eyes": "#f0e6d0" },
       "stock": ["khopesh_bronze", "war_hammer", "medjay_spear", "glass_blade", "lion_mace", "bronze_shield"]
     }
   }

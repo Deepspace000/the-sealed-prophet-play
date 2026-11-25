@@ -192,7 +192,7 @@ if (saved) {
 const ui = new UI(inv, () => dropHeld(), it => useThing(it));
 if (rebuilt) setTimeout(() => ui.say('This place has been rebuilt since you were last here. You start it again from its door.'), 1500);
 // Doors that need keys, levers, doors that slide, and fireballs from the walls (see hazards.js).
-const gates = new Gates({ scene, level, gates: data.gates, levers: data.levers, buttons: data.buttons, wallMat: MATS.wall, saved: saved && saved.gates, say: t => ui.say(t),
+const gates = new Gates({ scene, level, gates: data.gates, levers: data.levers, buttons: data.buttons, wallMat: MATS[data.liftTex || 'wall'], saved: saved && saved.gates, say: t => ui.say(t),
   findKey: id => [...inv.all()].map(e => e[0]).find(it => it.def.key === id) || null, takeKey: it => inv.remove(it) });
 const fireballs = new Fireballs({ scene, level, shooters: data.shooters });
 const lifts = new Lifts({ scene, level, lifts: data.lifts, mat: MATS[data.liftTex || 'wall'] });        // platforms that rise and sink in a void
