@@ -74,6 +74,22 @@ SOUNDS.gurgle = gurgle;
 // MUTED FOR NOW: the game is silent unless the address has ?sound=1 (or &sound=1). Set this to false to turn sound back on for everyone.
 export const MUTED = new URLSearchParams(location.search).get('sound') !== '1';
 
+// The wind, for a level under the open sky: a steady blowing that rises in gusts. v (0 to 1): how hard, called every frame
+// (the White Tower: harder the higher you climb).
+let windN = null;
+export function wind(v) {
+  if (MUTED || !ctx() || ac.state !== 'running') return;
+  if (!windN) {
+    const s = ac.createBufferSource(), f = ac.createBiquadFilter(), g = ac.createGain();
+    s.buffer = noise; s.loop = true; f.type = 'bandpass'; f.Q.value = 0.8; g.gain.value = 0;
+    s.connect(f); f.connect(g); g.connect(ac.destination); s.start();
+    windN = { f, g };
+  }
+  const t = ac.currentTime, gust = 0.72 + 0.28 * Math.sin(t * 0.37) * Math.sin(t * 0.11 + 1.3);
+  windN.g.gain.setTargetAtTime((0.035 + 0.24 * v) * gust, t, 0.5);
+  windN.f.frequency.setTargetAtTime(240 + 560 * v + 130 * Math.sin(t * 0.23), t, 0.5);
+}
+
 export function play(name, far = 0) {
   if (MUTED) return;
   if (!ctx() || ac.state !== 'running' || !SOUNDS[name]) return;

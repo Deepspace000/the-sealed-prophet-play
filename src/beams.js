@@ -70,21 +70,79 @@ export class Beams {
 
 // Stained glass: "windows" in a level, long panes of coloured glass in lead set into a wall. face: which way the wall faces
 // (N, E, S or W), a / b: its two ends along the wall (x, z in metres), y0 / y1: its foot and its top (metres). The glass glows a
-// little, as if the light came through it.
+// little, as if the light came through it; a soft glow lies on the wall round it, and a pool of its colours on the floor at its foot.
 export class Windows {
-  constructor({ scene, windows = [], texture }) {
-    const TURN = { S: 0, N: Math.PI, E: Math.PI / 2, W: -Math.PI / 2 };
+  constructor({ scene, windows = [], texture, level }) {
+    const TURN = { S: 0, N: Math.PI, E: Math.PI / 2, W: -Math.PI / 2 }, OUT = { S: [0, 1], N: [0, -1], E: [1, 0], W: [-1, 0] };
+    const COLOURS = ['#ffb84a', '#ff5a4a', '#5a8cff', '#3ad6c8', '#c86aff'];
+    const canvasTex = (w, h, draw) => { const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h);
+      const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; };
+    this.glows = []; this.time = 0;
     windows.forEach((w, i) => {
       const len = Math.hypot(w.b[0] - w.a[0], w.b[1] - w.a[1]), h = w.y1 - w.y0;
       const map = texture(i + 1); map.repeat.set(1, h / (len * 4));
-      const m = new THREE.MeshLambertMaterial({ map, emissiveMap: map, emissive: 0xffffff, emissiveIntensity: 0.6 });
+      const m = new THREE.MeshLambertMaterial({ map, emissiveMap: map, emissive: 0xffffff, emissiveIntensity: 0.8 });
       const mesh = new THREE.Mesh(new THREE.PlaneGeometry(len, h), m);
       mesh.position.set((w.a[0] + w.b[0]) / 2, (w.y0 + w.y1) / 2, (w.a[1] + w.b[1]) / 2);
       mesh.rotation.y = TURN[w.face] ?? 0;
       scene.add(mesh);
       const frame = new THREE.Mesh(new THREE.BoxGeometry(len + 0.3, 0.35, 0.25), new THREE.MeshLambertMaterial({ color: 0xd9a535, emissive: 0x5a3a08 }));
       for (const y of [w.y0, w.y1]) { const f = frame.clone(); f.position.set(mesh.position.x, y, mesh.position.z); f.rotation.y = mesh.rotation.y; scene.add(f); }
+      // the glow on the wall round it: bands of its colours, fading away to each side
+      const o = OUT[w.face] || [0, 1], c1 = COLOURS[i % COLOURS.length], c2 = COLOURS[(i * 3 + 2) % COLOURS.length];
+      const halo = new THREE.Mesh(new THREE.PlaneGeometry(len * 4.2, h + 2), new THREE.MeshBasicMaterial({ transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0.32, fog: true,
+        map: canvasTex(32, 64, (g, cw, ch) => { const img = g.createImageData(cw, ch), d = img.data, a = new THREE.Color(c1), b = new THREE.Color(c2);
+          for (let y = 0; y < ch; y++) for (let x = 0; x < cw; x++) { const u = Math.abs(x / (cw - 1) - 0.5) * 2, v = y / (ch - 1), k = 0.5 + 0.5 * Math.sin(v * 9 + i);
+            const al = Math.pow(1 - u, 2.4) * Math.min(1, v * 8, (1 - v) * 8), j = (y * cw + x) * 4;
+            d[j] = (a.r * k + b.r * (1 - k)) * 255; d[j + 1] = (a.g * k + b.g * (1 - k)) * 255; d[j + 2] = (a.b * k + b.b * (1 - k)) * 255; d[j + 3] = al * 255; }
+          g.putImageData(img, 0, 0); }) }));
+      halo.position.set(mesh.position.x - o[0] * 0.02, mesh.position.y, mesh.position.z - o[1] * 0.02); halo.rotation.y = mesh.rotation.y;
+      scene.add(halo); this.glows.push(halo.material);
+      // the pool of coloured light on the floor at its foot (laid on the floor's own slope; none where the floor falls away)
+      if (level) {
+        const mx = (w.a[0] + w.b[0]) / 2, mz = (w.a[1] + w.b[1]) / 2, ax = -o[1], az = o[0], half = len / 2 + 0.7;
+        const fl = (x, z) => level.floorAt(x, z, w.y0 - 2.5 + 1.2);
+        const base = fl(mx + o[0] * 0.5, mz + o[1] * 0.5);
+        let reach = 0;
+        for (const r of [2.6, 1.8, 1.1]) { if (Math.abs(fl(mx + o[0] * r, mz + o[1] * r) - base) < 1.3) { reach = r; break; } }
+        if (reach && isFinite(base)) {
+          const P = [[-half, 0.06], [half, 0.06], [half, reach], [-half, reach]].map(([s, r]) => { const x = mx + ax * s + o[0] * r, z = mz + az * s + o[1] * r; let y = fl(x, z); if (!isFinite(y) || Math.abs(y - base) > 1.3) y = base; return [x, y + 0.05, z]; });
+          const g = new THREE.BufferGeometry();
+          g.setAttribute('position', new THREE.Float32BufferAttribute([...P[0], ...P[1], ...P[2], ...P[0], ...P[2], ...P[3]], 3));
+          g.setAttribute('uv', new THREE.Float32BufferAttribute([0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1], 2));
+          const pool = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0.5, side: THREE.DoubleSide, fog: true,
+            polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2,
+            map: canvasTex(32, 32, (cg, cw, ch) => { const img = cg.createImageData(cw, ch), d = img.data, cols = [c1, c2, COLOURS[(i + 1) % COLOURS.length]].map(c => new THREE.Color(c));
+              for (let y = 0; y < ch; y++) for (let x = 0; x < cw; x++) { const u = x / (cw - 1), v = 1 - y / (ch - 1), c = cols[Math.floor(v * 5.99 + i) % 3];      // v: 0 at the wall
+                const al = Math.pow(1 - v, 1.3) * Math.pow(Math.sin(u * Math.PI), 0.7) * (0.75 + 0.25 * Math.sin(v * 37.7)), j = (y * cw + x) * 4;
+                d[j] = c.r * 255; d[j + 1] = c.g * 255; d[j + 2] = c.b * 255; d[j + 3] = al * 255; }
+              cg.putImageData(img, 0, 0); }) }));
+          scene.add(pool); this.glows.push(pool.material);
+        }
+      }
     });
+  }
+}
+
+// the glass's light breathes a little
+Windows.prototype.update = function (dt) { this.time += dt; const k = 0.82 + 0.18 * Math.sin(this.time * 0.8); for (const m of this.glows) m.opacity = (m.opacity0 ??= m.opacity) * k; };
+
+// "shafts": light coming down a hole in a roof (cell, y0: the floor below, y1: the top of the hole). A faint column of light
+// leaning a little away from the sun, wider at the floor, that you see from the dark.
+export class Shafts {
+  constructor({ scene, level, shafts = [], sun = [0.4, 0.8, 0.3] }) {
+    const s = level.size, lean = 0.22, l = Math.hypot(sun[0], sun[2]) || 1, lx = -sun[0] / l * lean, lz = -sun[2] / l * lean;
+    const mat = new THREE.MeshBasicMaterial({ color: 0xffe6b0, transparent: true, opacity: 0.11, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false });
+    for (const sh of shafts) {
+      const x0 = sh.cell[0] * s, z0 = sh.cell[1] * s, hgt = sh.y1 - sh.y0, grow = 0.35;
+      const top = [[x0, z0], [x0 + s, z0], [x0 + s, z0 + s], [x0, z0 + s]].map(([x, z]) => [x, sh.y1, z]);
+      const bot = [[x0 - grow, z0 - grow], [x0 + s + grow, z0 - grow], [x0 + s + grow, z0 + s + grow], [x0 - grow, z0 + s + grow]].map(([x, z]) => [x + lx * hgt, sh.y0 + 0.02, z + lz * hgt]);
+      const v = [];
+      for (let i = 0; i < 4; i++) { const j = (i + 1) % 4; v.push(...top[i], ...bot[i], ...top[j], ...top[j], ...bot[i], ...bot[j]); }      // its four sides
+      for (const q of [[0, 1, 2], [0, 2, 3]]) for (const k of q) v.push(...bot[k]);                                                         // and where it lands
+      const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(v, 3));
+      scene.add(new THREE.Mesh(g, mat));
+    }
   }
 }
 

@@ -1,8 +1,9 @@
 import * as THREE from 'three';
 import { Level } from './level.js';
 import { buildSky } from './sky.js';
-import { Beams, Ladders, Windows } from './beams.js';
-import { towerMaterials, glassTexture } from './towerart.js';
+import { Terrain } from './terrain.js';
+import { Beams, Ladders, Windows, Shafts } from './beams.js';
+import { towerMaterials, glassTexture, towerTick } from './towerart.js';
 import { People } from './people.js';
 import { Shop } from './shop.js';
 import { Player } from './player.js';
@@ -19,7 +20,7 @@ import { GameMap } from './map.js';
 import { Target } from './target.js';
 import { Scenes } from './scenes.js';
 import { loadArt } from './art.js';
-import { play } from './sound.js';
+import { play, wind } from './sound.js';
 import { buildProps, strikeUrn } from './props.js';
 import { loadModels } from './models.js';
 import { Gates, Fireballs, Lifts, buildSpikes, onSpikes } from './hazards.js';
@@ -89,7 +90,7 @@ const known = id => unlocked.has(id) || (visits[id] || 0) >= 2;
 const REAL_NAME = data.name || LEVEL;
 data.name = known(LEVEL) ? REAL_NAME : 'Unknown area';
 for (const s of data.spots || []) if (s.to && s.textUnknown && !known(s.to)) s.text = s.textUnknown;     // a door that would name a place you do not know yet
-LOAD.name(data.name.toUpperCase());
+LOAD.name(known(LEVEL) ? REAL_NAME.toUpperCase() : 'LOADING GAME');      // (a place you do not know yet is not named on the loading page)
 const setDoor = s => {
   const name = s.realm[0].toUpperCase() + s.realm.slice(1);
   if (!unlocked.has(s.realm)) return;
@@ -107,12 +108,26 @@ const level = new Level(data);
 if (data.fog != null) scene.fog.density = DARK.density = data.fog;      // how fast things fade into the dark
 const MATS = standinMaterials();
 if (data.sky) Object.assign(MATS, towerMaterials(data.sky));        // the White Tower's gilded walls (src/towerart.js)
+// Under the ground in a level with a sky (cells with "dark": true use these): the same old stone, but the sun and the sky's
+// light do not reach it. Only your lamp and the torches do. (underWall, underFloor, underCeil)
+if (data.sky) {
+  const C = THREE.ShaderChunk.lights_fragment_begin
+    .replace('getDirectionalLightInfo( directionalLight, directLight );', 'getDirectionalLightInfo( directionalLight, directLight ); directLight.color *= 0.0;')
+    .replace('irradiance += getHemisphereLightIrradiance( hemisphereLights[ i ], geometryNormal );', 'irradiance += getHemisphereLightIrradiance( hemisphereLights[ i ], geometryNormal ) * 0.02;')
+    .replace('vec3 irradiance = getAmbientLightIrradiance( ambientLightColor );', 'vec3 irradiance = getAmbientLightIrradiance( ambientLightColor ) * 0.1;');
+  for (const [name, from] of [['underWall', 'wall'], ['underFloor', 'floor'], ['underCeil', 'ceil']]) {
+    const m = MATS[from].clone();
+    m.onBeforeCompile = sh => { sh.fragmentShader = sh.fragmentShader.replace('#include <lights_fragment_begin>', C); };
+    m.customProgramCacheKey = () => 'under';
+    MATS[name] = m;
+  }
+}
 scene.add(level.build(MATS));
 buildSpikes(scene, level);                 // beds of spikes (cells with "spikes": true)
 // An open sky (a level with "sky", see src/sky.js): a dome, sunlight, drifting clouds, and a haze the colour of the horizon instead of the dark.
 let skyFx = null;
 if (data.sky) {
-  DARK.color = new THREE.Color(data.sky.horizon).getHex(); DARK.density = data.sky.haze ?? 0.004;
+  DARK.color = new THREE.Color(data.sky.hazeColor || data.sky.horizon).getHex(); DARK.density = data.sky.haze ?? 0.004;
   scene.background.setHex(DARK.color); scene.fog.color.setHex(DARK.color); scene.fog.density = DARK.density;
   camera.far = data.sky.far || 900; camera.updateProjectionMatrix();
   skyFx = buildSky(scene, data.sky, MATS, { x: level.w * level.size / 2, z: level.h * level.size / 2 });
@@ -188,8 +203,10 @@ const fireballs = new Fireballs({ scene, level, shooters: data.shooters });
 const lifts = new Lifts({ scene, level, lifts: data.lifts, mat: MATS[data.liftTex || 'wall'] });        // platforms that rise and sink in a void
 const beams = new Beams({ scene, level, beams: data.beams, mat: MATS.whiteplain });      // rays of white stone to walk on (src/beams.js)
 const ladders = new Ladders({ scene, level, ladders: data.ladders });
-new Windows({ scene, windows: data.windows, texture: glassTexture });            // long stained glass windows
-player.extraFloor = (x, z, lim) => Math.max(lifts.topAt(x, z, lim), beams.topAt(x, z, lim));      // lifts and beams hold you up too (lim: none higher than this)
+const windows = new Windows({ scene, windows: data.windows, texture: glassTexture, level });
+new Shafts({ scene, level, shafts: data.shafts, sun: data.sky && data.sky.sun && data.sky.sun.dir });      // light down holes in a roof            // long stained glass windows
+const terrain = data.terrain ? new Terrain({ scene, level, terrain: data.terrain, mat: MATS[data.terrain.mat || 'sand'] }) : null;      // dunes (src/terrain.js)
+player.extraFloor = (x, z, lim) => Math.max(lifts.topAt(x, z, lim), beams.topAt(x, z, lim), terrain ? terrain.topAt(x, z, lim) : -Infinity);      // lifts, beams and dunes hold you up too (lim: none higher than this)
 player.ladderAt = (x, z, y, yaw) => ladders.at(x, z, y, yaw);
 // Where a thing lies: the floor, or a room's roof or a ray or a lift if it was left up there (near: the height it was left at).
 world.ground = (x, z, near) => {
@@ -611,7 +628,8 @@ function dropHeld() {
 }
 function brightnessAt(x, y, z) {    // roughly how well lit a spot is, for flat pictures that light does not reach
   // under an open sky it is daylight (a little less in a room); otherwise a faint glow, the lamp and the torches
-  let b = data.sky ? (level.cellAt(x, z).ceilTex === 'sky' || y >= level.cellAt(x, z).ceil ? 1.0 : 0.8) : 0.07;
+  const here = level.cellAt(x, z), deep = here.dark && y < here.ceil;        // (under the ground, even in a level with a sky, it is dark)
+  let b = data.sky && !deep ? (here.ceilTex === 'sky' || y >= here.ceil ? 1.0 : 0.8) : 0.07;
   const add = (l, power, range) => {
     const d2 = (x - l.x) ** 2 + (y - l.y) ** 2 + (z - l.z) ** 2;
     b += power / (Math.PI * (d2 + 0.5)) * Math.max(0, 1 - Math.sqrt(d2) / range);
@@ -940,7 +958,11 @@ function step(dt, forced) {
     document.getElementById('helpBtn').textContent = helpOn ? 'HIDE CONTROLS' : 'CONTROLS';
   }
 
-  if (skyFx) skyFx.update(dt, camera, renderer.domElement.height);
+  if (skyFx) {
+    skyFx.update(dt, camera, renderer.domElement.height);
+    towerTick(dt); windows.update(dt);
+    wind(Math.min(1, Math.max(0, player.pos.y / 140)));          // the wind is harder the higher you are
+  }
   renderer.render(scene, camera);
 }
 

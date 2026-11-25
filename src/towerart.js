@@ -18,6 +18,8 @@ const glyphTex = () => glyphs || (glyphs = (() => {
   return t;
 })());
 const f2 = v => v.toFixed(2);
+const TIME = { value: 0 };                    // seconds, for the slow light in the stone
+export function towerTick(dt) { TIME.value += dt; }
 
 // seed: which writing. y0, y1: the foot and the top of this tier (metres). col: metres per column of writing (the width of a
 // cell, so columns meet the corners), row: metres per sign, rows: signs between two plain bands, band: the plain band's height.
@@ -31,6 +33,7 @@ function writtenWall({ seed, y0, y1, giant = -1, centre = [111, 85], col = 2.0, 
     sh.uniforms.gSeed = { value: seed };
     sh.uniforms.gSun = { value: new THREE.Vector3(...sun).normalize() };
     sh.uniforms.gHaze = { value: new THREE.Color(haze) };
+    sh.uniforms.gTime = TIME;
     sh.vertexShader = `varying vec3 vWP;
 varying vec3 vWN;
 ` + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
@@ -42,8 +45,10 @@ uniform sampler2D glyphs;
 uniform float gSeed;
 uniform vec3 gSun;
 uniform vec3 gHaze;
+uniform float gTime;
 float gGold = 0.0;
 float gGlint = 0.0;
+vec3 gGlow = vec3(0.0);
 const float GIANT = ${f2(giant)}, COL = ${f2(col)}, ROW = ${f2(row)}, PER = ${f2(PER)}, TEXT = ${f2(rows * row)}, Y0 = ${f2(y0 + DADO + 0.2)}, Y1 = ${f2(y1 - CORN - 0.5)};
 float h21(vec2 p) { p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32 + gSeed); return fract(p.x * p.y); }
 float vn(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
@@ -92,14 +97,37 @@ vec4 sign_at(float h, float y, float face) {
     float y = vWP.y;
     bool top = abs(vWN.y) > 0.5;                                    // (the top of a wall: plain stone)
     float dist = length(cameraPosition - vWP);
-    // smooth white marble: a soft cloud in it and a few faint grey veins, no joints
-    float cl = vn(vec2(h, y) * 0.07) * 0.6 + vn(vec2(h, y) * 0.23) * 0.4;
-    float vein = smoothstep(0.035, 0.0, abs(vn(vec2(h * 0.18 + y * 0.05, y * 0.11)) - 0.5)) * 0.06;
-    vec3 stone = vec3(0.80, 0.775, 0.72) * (0.94 + 0.08 * cl) - vein;
+    // Old marble, scoured by wind and sand. No joints: one skin of stone, but mottled, grained and pitted, with pale streaks
+    // along the wind, hollows the sand has stained, dark runs down from above, a few cracks, and sand drifted up from its foot.
+    vec2 p = vec2(h, y);
+    float near = 1.0 - 0.75 * smoothstep(30.0, 110.0, dist);        // (fine things fade with distance, or they turn to speckle)
+    float cl = vn(p * 0.07) * 0.6 + vn(p * 0.23) * 0.4;
+    float mott = vn(p * 0.9) * 0.55 + vn(p * 2.7) * 0.3 + vn(p * 8.0) * 0.15;
+    float grain = vn(p * 31.0);
+    float scour = vn(vec2(h * 0.11 + 3.0, y * 3.1)) * 0.6 + vn(vec2(h * 0.37, y * 9.0)) * 0.4;
+    float pit = smoothstep(0.78, 0.92, vn(p * 13.0) * 0.65 + vn(p * 37.0) * 0.35) * near;
+    float crack = smoothstep(0.014, 0.0, abs(vn(vec2(h * 0.31 + y * 0.12, y * 0.21 - h * 0.05)) - 0.5)) * step(0.52, vn(p * 0.05 + 9.0)) * near;
+    float veinL = smoothstep(0.035, 0.0, abs(vn(vec2(h * 0.18 + y * 0.05, y * 0.11)) - 0.5));
+    float run = smoothstep(0.62, 0.9, vn(vec2(h * 1.3, y * 0.07))) * smoothstep(0.3, 0.7, vn(vec2(h * 0.2, y * 0.3 + 4.0)));
+    vec3 stone = vec3(0.80, 0.765, 0.70) * (0.80 + 0.13 * cl + 0.17 * mott * mix(0.5, 1.0, near) + 0.07 * grain * near);
+    stone = mix(stone, vec3(0.87, 0.83, 0.74), smoothstep(0.55, 0.85, scour) * 0.5);            // scoured pale by the wind
+    stone = mix(stone, stone * vec3(0.80, 0.72, 0.58), smoothstep(0.38, 0.12, scour) * 0.55);   // hollows the sand has stained
+    stone *= 1.0 - pit * 0.32 - crack * 0.5 - run * 0.17;
+    stone -= veinL * 0.05;
+    float drift = exp(-max(y - ${f2(y0)}, 0.0) / 4.5) * (0.35 + 0.4 * vn(vec2(h * 0.4, y * 0.8)));     // sand blown up from the foot
+    stone = mix(stone, vec3(0.70, 0.58, 0.37), drift * 0.55);
     vec4 s = top ? vec4(0.0) : sign_at(h, y, face);
-    float shd = top ? 0.0 : sign_at(h - 0.05, y + 0.06, face).x * (1.0 - s.x);      // the sign is sunk: its edge throws a little shadow
+    float e = 0.03 * (s.z > 1.5 ? 3.2 : s.z > 0.5 ? 2.0 : 1.0);
+    float sx = top ? 0.0 : sign_at(h + e, y, face).x, sy = top ? 0.0 : sign_at(h, y + e, face).x;
+    float bev = clamp(dot(vec2(sx - s.x, sy - s.x), vec2(0.7, -0.7)) * 1.5, -1.0, 1.0);     // the edge that faces the light (upper left)
+    float shd = top ? 0.0 : sign_at(h - 0.05, y + 0.06, face).x * (1.0 - s.x);      // the inlay stands a little proud and throws a shadow
     // far off the small signs fade into the marble (the great ones less), so the tower is calm from the desert
     float see = mix(1.0, s.z > 1.5 ? 1.0 : mix(0.32, 0.9, s.z), smoothstep(40.0, 130.0, dist));
+    // Three thousand years of sand: in patches the gold has gone, most near the foot, and the sign is left as a hollow cut in
+    // the stone. What gold is left is dulled in places.
+    float wear = vn(p * 0.55 + 20.0) * 0.5 + vn(p * 1.9 + 7.0) * 0.3 + vn(p * 6.5) * 0.2 + exp(-max(y - ${f2(y0)}, 0.0) / 10.0) * 0.07;
+    float gone = smoothstep(0.52, 0.585, wear);
+    float dull = smoothstep(0.42, 0.72, vn(p * 3.3 + 1.0));
     // the plain band between two runs of writing, edged with gold; fine lines between the columns
     float yy = mod(y - Y0, PER);
     bool written = !top && y > Y0 && y < Y1;
@@ -107,12 +135,14 @@ vec4 sign_at(float h, float y, float face) {
     float cx = fract(h / COL);
     float colLine = (written && yy < TEXT && s.z < 0.5) ? step(min(cx, 1.0 - cx) * COL, 0.022) * 0.45 * see : 0.0;
     float sheen = 0.84 + 0.24 * vn(vec2(h * 1.7, y * 1.7)) + 0.10 * fract(yy / ROW);
-    vec3 gold = vec3(0.66, 0.43, 0.08) * sheen;
+    vec3 gold = vec3(0.66, 0.43, 0.08) * sheen * (1.0 + 0.55 * bev);
+    gold = mix(gold, gold * vec3(0.60, 0.54, 0.50), dull * 0.65);     // dulled
     gold = mix(gold, vec3(0.20, 0.11, 0.02), s.y * 0.9);             // the drawing cut into it
-    vec3 col = stone * (1.0 - shd * 0.4 * see);
-    col = mix(col, vec3(0.64, 0.44, 0.10), max(rule, colLine));
-    col = mix(col, gold, s.x * see);
-    gGold = max(s.x * see, rule);
+    vec3 hollow = stone * vec3(0.66, 0.62, 0.56) * (1.0 - 0.45 * bev) + vec3(0.10, 0.06, 0.01) * (1.0 - gone * 0.5);      // the cut left when the gold has gone, a trace of gilt in it
+    vec3 col = stone * (1.0 - shd * 0.4 * see * (1.0 - gone));
+    col = mix(col, mix(vec3(0.64, 0.44, 0.10), stone * 0.8, gone * 0.85), max(rule, colLine));
+    col = mix(col, mix(gold, hollow, gone), s.x * see);
+    gGold = max(s.x * see, rule) * (1.0 - gone) * (1.0 - dull * 0.5);
     // the foot of the tier: dark lapis under a line of gold. Its top: a cornice of gold, darker underneath.
     float keep = 0.0;                                               // the dark parts keep their colour up in the haze
     if (!top) {
@@ -125,12 +155,20 @@ vec4 sign_at(float h, float y, float face) {
       if (yc >= 0.0 && yc < ${f2(CORN)}) { col = vec3(0.70, 0.50, 0.15) * (0.86 + 0.24 * smoothstep(0.0, ${f2(CORN)}, yc)); gGold = 1.0; }
       if (yc >= 0.9 && yc < 1.5) { col = vec3(0.045, 0.10, 0.30); gGold = 0.0; keep = 1.0; }                 // a stripe of lapis in the cornice
       if (yc >= ${f2(CORN)} && yc < ${f2(CORN + 0.4)}) { col = vec3(0.12, 0.075, 0.015); gGold = 0.0; keep = 1.0; }      // its dark underside
+      if (keep > 0.5 || yc < ${f2(CORN)} || yd < ${f2(DADO + 0.3)}) {                    // worn like the rest: chipped to the stone in patches, pitted
+        col = mix(col, stone * 0.82, smoothstep(0.56, 0.62, wear) * 0.6) * (1.0 - pit * 0.3) * (0.86 + 0.28 * mott);
+        gGold *= 1.0 - smoothstep(0.56, 0.62, wear);
+      }
     }
     // the gold glints: each sign is set at its own slight tilt, so they catch the sun one after another as you move
     vec3 tang = ew ? vec3(0.0, 0.0, 1.0) : vec3(1.0, 0.0, 0.0);
     vec3 n2 = normalize(vWN + 0.42 * ((s.w - 0.5) * tang + (fract(s.w * 17.3) - 0.5) * vec3(0.0, 1.0, 0.0)));
     vec3 hv = normalize(normalize(cameraPosition - vWP) + gSun);
     float lit = smoothstep(0.0, 0.15, dot(vWN, gSun));
+    // and still it radiates: a faint warm light in the stone itself, stronger toward the top, and a slow light that climbs its veins
+    float breath = 0.8 + 0.2 * sin(gTime * 0.5);
+    gGlow = vec3(1.0, 0.93, 0.78) * (0.035 + 0.075 * smoothstep(0.0, 140.0, y)) * breath * (1.0 - keep)
+      + vec3(1.0, 0.78, 0.36) * veinL * (0.24 + 0.24 * sin(y * 0.09 - gTime * 0.7 + h * 0.03)) * near;
     gGlint = lit * (pow(max(dot(n2, hv), 0.0), 60.0) * 2.4 * gGold * (1.0 - s.y) + pow(max(dot(vWN, hv), 0.0), 80.0) * 0.10);
     // the sides the sun does not reach are cool and blue, not grey
     col *= mix(mix(vec3(0.66, 0.70, 0.98), vec3(1.18, 1.05, 0.82), gGold), vec3(1.0), lit);       // (the gold keeps its own colour)
@@ -138,7 +176,7 @@ vec4 sign_at(float h, float y, float face) {
     col = mix(col, gHaze, clamp((y - 30.0) / 150.0, 0.0, 1.0) * mix(0.36, 0.08, max(gGold, keep)));
     diffuseColor.rgb *= col;
   }`).replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
-  totalEmissiveRadiance += diffuseColor.rgb * gGold * 0.14 + vec3(1.0, 0.86, 0.5) * gGlint;`).replace('#include <opaque_fragment>', `
+  totalEmissiveRadiance += diffuseColor.rgb * gGold * 0.14 + vec3(1.0, 0.86, 0.5) * gGlint + gGlow;`).replace('#include <opaque_fragment>', `
   outgoingLight = 1.0 - exp(-outgoingLight * 1.25);      // a soft shoulder: full sun on white marble stays just under white, and gold stays gold
 #include <opaque_fragment>`);
   };
