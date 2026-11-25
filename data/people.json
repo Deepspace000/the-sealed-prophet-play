@@ -1,0 +1,16 @@
+{
+  "notes": [
+    "People you can speak to (src/people.js). The key is their id, used in a level's \"people\" and in the save's flags.",
+    "start: the part of their story they are in before anything has happened. A level puts them where they stand in each part (\"when\").",
+    "look: their stand-in picture (as for creatures). height: metres. stock: the things they trade (src/shop.js), each to be had once."
+  ],
+  "people": {
+    "trader": {
+      "name": "Sayed Rashid",
+      "start": "caged",
+      "height": 1.75,
+      "look": { "shape": "biped", "colour": "#e6dcc4", "eyes": "#2a1a0a" },
+      "stock": ["khopesh_bronze", "war_hammer", "medjay_spear", "glass_blade", "lion_mace", "bronze_shield"]
+    }
+  }
+}

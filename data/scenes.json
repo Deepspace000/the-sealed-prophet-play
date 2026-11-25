@@ -73,6 +73,9 @@
         "He is lying with his hand on the strap of the pack. I will take it, and I will not forget his name.",
         "Eight doors, and the first to try is the temple of Ptah, in the north wall on the left. It is sealed. The old man to the north will open it. I will go to him first."
       ]
-    }
+    },
+    "trader_caged": {"title": "A man in a cell", "lines": ["There is a man behind the bars, in a dusty suit and a red tarboosh. He grips the bars with both hands.", "\"Thank God, a living face! Sayed Rashid, dealer in antiquities, of Luxor. Those thin grey devils shut me in here.\"", "\"There is a lever on the wall beside the door. I cannot reach it from in here. Pull it, please. Quickly, before they come back.\""]},
+    "trader_freed": {"title": "Sayed Rashid", "lines": ["The man steps out and shakes my hand for a long time.", "\"You have saved my life. I climbed up here after gold, and the tower nearly kept me for ever.\"", "\"I have good weapons with me, better than anything you will find lying in these tombs. I will not carry them up here again.\"", "\"I will go down to the great hall and wait there. Bring me gold, silver and jewels, and I will trade with you. Fairly. Mostly.\"", "He hurries away down the tower, and is gone."]},
+    "trader_hall": {"title": "Sayed Rashid", "lines": ["Sayed has laid out his goods on a cloth by the east wall of the hall.", "\"My friend! Everything here is the best. Choose what you like, and show me what you have brought.\""]}
   }
 }

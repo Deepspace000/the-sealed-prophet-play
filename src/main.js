@@ -3,6 +3,8 @@ import { Level } from './level.js';
 import { buildSky } from './sky.js';
 import { Beams, Ladders, Windows } from './beams.js';
 import { towerMaterials, glassTexture } from './towerart.js';
+import { People } from './people.js';
+import { Shop } from './shop.js';
 import { Player } from './player.js';
 import { Input } from './input.js';
 import { standinMaterials, standinTorch, egyptianTorch, standinDoor } from './standin.js';
@@ -76,6 +78,8 @@ if (run && run.levels && run.levels[LEVEL] && (run.levels[LEVEL].rev || 0) !== R
 // The Sealed Prophet's ghost opens them one at a time (see data/prophet.json); which are open is kept in the save.
 const unlocked = new Set(run && run.prophet && run.prophet.unlocked || []);
 let heard = run && run.prophet ? run.prophet.heard : 0;           // how many of his visits have been told
+// Where each person's story has got to (flags.trader: 'caged' or 'hub'), and what a shop has sold. Kept in the save.
+const flags = { ...(run && run.flags) };
 // Names of places. The first time you come to a place you do not know what it is called: it is an "Unknown area". Come back to
 // it, and it has its name. The realms the ghost opens are named by him, so you know those from the start. (visits: how many
 // times you have arrived in each place, kept in the save. An older save without them: the places in it keep their names.)
@@ -160,6 +164,7 @@ const defs = (await (await fetch('data/items.json')).json()).items;
 for (const id in defs) defs[id].id = id;
 const make = id => { if (!defs[id]) throw new Error(`No item called "${id}"`); return new Item(defs[id]); };
 const inv = new Inventory();
+const peopleDefs = (await (await fetch('data/people.json')).json()).people;
 const world = new WorldItems(scene, level);
 // Things are written into a save as plain data and made again from it.
 const pack = it => it && { id: it.def.id, n: it.n, lit: it.lit || undefined, inside: it.inside && it.inside.map(pack) };
@@ -238,6 +243,24 @@ if (run && run.pos) {
   }
 }
 player.eyeY = player.pos.y + 1.55;
+
+// People you can speak to (src/people.js), and a shop for one who keeps one (src/shop.js).
+const people = new People({ scene, level, people: data.people, defs: peopleDefs, flags });
+const shop = new Shop({ defs, inv, make, say: t => ui.say(t), flags });
+function talk() {                         // F (or a tap) on someone in front of you. Returns true if there was someone.
+  const p = people.near(player);
+  if (!p) return false;
+  if (p.id === 'trader' && p.when === 'caged') {
+    if (gates.opened.has('trader') || gates.group('trader').some(g => g.t < 0.05)) {       // his door is open: he is free
+      scenes.show('trader_freed'); flags.trader = 'hub'; people.leave(p);
+    } else scenes.show('trader_caged');
+  } else if (p.def.stock) {
+    if (!flags[p.id + '_met']) { flags[p.id + '_met'] = true; scenes.show('trader_hall'); shopNext = p; }
+    else shop.open(p);
+  }
+  return true;
+}
+let shopNext = null;                      // a shop to open once the words before it are read
 
 // Creatures, and the fighting.
 LOAD.set(0.93);
@@ -326,7 +349,7 @@ function capture() {
     v: 1, level: LEVEL, from: null,
     pos: { x: player.pos.x, y: player.pos.y, z: player.pos.z, yaw: player.yaw, pitch: player.pitch },
     inv: { hands: inv.hands.map(pack), belt: inv.belt.map(pack), back: inv.back.map(pack) },
-    relics: [...placed], prophet: { heard, unlocked: [...unlocked] }, hp: fight.hp, food: life.food, rest: life.rest, played, levels, maps: map.pack(), seen: scenes.pack(), visits,
+    relics: [...placed], prophet: { heard, unlocked: [...unlocked] }, flags, hp: fight.hp, food: life.food, rest: life.rest, played, levels, maps: map.pack(), seen: scenes.pack(), visits,
   };
 }
 const loadRun = r => { leaving = true; setRun(r); fade(1, 0.5); setTimeout(go, 550); };
@@ -499,7 +522,7 @@ function prophetTick(dt) {
 document.getElementById('cutSkip').addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); if (cut) cut.t = cut.dur; });
 let leaving = false;
 // The mouse turns your head while the pointer is held; these are the times it is given back (see input.js).
-input.uiOpen = () => ui.open || !!inv.open || menu.open || map.open || !!scenes.open || fight.dead || leaving;
+input.uiOpen = () => ui.open || !!inv.open || menu.open || map.open || !!scenes.open || shop.isOpen || fight.dead || leaving;
 // The cursor/camera switch above PACK. It shows which one the mouse is doing; pressed with the cursor, it closes the pack and
 // takes the pointer back for the camera. (With the camera on the cursor is hidden, so Esc is the way back to it.)
 ui.camera = () => input.locked();
@@ -650,7 +673,7 @@ function step(dt, forced) {
   if (inp.pressed.has('quicksave') && !fight.dead && asleep <= 0 && !leaving && !menu.open && !map.open) {
     ui.say(writeSlot('quick', capture(), data.name || LEVEL) ? 'Quicksaved.' : 'The quicksave could not be written.');
   }
-  if (inp.pressed.has('menu') && !fight.dead && asleep <= 0 && !leaving) { menu.pad = input.device === 'pad'; menu.toggle(); }
+  if (inp.pressed.has('menu') && !shop.isOpen && !fight.dead && asleep <= 0 && !leaving) { menu.pad = input.device === 'pad'; menu.toggle(); }
   if (menu.open) {
     if (inp.pressed.has('left')) menu.nav(-1);
     if (inp.pressed.has('right')) menu.nav(1);
@@ -662,6 +685,12 @@ function step(dt, forced) {
   // A text scene. The game stands still while it is up; F, Space, A or the button goes on.
   if (scenes.open) {
     if (inp.pressed.has('use') || inp.pressed.has('jump') || inp.pressed.has('back')) scenes.close();
+    renderer.render(scene, camera);
+    return;
+  }
+  if (shopNext) { const p = shopNext; shopNext = null; shop.open(p); }
+  if (shop.isOpen) {                                     // trading: the game waits; B or Esc closes the shop
+    if (inp.pressed.has('back') || inp.pressed.has('menu')) shop.close();
     renderer.render(scene, camera);
     return;
   }
@@ -749,7 +778,7 @@ function step(dt, forced) {
     if (inp.pressed.has('back')) { if (ui.opts) ui.closeOpts(); else ui.toggle(); }
   } else {
     if (inp.pressed.has('use')) {
-      if (setRelics()) { /* gems set in the seal */ } else if (inv.held) dropHeld(); else if (!pickUp(viewDir, 0.3) && !gates.use(player) && spot && spot.to && !spot.auto) travel(spot.to);
+      if (setRelics()) { /* gems set in the seal */ } else if (inv.held) dropHeld(); else if (!pickUp(viewDir, 0.3) && !gates.use(player) && !talk() && spot && spot.to && !spot.auto) travel(spot.to);      // (a lever or a lock before speaking to someone)
     }
     if (inp.pressed.has('back')) inp.pressed.add('dodge');          // B dodges when the pack is shut
   }
@@ -757,7 +786,7 @@ function step(dt, forced) {
   // A click picks up, drops or goes through a door. If it did none of those, it is the start of a blow.
   for (const [cx, cy] of inp.clicks || []) {
     if (inv.held) { dropHeld(); clickUsed = true; }
-    else if (pickUp(dirAt(cx, cy), 0.14) || setRelics() || (input.device === 'touch' && gates.use(player))) clickUsed = true;
+    else if (pickUp(dirAt(cx, cy), 0.14) || setRelics() || (input.device === 'touch' && (gates.use(player) || talk()))) clickUsed = true;
     else if (spot && spot.to && !spot.auto && input.device === 'touch') { travel(spot.to); clickUsed = true; }      // with a mouse a click is a blow: doors are F
   }
   if (!inp.handL) clickUsed = false;
@@ -778,6 +807,7 @@ function step(dt, forced) {
   const lit = Math.min(1, brightnessAt(player.pos.x, player.pos.y + 1, player.pos.z) * 1.6);
   const moving = Math.hypot(player.vx, player.vz);
   const noise = Math.max(fight.noise, !player.onGround || player.swimming ? 0.7 : moving > 4 ? 1 : moving > 1.5 ? 0.35 : 0);
+  people.update(dt, brightnessAt);
   creatures.update(dt, { x: player.pos.x, y: player.pos.y, z: player.pos.z, eyeY: player.eyeY, r: 0.3, lit, noise, alive: !fight.dead },
     brightnessAt);
   let dodge = null;

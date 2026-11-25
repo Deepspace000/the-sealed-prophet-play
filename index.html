@@ -197,6 +197,28 @@
                  background: rgba(8,6,3,.8); border: 1px solid #d9b65a; padding: 6px 10px; cursor: pointer; }
   #settingsBtn:hover { background: #d9b65a; color: #17120a; }
   body.touch #settingsBtn { display: none; }      /* a touch screen has its own MENU button */
+  /* ---- a shop: their things on the left, yours on the right (src/shop.js) ---- */
+  #shop { display: none; position: fixed; inset: 0; z-index: 29; align-items: center; justify-content: center; background: rgba(4,3,2,.72); }
+  #shopIn { width: min(calc(860px * var(--u)), 96vw); max-height: 94vh; display: flex; flex-direction: column; box-sizing: border-box;
+            padding: calc(14px * var(--u)) calc(18px * var(--u)); background: linear-gradient(rgba(26,16,8,.97), rgba(10,6,3,.97)); border: 1px solid #d9b65a; box-shadow: 0 10px 40px #000; }
+  #shopTitle { margin: 0 0 8px; text-align: center; font-weight: normal; font-size: 13px; letter-spacing: .3em; color: #ecc96c; }
+  #shopCols { display: flex; gap: 14px; min-height: 0; flex: 1; }
+  #shopCols > div { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+  #shopCols h4 { margin: 0 0 6px; font-weight: normal; font-size: 10px; letter-spacing: .25em; color: #b89a5a; }
+  #shopTheirs, #shopMine { overflow-y: auto; display: flex; flex-direction: column; gap: 5px; padding-right: 4px; max-height: 58vh; }
+  #shop .ware { position: relative; text-align: left; font: inherit; color: #efe4c0; background: #17120a; border: 1px solid #5a4620; padding: 7px 50px 7px 10px; cursor: pointer; }
+  #shop .ware:hover { border-color: #d9b65a; }
+  #shop .ware.on { border-color: #ecc96c; background: #3a2c10; }
+  #shop .ware b { display: block; font-weight: normal; font-size: calc(15px * var(--u)); font-family: var(--book); }
+  #shop .ware i { display: block; font-style: normal; font-size: 11px; color: #c9bb8e; margin-top: 2px; }
+  #shop .ware i.stats { color: #ecc96c; }
+  #shop .worth { position: absolute; right: 10px; top: 8px; font-size: 12px; letter-spacing: .08em; color: #ecc96c; }
+  #shop .none { font-size: 12px; color: #a08a5a; margin: 6px 2px; }
+  #shopSum { margin: 10px 0 8px; text-align: center; font-family: var(--book); font-size: calc(16px * var(--u)); color: #efe4c0; }
+  #shopBtns { display: flex; justify-content: center; gap: 10px; }
+  #shopBtns button { font: inherit; font-size: 11px; letter-spacing: .2em; color: #e8d9a8; background: #17120a; border: 1px solid #d9b65a; padding: 9px 22px; cursor: pointer; }
+  #shopBtns button:hover:not(:disabled) { background: #d9b65a; color: #17120a; }
+  #shopBtns button:disabled { opacity: .35; cursor: default; }
   #menu { display: none; position: fixed; inset: 0; z-index: 30; align-items: center; justify-content: center; background: rgba(4,3,2,.72); }
   #menuIn { width: min(560px, 94vw); max-height: 94vh; overflow: auto; box-sizing: border-box; padding: calc(22px * var(--u)) 26px calc(16px * var(--u));
             background: linear-gradient(rgba(26,16,8,.97), rgba(10,6,3,.97)); border: 1px solid #d9b65a;
@@ -393,13 +415,16 @@
 </div>
 <button id="settingsBtn">SETTINGS</button>
 <div id="dead">YOU ARE DEAD</div>
+<div id="shop"><div id="shopIn"><h3 id="shopTitle"></h3>
+  <div id="shopCols"><div><h4>HIS GOODS</h4><div id="shopTheirs"></div></div><div><h4>WHAT YOU OFFER</h4><div id="shopMine"></div></div></div>
+  <div id="shopSum"></div><div id="shopBtns"><button id="shopTrade">TRADE</button><button id="shopClose">CLOSE</button></div></div></div>
 <div id="menu"><div id="menuIn"></div><input id="menuFile" type="file" accept=".json,application/json" hidden></div>
 <div id="map">
   <div id="mapTop"><button data-m="prev">&#9664;</button><button data-m="close">CLOSE</button><button data-m="next">&#9654;</button></div>
   <div id="mapPage"><canvas id="mapCanvas"></canvas><input id="mapNote" maxlength="36" autocomplete="off" spellcheck="false"></div>
   <div id="mapHint"></div>
 </div>
-<div id="title">THE SEALED PROPHET <span class="ver">v0.2.21</span><small><span id="levelName"></span> &middot; <span id="state">Walking</span></small></div>
+<div id="title">THE SEALED PROPHET <span class="ver">v0.2.22</span><small><span id="levelName"></span> &middot; <span id="state">Walking</span></small></div>
 <button id="helpBtn">HIDE CONTROLS</button>
 <div id="help"></div>
 <div id="look"></div>
@@ -460,7 +485,7 @@ window.loading = (() => {
       <div class="fan"></div>
       <h1 id="bloodTitle">THE SEALED<br>PROPHET</h1>
       <div class="sub">A JOURNAL &middot; 1924</div>
-      <div class="ver" style="margin-top:8px;text-align:center">v0.2.21</div>
+      <div class="ver" style="margin-top:8px;text-align:center">v0.2.22</div>
       <div class="rule"></div>
       <button id="continueBtn" style="display:none">CONTINUE</button>
       <button id="beginBtn">BEGIN</button>

@@ -69,6 +69,7 @@
     {"id": "torch", "cell": [13, 13], "at": [0.7, 0.35]}
   ],
   "scenes": [{"id": "hub_note", "area": [7, 8, 9, 10]}],
+  "people": [{"id": "trader", "cell": [18, 14], "at": [0.6, 0.5], "when": "hub"}],
   "props": [
     {"id": "remains", "cell": [8, 9], "at": [0.5, 0.45], "kind": "bones"},
     {"id": "model", "name": "cgb_column_painted_tall", "cell": [9, 7], "at": [0.5, 0.5], "size": 9, "wide": 0.8, "turn": 0.0},
