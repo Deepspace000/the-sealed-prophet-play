@@ -68,6 +68,26 @@ export class Beams {
   }
 }
 
+// Stained glass: "windows" in a level, long panes of coloured glass in lead set into a wall. face: which way the wall faces
+// (N, E, S or W), a / b: its two ends along the wall (x, z in metres), y0 / y1: its foot and its top (metres). The glass glows a
+// little, as if the light came through it.
+export class Windows {
+  constructor({ scene, windows = [], texture }) {
+    const TURN = { S: 0, N: Math.PI, E: Math.PI / 2, W: -Math.PI / 2 };
+    windows.forEach((w, i) => {
+      const len = Math.hypot(w.b[0] - w.a[0], w.b[1] - w.a[1]), h = w.y1 - w.y0;
+      const map = texture(i + 1); map.repeat.set(1, h / (len * 4));
+      const m = new THREE.MeshLambertMaterial({ map, emissiveMap: map, emissive: 0xffffff, emissiveIntensity: 0.32 });
+      const mesh = new THREE.Mesh(new THREE.PlaneGeometry(len, h), m);
+      mesh.position.set((w.a[0] + w.b[0]) / 2, (w.y0 + w.y1) / 2, (w.a[1] + w.b[1]) / 2);
+      mesh.rotation.y = TURN[w.face] ?? 0;
+      scene.add(mesh);
+      const frame = new THREE.Mesh(new THREE.BoxGeometry(len + 0.3, 0.35, 0.25), new THREE.MeshLambertMaterial({ color: 0xd9a535, emissive: 0x5a3a08 }));
+      for (const y of [w.y0, w.y1]) { const f = frame.clone(); f.position.set(mesh.position.x, y, mesh.position.z); f.rotation.y = mesh.rotation.y; scene.add(f); }
+    });
+  }
+}
+
 export class Ladders {
   constructor({ scene, level, ladders = [] }) {
     const s = level.size, wood = new THREE.MeshLambertMaterial({ color: 0x8a5a2b }), OFF = { N: [0, -1], E: [1, 0], S: [0, 1], W: [-1, 0] };

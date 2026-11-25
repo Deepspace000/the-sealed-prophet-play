@@ -1,7 +1,8 @@
 import * as THREE from 'three';
 import { Level } from './level.js';
 import { buildSky } from './sky.js';
-import { Beams, Ladders } from './beams.js';
+import { Beams, Ladders, Windows } from './beams.js';
+import { towerMaterials, glassTexture } from './towerart.js';
 import { Player } from './player.js';
 import { Input } from './input.js';
 import { standinMaterials, standinTorch, egyptianTorch, standinDoor } from './standin.js';
@@ -101,6 +102,7 @@ LOAD.set(0.66);
 const level = new Level(data);
 if (data.fog != null) scene.fog.density = DARK.density = data.fog;      // how fast things fade into the dark
 const MATS = standinMaterials();
+if (data.sky) Object.assign(MATS, towerMaterials());        // the White Tower's gilded walls (src/towerart.js)
 scene.add(level.build(MATS));
 buildSpikes(scene, level);                 // beds of spikes (cells with "spikes": true)
 // An open sky (a level with "sky", see src/sky.js): a dome, sunlight, drifting clouds, and a haze the colour of the horizon instead of the dark.
@@ -191,6 +193,7 @@ const fireballs = new Fireballs({ scene, level, shooters: data.shooters });
 const lifts = new Lifts({ scene, level, lifts: data.lifts, mat: MATS[data.liftTex || 'wall'] });        // platforms that rise and sink in a void
 const beams = new Beams({ scene, level, beams: data.beams, mat: MATS.whiteplain });      // rays of white stone to walk on (src/beams.js)
 const ladders = new Ladders({ scene, level, ladders: data.ladders });
+new Windows({ scene, windows: data.windows, texture: glassTexture });            // long stained glass windows
 player.extraFloor = (x, z, lim) => Math.max(lifts.topAt(x, z, lim), beams.topAt(x, z, lim));      // lifts and beams hold you up too (lim: none higher than this)
 player.ladderAt = (x, z, y, yaw) => ladders.at(x, z, y, yaw);
 const USE = { keys: 'Press F to use it.', pad: 'Press X to use it.', touch: 'Tap to use it.' };
