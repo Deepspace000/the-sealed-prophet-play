@@ -2,7 +2,8 @@
 //   zenith, horizon  colours of the dome overhead and at the edge of the world (the haze fades into the horizon colour)
 //   sun              { dir: [x, y, z], color, power }: the sunlight
 //   ground           { y, mat }: a plain of sand under the whole level, so the land runs on to the horizon past the level's edge
-//   clouds           { count, low, high, spread, size, wind: [x, z] }: soft clouds that drift with the wind and come round again
+//   clouds           { count, low, high, spread, size, wind: [x, z] }: soft clouds that drift with the wind and come round again;
+//                    near: { at: [x, z] (metres), count, low, high, spread, size, speed }: more that stay close to that place
 // Clouds are drawn by code: heaps of lit 3D puffs (effects, not art).
 import * as THREE from 'three';
 
@@ -75,9 +76,17 @@ void main(){ float t = clamp(vP.y * 1.6, 0.0, 1.0); gl_FragColor = vec4(mix(bot,
   let seed = 4242;
   const r = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
   const clouds = [], puffs = [];
-  for (let i = 0; i < (cl.count || 0); i++) {
-    const size = (cl.size || 40) * (0.6 + r() * 0.9), H = size * 0.42;
-    clouds.push({ x: centre.x + (r() - 0.5) * spread * 2, y: (cl.low ?? 80) + r() * ((cl.high ?? 160) - (cl.low ?? 80)), z: centre.z + (r() - 0.5) * spread * 2, k: 0.7 + r() * 0.6 });
+  // Two sets: the sky's clouds, spread far and wide; and ("near") clouds that keep close to one place, such as a tower: each
+  // drifts across it on the wind and comes round again, so they pass in front of it, behind it and through it.
+  const sets = [{ n: cl.count || 0, cx: centre.x, cz: centre.z, sp: spread, low: cl.low ?? 80, high: cl.high ?? 160, size: cl.size || 40, k: 1 }];
+  if (cl.near) sets.push({ n: cl.near.count || 0, cx: cl.near.at[0], cz: cl.near.at[1], sp: cl.near.spread || 50, low: cl.near.low ?? 60,
+    high: cl.near.high ?? 150, size: cl.near.size || 30, k: cl.near.speed ?? 0.6 });
+  const plan = [];
+  for (const st of sets) for (let i = 0; i < st.n; i++) plan.push(st);
+  for (let i = 0; i < plan.length; i++) {
+    const st = plan[i];
+    const size = st.size * (0.6 + r() * 0.9), H = size * 0.42;
+    clouds.push({ x: st.cx + (r() - 0.5) * st.sp * 2, y: st.low + r() * (st.high - st.low), z: st.cz + (r() - 0.5) * st.sp * 2, k: (0.7 + r() * 0.6) * st.k, cx: st.cx, cz: st.cz, sp: st.sp });
     const n = Math.round(16 + size / 5 + r() * 8), px = (r() - 0.5) * 0.4, pz = (r() - 0.5) * 0.4;      // px, pz: where its heap is highest
     for (let j = 0; j < n; j++) {
       const a = r() * Math.PI * 2, dd = Math.sqrt(r());
@@ -142,8 +151,8 @@ void main(){ vec2 p = gl_PointCoord * 2.0 - 1.0; p.y = -p.y; float r2 = dot(p, p
       for (const c of clouds) {
         c.x += wind[0] * c.k * dt; c.z += wind[1] * c.k * dt;
         // gone too far downwind: comes back in on the other side
-        if (c.x - centre.x > spread) c.x -= spread * 2; else if (c.x - centre.x < -spread) c.x += spread * 2;
-        if (c.z - centre.z > spread) c.z -= spread * 2; else if (c.z - centre.z < -spread) c.z += spread * 2;
+        if (c.x - c.cx > c.sp) c.x -= c.sp * 2; else if (c.x - c.cx < -c.sp) c.x += c.sp * 2;
+        if (c.z - c.cz > c.sp) c.z -= c.sp * 2; else if (c.z - c.cz < -c.sp) c.z += c.sp * 2;
       }
       if (!N) return;
       camera.updateMatrixWorld();

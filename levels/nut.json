@@ -16,7 +16,7 @@
   ],
   "cell": 2,
   "ambient": 0.5,
-  "sky": {"zenith": "#1aa7a8", "horizon": "#9fe6dc", "haze": 0.0035, "far": 900, "sun": {"dir": [0.35, 0.6, 0.72], "color": "#fff1d8", "power": 5.2}, "fill": 1.9, "ground": {"y": -0.3, "mat": "sand"}, "clouds": {"count": 70, "low": 70, "high": 175, "spread": 260, "size": 55, "wind": [1.6, 0.5]}},
+  "sky": {"zenith": "#1aa7a8", "horizon": "#9fe6dc", "haze": 0.0035, "far": 900, "sun": {"dir": [0.35, 0.6, 0.72], "color": "#fff1d8", "power": 5.2}, "fill": 1.9, "ground": {"y": -0.3, "mat": "sand"}, "clouds": {"count": 70, "low": 70, "high": 175, "spread": 260, "size": 55, "wind": [1.6, 0.5], "near": {"at": [111.0, 85.0], "count": 16, "low": 70, "high": 150, "spread": 42, "size": 34, "speed": 0.7}}},
   "legend": {
     "#": {"solid": true},
     ".": {"floor": 0, "ceil": 400, "floorTex": "sand", "ceilTex": "sky", "wallTex": "white"},
