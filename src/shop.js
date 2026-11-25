@@ -12,13 +12,17 @@ export class Shop {
     $('shopClose').addEventListener('click', () => this.close());
     $('shopTrade').addEventListener('click', () => this.trade());
   }
-  open(person) {
-    this.person = person; this.pick = null; this.offer = new Set(); this.isOpen = true;
+  open(person, pad) {
+    this.person = person; this.pick = null; this.offer = new Set(); this.isOpen = true; this.pad = !!pad; this.focus = 0;
     this.el.style.display = 'flex';
     if (document.pointerLockElement) document.exitPointerLock();
     this.render();
   }
   close() { this.isOpen = false; this.el.style.display = 'none'; }
+  // Controller: the d-pad goes from one thing to the next (his, then yours, then the buttons), A chooses it, B closes.
+  buttons() { return [...this.el.querySelectorAll('button')].filter(b => !b.disabled); }
+  nav(d) { const n = this.buttons().length; if (n) { this.focus = (this.focus + d + n) % n; this.render(); } }
+  press() { const b = this.buttons()[this.focus]; if (b) b.click(); }
   sold() { return new Set(this.flags[this.person.id + '_sold'] || []); }
   worth(it) { return (it.def.worth || 0) + (it.inside || []).reduce((s, x) => s + (x ? this.worth(x) : 0), 0); }
   describe(def) {
@@ -54,6 +58,12 @@ export class Shop {
       ? `${this.defs[this.pick].name}: worth ${price}.  You offer things worth ${given}.` + (given >= price ? '  He will take it.' : '  It is not enough.')
       : 'Choose one of his things, then what you will give for it.';
     $('shopTrade').disabled = !(this.pick && given >= price);
+    if (this.pad) {
+      const bs = this.buttons();
+      this.focus = Math.min(this.focus, bs.length - 1);
+      for (const b of this.el.querySelectorAll('button')) b.classList.remove('focus');
+      if (bs[this.focus]) { bs[this.focus].classList.add('focus'); bs[this.focus].scrollIntoView({ block: 'nearest' }); }
+    }
   }
   trade() {
     if (!this.pick) return;

@@ -23,6 +23,9 @@ the creatures are posed and rendered to pictures by `tools/blender/creatures.py`
 | Zombie_Smoke_Mummy_Character (the rotting dead) | Mehdi Shahsavan | CC Attribution 4.0 | https://sketchfab.com/3d-models/zombie-smoke-mummy-character-12-mb-855ade268167415e954f4377ed4519c5 |
 | CC0 Black Scarab Beetle, R. polita (the sacred scarab; shell tinted blue, posed and rendered by `tools/blender/creature_beetle.py`) | ffish.asia / floraZia.com | CC0 (public domain) | https://sketchfab.com/3d-models/cc0-black-scarab-beetle-r-polita-120c26e3f712449388b91021a67082d7 |
 | Stone Monster Statue (the Colossus of Ptah; posed and rendered by `tools/blender/creature_colossus.py`) | Digital3dWorld | CC Attribution 4.0 | https://sketchfab.com/3d-models/stone-monster-statue-fda7fd8e5c8243c28974fd3ee2fd8d22 |
+| primal carnage pteranodon (the flying lizard; wings posed by hand and rendered by `tools/blender/creature_nut.py`) | seth the yutyrannus (slang107123456789) | CC Attribution 4.0 | https://sketchfab.com/3d-models/primal-carnage-pteranodon-672f069337ea45afb2300b083483133a |
+| Tall Fast Horror Monster with Long Claws (the thin demon; arms bent and rendered by `tools/blender/creature_nut.py`) | Pigcraft | CC Attribution 4.0 | https://sketchfab.com/3d-models/74a81838ee6045a9b4df581b90bd68bb |
+| Jellyfish (the sky jelly; bell squeezed and rendered by `tools/blender/creature_nut.py`) | chinabazooka | CC Attribution 4.0 | https://sketchfab.com/3d-models/d93ac9460e8946ce9b33048e4954b0dd |
 | Wooden Hammer 01 (the hammer) | James Ray Cock | CC0 (public domain) | https://polyhaven.com/a/wooden_hammer_01 |
 | La Belle Aurore (the handwriting of the journal, the notes and the map) | Kimberly Geswein | SIL Open Font License 1.1 | https://fonts.google.com/specimen/La+Belle+Aurore |
 

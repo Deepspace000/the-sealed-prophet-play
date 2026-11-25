@@ -207,7 +207,8 @@
   #shopCols h4 { margin: 0 0 6px; font-weight: normal; font-size: 10px; letter-spacing: .25em; color: #b89a5a; }
   #shopTheirs, #shopMine { overflow-y: auto; display: flex; flex-direction: column; gap: 5px; padding-right: 4px; max-height: 58vh; }
   #shop .ware { position: relative; text-align: left; font: inherit; color: #efe4c0; background: #17120a; border: 1px solid #5a4620; padding: 7px 50px 7px 10px; cursor: pointer; }
-  #shop .ware:hover { border-color: #d9b65a; }
+  #shop .ware:hover, #shop .ware.focus { border-color: #d9b65a; }
+  #shop .ware.focus, #shopBtns button.focus { outline: 2px solid #ffe39a; outline-offset: 1px; }
   #shop .ware.on { border-color: #ecc96c; background: #3a2c10; }
   #shop .ware b { display: block; font-weight: normal; font-size: calc(15px * var(--u)); font-family: var(--book); }
   #shop .ware i { display: block; font-style: normal; font-size: 11px; color: #c9bb8e; margin-top: 2px; }
@@ -424,7 +425,7 @@
   <div id="mapPage"><canvas id="mapCanvas"></canvas><input id="mapNote" maxlength="36" autocomplete="off" spellcheck="false"></div>
   <div id="mapHint"></div>
 </div>
-<div id="title">THE SEALED PROPHET <span class="ver">v0.2.24</span><small><span id="levelName"></span> &middot; <span id="state">Walking</span></small></div>
+<div id="title">THE SEALED PROPHET <span class="ver">v0.2.25</span><small><span id="levelName"></span> &middot; <span id="state">Walking</span></small></div>
 <button id="helpBtn">HIDE CONTROLS</button>
 <div id="help"></div>
 <div id="look"></div>
@@ -485,7 +486,7 @@ window.loading = (() => {
       <div class="fan"></div>
       <h1 id="bloodTitle">THE SEALED<br>PROPHET</h1>
       <div class="sub">A JOURNAL &middot; 1924</div>
-      <div class="ver" style="margin-top:8px;text-align:center">v0.2.24</div>
+      <div class="ver" style="margin-top:8px;text-align:center">v0.2.25</div>
       <div class="rule"></div>
       <button id="continueBtn" style="display:none">CONTINUE</button>
       <button id="beginBtn">BEGIN</button>

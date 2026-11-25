@@ -170,7 +170,8 @@ const haloTex = () => halo || (halo = (() => {
 
 export class WorldItems {
   constructor(scene, level) { this.scene = scene; this.level = level; this.list = []; this.spare = []; }
-  place(item, x, z) {
+  // near: the height of the ground it was left on (a room's roof, a ray of stone), so it lies there and not on the floor below.
+  place(item, x, z, near) {
     const real = hasArt(item.def), tex = new THREE.CanvasTexture(iconCanvas(item.def));
     tex.magFilter = THREE.NearestFilter;
     tex.minFilter = real ? THREE.LinearMipmapLinearFilter : THREE.NearestFilter;
@@ -179,7 +180,8 @@ export class WorldItems {
     const spr = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, fog: !glow, alphaTest: real ? 0.4 : 0 }));
     // bigger things look bigger; a long thing gives the size of its picture in metres as "floor"
     const big = item.def.floor || (real ? 0.34 + 0.1 * Math.min(3, item.def.size || 1) : 0.46);
-    const y = this.level.floorAt(x, z) + big * 0.5;
+    const ground = this.ground ? this.ground(x, z, near) : this.level.floorAt(x, z, near);
+    const y = ground + big * 0.5;
     spr.scale.set(big, big, 1);
     spr.position.set(x, y, z);
     if (glow) {
@@ -190,7 +192,7 @@ export class WorldItems {
       spr.add(halo, light);
     }
     this.scene.add(spr);
-    const e = { item, spr, x, y, z };
+    const e = { item, spr, x, y, z, ground };
     this.list.push(e);
     return e;
   }

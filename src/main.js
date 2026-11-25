@@ -106,7 +106,7 @@ LOAD.set(0.66);
 const level = new Level(data);
 if (data.fog != null) scene.fog.density = DARK.density = data.fog;      // how fast things fade into the dark
 const MATS = standinMaterials();
-if (data.sky) Object.assign(MATS, towerMaterials());        // the White Tower's gilded walls (src/towerart.js)
+if (data.sky) Object.assign(MATS, towerMaterials(data.sky));        // the White Tower's gilded walls (src/towerart.js)
 scene.add(level.build(MATS));
 buildSpikes(scene, level);                 // beds of spikes (cells with "spikes": true)
 // An open sky (a level with "sky", see src/sky.js): a dome, sunlight, drifting clouds, and a haze the colour of the horizon instead of the dark.
@@ -179,16 +179,6 @@ const unpack = o => {
 const saved = run && run.levels && run.levels[LEVEL];      // this level as you left it, if you have been here before
 if (run) for (const a of ['hands', 'belt', 'back']) (run.inv[a] || []).forEach((o, i) => { if (i < inv[a].length) inv[a][i] = unpack(o); });
 else for (const id of data.carry || []) inv.add(make(id));
-if (saved) {
-  for (const o of saved.items) { const it = unpack(o); if (it) world.place(it, o.x, o.z); }
-} else for (const it of data.items || []) {
-  if (it.starter && run) continue;              // starter things are only there if you arrive with nothing
-  if (it.spare && [...inv.all()].some(e => e[0].def.id === it.id)) continue;      // a spare is only there if you do not have one already (the knapsack in the hall)
-  const at = it.at || [0.5, 0.5];
-  const thing = make(it.id);
-  (it.inside || []).forEach((id, i) => { if (thing.inside && i < thing.inside.length) thing.inside[i] = make(id); });     // what is in a bag
-  world.place(thing, (it.cell[0] + at[0]) * level.size, (it.cell[1] + at[1]) * level.size);
-}
 const ui = new UI(inv, () => dropHeld(), it => useThing(it));
 if (rebuilt) setTimeout(() => ui.say('This place has been rebuilt since you were last here. You start it again from its door.'), 1500);
 // Doors that need keys, levers, doors that slide, and fireballs from the walls (see hazards.js).
@@ -201,6 +191,22 @@ const ladders = new Ladders({ scene, level, ladders: data.ladders });
 new Windows({ scene, windows: data.windows, texture: glassTexture });            // long stained glass windows
 player.extraFloor = (x, z, lim) => Math.max(lifts.topAt(x, z, lim), beams.topAt(x, z, lim));      // lifts and beams hold you up too (lim: none higher than this)
 player.ladderAt = (x, z, y, yaw) => ladders.at(x, z, y, yaw);
+// Where a thing lies: the floor, or a room's roof or a ray or a lift if it was left up there (near: the height it was left at).
+world.ground = (x, z, near) => {
+  const f = level.floorAt(x, z, near);
+  return near == null ? f : Math.max(f, player.extraFloor(x, z, near + 0.6));
+};
+// The things lying in the level: as you left them, or as the level puts them the first time.
+if (saved) {
+  for (const o of saved.items) { const it = unpack(o); if (it) world.place(it, o.x, o.z, o.gy); }
+} else for (const it of data.items || []) {
+  if (it.starter && run) continue;              // starter things are only there if you arrive with nothing
+  if (it.spare && [...inv.all()].some(e => e[0].def.id === it.id)) continue;      // a spare is only there if you do not have one already (the knapsack in the hall)
+  const at = it.at || [0.5, 0.5];
+  const thing = make(it.id);
+  (it.inside || []).forEach((id, i) => { if (thing.inside && i < thing.inside.length) thing.inside[i] = make(id); });     // what is in a bag
+  world.place(thing, (it.cell[0] + at[0]) * level.size, (it.cell[1] + at[1]) * level.size, it.y);      // y: on a room's roof or a ray, not the floor below
+}
 const USE = { keys: 'Press F to use it.', pad: 'Press X to use it.', touch: 'Tap to use it.' };
 // The great seal in the hall has a socket for the relic of each realm. Carry one back and set it in. Which are set is kept in the save.
 const placed = new Set(run && run.relics || []);
@@ -256,7 +262,7 @@ function talk() {                         // F (or a tap) on someone in front of
     } else scenes.show('trader_caged');
   } else if (p.def.stock) {
     if (!flags[p.id + '_met']) { flags[p.id + '_met'] = true; scenes.show('trader_hall'); shopNext = p; }
-    else shop.open(p);
+    else shop.open(p, input.device === 'pad');
   }
   return true;
 }
@@ -269,7 +275,7 @@ for (const id in kinds) kinds[id].id = id;
 const creatures = new Creatures(scene, level, kinds, {
   onStrike: (c, dmg, type) => fight.takeHit(c, dmg, type),
   onDeath: () => {},
-  drop: (id, x, z) => world.place(make(id), x, z),
+  drop: (id, x, z, y) => world.place(make(id), x, z, y),
   extraFloor: (x, z, lim) => player.extraFloor(x, z, lim),       // walkers can stand on beams and lifts too
   pushPlayer: (dx, dz) => {
     const p = player.pos;
@@ -280,7 +286,9 @@ const creatures = new Creatures(scene, level, kinds, {
 });
 (data.creatures || []).forEach((c, n) => {
   const at = c.at || [0.5, 0.5];
-  const was = saved && saved.creatures[n];
+  let was = saved && saved.creatures[n];
+  // (one saved where it can no longer be, such as over a shut gate, starts again from its place in the level)
+  if (was && !was.dead && level.cellAt(was.x, was.z).solid) was = null;
   const cr = creatures.spawn(c.id, was ? was.x : (c.cell[0] + at[0]) * level.size, was ? was.z : (c.cell[1] + at[1]) * level.size, n,
     !!(was && was.dead), c.y);         // y: a height to put it at (a flyer, or one on top of a cap); without it, the floor
   if (was) {
@@ -310,7 +318,7 @@ const life = new Survival({ inv, fight, ui, onSleep: () => sleep(), onMap: () =>
 // Text scenes: your thoughts the first time you meet an enemy, a body, water, a hidden room. ?scenes=0 turns them off for tests.
 const scenes = new Scenes({
   data: (await (await fetch('data/scenes.json')).json()).scenes, seen: run && run.seen, off: params.get('scenes') === '0',
-  level, player, creatures, brightnessAt: (x, y, z) => brightnessAt(x, y, z), areas: data.scenes || [],
+  level, player, creatures, brightnessAt: (x, y, z) => brightnessAt(x, y, z), areas: data.scenes || [], outdoors: !!data.sky,
   remains: (data.props || []).filter(p => p.id === 'remains' && p.kind === 'bones')
     .map(p => ({ x: (p.cell[0] + (p.at ? p.at[0] : 0.5)) * level.size, z: (p.cell[1] + (p.at ? p.at[1] : 0.5)) * level.size })),
 });
@@ -341,7 +349,7 @@ function capture() {
   inv.held = null;
   const levels = { ...(run && run.levels) };
   levels[LEVEL] = {
-    rev: REV, items: world.list.map(e => ({ ...pack(e.item), x: e.x, z: e.z })),
+    rev: REV, items: world.list.map(e => ({ ...pack(e.item), x: e.x, z: e.z, gy: e.ground })),
     urns: props.solid.filter(u => u.smashed).map(u => u.n), gates: gates.pack(),
     creatures: creatures.list.map(c => ({ x: c.x, y: c.y, z: c.z, hp: c.hp, max: c.max, dead: c.state === 'dead', skinned: c.skinned || undefined, fled: c.fled, awake: c.state !== 'still' })),
   };
@@ -454,6 +462,11 @@ const spotHere = () => {
 // short cutscene plays (the view turns to him, bars close in, he fades up out of the dark), then he speaks: his story, and the door to
 // go to next, which he opens. He has something new to say after each gem you set in the seal.
 const prophetStages = data.prophet ? (await (await fetch('data/prophet.json')).json()).stages : null;
+// A save from before he spoke of the trader: he tells you now, once, when you come into the hall.
+if (prophetStages && !flags.trader_told && flags.trader !== 'hub') {
+  const ni = prophetStages.findIndex(st => st.realm === 'nut');
+  if (ni >= 0 && heard > ni) { flags.trader_told = true; setTimeout(() => { if (!scenes.open) scenes.show('trader_told'); else flags.trader_told = false; }, 2500); }
+}
 let cut = null, ghost = null, ghostA = 0, pw = null;
 if (prophetStages) {
   const at = data.prophet.at || [0.5, 0.5], px = (data.prophet.cell[0] + at[0]) * level.size, pz = (data.prophet.cell[1] + at[1]) * level.size;
@@ -510,6 +523,7 @@ function prophetTick(dt) {
       cut = null; heard++;
       document.getElementById('cutBars').classList.remove('on');
       if (st.realm) unlockRealm(st.realm);
+      if (st.realm === 'nut') flags.trader_told = true;          // his words about the trader are in this visit
       scenes.show('prophet_' + i);
     }
   } else if (pend && d < 3 && Math.abs(turnTo(player.yaw, Math.atan2(player.pos.x - pw.x, player.pos.z - pw.z))) < 0.45 && !scenes.open && !fight.dead && !creatures.hunting && asleep <= 0 && !leaving && !map.open && !menu.open) {
@@ -587,10 +601,11 @@ function dropHeld() {
   const it = inv.held;
   if (!it) return;
   let x = player.pos.x - Math.sin(player.yaw) * 0.9, z = player.pos.z - Math.cos(player.yaw) * 0.9;
-  const f = level.floorAt(x, z);
-  if (!(f <= player.pos.y + 0.6) || level.ceilAt(x, z) < f + 0.5) { x = player.pos.x; z = player.pos.z; }
+  const f = world.ground(x, z, player.pos.y);
+  // (not into a wall, and not over an edge: then at your feet)
+  if (!(f <= player.pos.y + 0.6) || f < player.pos.y - 1.2 || level.ceilAt(x, z, player.pos.y) < f + 0.5) { x = player.pos.x; z = player.pos.z; }
   it.lit = false;
-  world.place(it, x, z);
+  world.place(it, x, z, player.pos.y);
   inv.held = null; inv.version++;
   ui.say(`Dropped: ${it.def.name}.`);
 }
@@ -688,9 +703,14 @@ function step(dt, forced) {
     renderer.render(scene, camera);
     return;
   }
-  if (shopNext) { const p = shopNext; shopNext = null; shop.open(p); }
+  if (shopNext) { const p = shopNext; shopNext = null; shop.open(p, input.device === 'pad'); }
   if (shop.isOpen) {                                     // trading: the game waits; B or Esc closes the shop
     if (inp.pressed.has('back') || inp.pressed.has('menu')) shop.close();
+    else if (input.device === 'pad') {
+      if (inp.pressed.has('left')) shop.nav(-1);
+      if (inp.pressed.has('right')) shop.nav(1);
+      if (inp.pressed.has('jump') || inp.pressed.has('use')) shop.press();
+    }
     renderer.render(scene, camera);
     return;
   }
@@ -730,7 +750,7 @@ function step(dt, forced) {
     const h = player.landed; player.landed = 0;
     if (data.fallDamage && h > 6 && !fight.dead) {
       if (h >= 16) { ui.say('You fall a long way.'); fight.harm(9999, 'fell'); }
-      else { ui.say('You land hard.'); fight.harm(Math.round((h - 6) * 8), 'fell'); }
+      else { ui.say('You land hard.'); fight.harm(Math.round((h - 6) / 10 * fight.hpMax * 0.9), 'fell'); }      // (up to 90% of your health, at 16 m)
     }
   }
   if (dropWords && (player.onGround || player.swimming)) { ui.say(dropWords); dropWords = ''; }
@@ -842,7 +862,7 @@ function step(dt, forced) {
     if (skinning.t >= SKIN_TIME) {
       const sk = corpse.def.skin, it = make(sk.item);
       corpse.skinned = true; skinning.c = null; skinning.t = 0;
-      if (!inv.add(it)) world.place(it, player.pos.x - Math.sin(player.yaw) * 0.6, player.pos.z - Math.cos(player.yaw) * 0.6);
+      if (!inv.add(it)) world.place(it, player.pos.x - Math.sin(player.yaw) * 0.6, player.pos.z - Math.cos(player.yaw) * 0.6, player.pos.y);
       ui.say(sk.done);
     }
   } else { skinning.c = null; skinning.t = 0; }

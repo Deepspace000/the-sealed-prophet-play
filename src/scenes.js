@@ -6,8 +6,8 @@ const turn = (a, b) => { let d = (b - a) % (Math.PI * 2); if (d > Math.PI) d -= 
 
 export class Scenes {
   // remains: [{ x, z }] human bones lying in this level. areas: [{ id, area: [x0, z0, x1, z1] }] from the level file.
-  constructor({ data, seen, off, level, player, creatures, brightnessAt, remains, areas }) {
-    Object.assign(this, { data, off, level, player, creatures, brightnessAt, remains, areas });
+  constructor({ data, seen, off, level, player, creatures, brightnessAt, remains, areas, outdoors }) {
+    Object.assign(this, { data, off, level, player, creatures, brightnessAt, remains, areas, outdoors });
     this.seen = new Set(seen || []);
     this.open = null; this.wait = 3; this.at = 0;       // wait: seconds before the next quiet scene (creatures do not wait)
     this.el = $('scene');
@@ -17,7 +17,7 @@ export class Scenes {
   due(id) { return !this.seen.has(id) && !!this.data[id]; }
 
   show(id, vars = {}) {
-    const s = this.data[id];
+    const s = (this.outdoors && this.data[id + '_sky']) || this.data[id];      // (under the open sky some have other words: "enemy_sky")
     this.seen.add(id);
     if (!s) return;
     $('sceneTitle').textContent = s.title;

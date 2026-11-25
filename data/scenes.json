@@ -54,6 +54,33 @@
         "I can swim, and I can hold my breath for about twenty seconds. If I go under, I must be sure I can come up again."
       ]
     },
+    "enemy_sky": {
+      "title": "Something alive",
+      "lines": [
+        "Something is moving up here, and it is coming toward me.",
+        "It is a {name}. It has seen me, and it is not afraid of me.",
+        "Nothing like it lives in Egypt. Nothing like it should live anywhere.",
+        "Nobody is coming to help me. I will have to kill it, or get away from it."
+      ]
+    },
+    "water_sky": {
+      "title": "Water",
+      "lines": [
+        "There is water here, inside the wall of the tower, far above the sand.",
+        "It is dark and still. I cannot see the bottom.",
+        "Someone carried it up here, or it comes up from below. Either way, it does not belong here.",
+        "I can swim, and I can hold my breath for about twenty seconds. If I go under, I must be sure I can come up again."
+      ]
+    },
+    "trader_told": {
+      "title": "The ghost",
+      "lines": [
+        "The old man's voice comes out of the dark, faint, as I pass.",
+        "\"One more thing. I forgot it, the last time. Three thousand years, and one forgets things.\"",
+        "\"There is a living man in Nut's tower. A trader, who came looking for gold. Something has shut him in a cell at the top. I hear him shouting.\"",
+        "\"Let him out. He will come down here and trade with you, and I will have a voice to listen to besides your footsteps.\""
+      ]
+    },
     "secret": {
       "title": "A hidden room",
       "lines": [

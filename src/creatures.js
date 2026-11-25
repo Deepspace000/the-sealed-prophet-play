@@ -12,7 +12,7 @@ const HUNTING = new Set(['chase', 'windup', 'strike', 'recover', 'hurt', 'flee']
 const VOICE = c => (c.def.look && c.def.look.detail === 'bones') ? 'rattle' : c.def.kind === 'beast' ? 'growl' : 'groan';
 
 export class Creatures {
-  // hooks: onStrike(creature, damage, type), onDeath(creature), drop(itemId, x, z), pushPlayer(dx, dz) -> true if the player moved
+  // hooks: onStrike(creature, damage, type), onDeath(creature), drop(itemId, x, z, y), pushPlayer(dx, dz) -> true if the player moved
   constructor(scene, level, defs, hooks) {
     this.scene = scene; this.level = level; this.defs = defs; this.hooks = hooks;
     this.list = []; this.edges = new Map(); this.tex = {}; this.hunting = 0;
@@ -181,7 +181,7 @@ export class Creatures {
       c.state = 'dead'; c.hp = 0;
       play(c.def.look && c.def.look.detail === 'bones' ? 'rattle' : 'die', d);
       for (const [id, chance] of c.def.drops || []) {
-        if (Math.random() < chance) this.hooks.drop(id, c.x + (Math.random() - 0.5) * 0.5, c.z + (Math.random() - 0.5) * 0.5);
+        if (Math.random() < chance) this.hooks.drop(id, c.x + (Math.random() - 0.5) * 0.5, c.z + (Math.random() - 0.5) * 0.5, c.def.fly ? undefined : c.y);
       }
       this.hooks.onDeath(c);
       return { real, weak, killed: true };
