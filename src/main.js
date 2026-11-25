@@ -197,12 +197,20 @@ function setRelics() {            // returns true if it set any
   return true;
 }
 
+let dropWords = '';                 // said once you land, after coming in through a hole in the roof
 // Where you stand: as saved, or just inside the door you came through, or the level's own starting place.
 if (run && run.pos) {
   Object.assign(player.pos, { x: run.pos.x, y: run.pos.y, z: run.pos.z });
   player.yaw = run.pos.yaw; player.pitch = run.pos.pitch;
   const lift = lifts.topAt(run.pos.x, run.pos.z);                 // saved standing on a lift: you are set down on it, wherever it now is
   if (lift > -Infinity) player.pos.y = Math.max(lift, level.floorAt(run.pos.x, run.pos.z));
+} else if (run && run.via && (data.spots || []).some(sp => sp.landing === run.via)) {
+  // You come in from above: dropped through the shaft over this spot, falling from near its top.
+  const sp = data.spots.find(s => s.landing === run.via), c = level.cellCentre(sp.cell[0], sp.cell[1]);
+  Object.assign(player.pos, { x: c.x, y: level.ceilAt(c.x, c.z) - 1.8, z: c.z });
+  player.onGround = false; player.vy = -4;
+  player.yaw = { N: 0, W: Math.PI / 2, S: Math.PI, E: -Math.PI / 2 }[sp.face] ?? player.yaw;
+  dropWords = sp.landText || '';
 } else if (run && run.from) {
   const door = (data.spots || []).find(sp => sp.to === run.from);
   if (door) {
@@ -489,10 +497,10 @@ ui.onMode = () => {
 const SKIN_TIME = 1.8;            // seconds to hold a button to take something from a corpse
 const skinning = { c: null, t: 0 };
 let autoArmed = false, autoStay = 0;           // a flooded passage takes you on only after you have been somewhere else first
-function travel(to) {
+function travel(to, via) {            // via: arrive at the spot in that level whose "landing" is this, not at the door (a hole you drop through)
   if (leaving) return;
   leaving = true;
-  setRun({ ...capture(), level: to, from: LEVEL, pos: null });
+  setRun({ ...capture(), level: to, from: LEVEL, pos: null, via: via || null });
   document.getElementById('black').style.opacity = 0;
   fade(1, 0.7);
   setTimeout(go, 800);
@@ -523,6 +531,15 @@ let finishing = false;
 function finishRealm() {
   if (finishing || LEVEL === 'hub') return;
   finishing = true;
+  // A realm with a gate named "wayup" (mode "button": it looks like plain wall) has its own way back: that wall slides open, and
+  // you walk out. Without one, you are drawn back to the hall through the door you came in by.
+  if (gates.group('wayup').length) {
+    setTimeout(() => {
+      gates.opened.add('wayup'); gates.setGroup('wayup', true); gates.shake = 1; play('rumble');
+      ui.say(data.wayupText || 'The gem is yours. Stone grinds behind you: part of the wall has slid back, and a stair goes up.');
+    }, 1800);
+    return;
+  }
   setTimeout(() => ui.say('The gem is yours. The walls tremble, and the way back opens.'), 1800);
   setTimeout(() => { if (!fight.dead) travel('hub'); else finishing = false; }, 4600);
 }
@@ -660,6 +677,7 @@ function step(dt, forced) {
   if (cut) { inp.attackHeld = inp.blockHeld = inp.mouseAttack = inp.handR = inp.handL = false; inp.mx = inp.mz = inp.lookX = inp.lookY = 0; inp.jumpHeld = false; inp.pressed.clear(); inp.clicks = []; }
   lifts.update(dt);
   player.update(dt, inp);
+  if (dropWords && (player.onGround || player.swimming)) { ui.say(dropWords); dropWords = ''; }
   gates.update(dt, player);
   fireballs.update(dt, player, dmg => { ui.say('A fireball burns you.'); fight.harm(dmg, 'burned'); });
   if (!fight.dead && onSpikes(level, player)) { ui.say('The spikes take you.'); fight.harm(9999, 'impaled'); }
@@ -692,7 +710,7 @@ function step(dt, forced) {
   if (!spot || !spot.auto) { autoArmed = true; autoStay = 0; }
   else if (autoArmed && spot.to && !fight.dead) {         // "delay": seconds to stand there first, so the load starts after you are out of the water, not in it
     autoStay += dt;
-    if (autoStay >= (spot.delay || 0)) { travel(spot.to); return; }
+    if (autoStay >= (spot.delay || 0)) { travel(spot.to, spot.via); return; }
   }
   if (inp.pressed.has('bag')) ui.toggle();
   if (inp.pressed.has('mode')) ui.onMode();             // Tab: the cursor or the camera, like the switch above PACK
