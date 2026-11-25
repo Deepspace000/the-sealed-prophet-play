@@ -139,8 +139,8 @@ export class Level {
         const u = (a, b) => Level.floorIn(c, a, b) - c.deck;
         wl.quad(P(0, 0, u(0, 0)), P(1, 0, u(1, 0)), P(1, 1, u(1, 1)), P(0, 1, u(0, 1)), true);
       }
-      // ceiling
-      geo(c.ceilTex || 'ceil').quad(P(0, 0, c.ceil), P(1, 0, c.ceil), P(1, 1, c.ceil), P(0, 1, c.ceil), true);
+      // ceiling ("sky": none, it is open to the sky)
+      if (c.ceilTex !== 'sky') geo(c.ceilTex || 'ceil').quad(P(0, 0, c.ceil), P(1, 0, c.ceil), P(1, 1, c.ceil), P(0, 1, c.ceil), true);
       // water surface
       if (c.water != null && c.ceil > c.water) {
         geo('water').quad(P(0, 0, c.water), P(0, 1, c.water), P(1, 1, c.water), P(1, 0, c.water), true);
@@ -159,6 +159,7 @@ export class Level {
           const wall = (ba, bb, ta2, tb2) =>
             wl.quad(P(A[0], A[1], ba), P(B[0], B[1], bb), P(B[0], B[1], tb2), P(A[0], A[1], ta2), false);
           // A false wall: from outside, a secret cell looks like solid wall, but it can be walked through.
+          if (n.solid && c.ceilTex === 'sky') continue;            // the edge of an open desert: nothing drawn, the land runs on into the haze
           if (n.solid || (n.secret && !c.secret)) { wall(fa, fb, c.ceil, c.ceil); continue; }
           let na, nb;
           if (n.steps) {

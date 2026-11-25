@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { Level } from './level.js';
+import { buildSky } from './sky.js';
 import { Player } from './player.js';
 import { Input } from './input.js';
 import { standinMaterials, standinTorch, egyptianTorch, standinDoor } from './standin.js';
@@ -101,6 +102,14 @@ if (data.fog != null) scene.fog.density = DARK.density = data.fog;      // how f
 const MATS = standinMaterials();
 scene.add(level.build(MATS));
 buildSpikes(scene, level);                 // beds of spikes (cells with "spikes": true)
+// An open sky (a level with "sky", see src/sky.js): a dome, sunlight, drifting clouds, and a haze the colour of the horizon instead of the dark.
+let skyFx = null;
+if (data.sky) {
+  DARK.color = new THREE.Color(data.sky.horizon).getHex(); DARK.density = data.sky.haze ?? 0.004;
+  scene.background.setHex(DARK.color); scene.fog.color.setHex(DARK.color); scene.fog.density = DARK.density;
+  camera.far = data.sky.far || 900; camera.updateProjectionMatrix();
+  skyFx = buildSky(scene, data.sky, MATS, { x: level.w * level.size / 2, z: level.h * level.size / 2 });
+}
 const TORCH = data.torchColor ? parseInt(data.torchColor.slice(1), 16) : null;      // a level may light its torches another colour ("torchColor": "#ff2a1a")
 
 // Light: a faint glow everywhere, the lamp you carry, and the nearest wall torches.
@@ -863,6 +872,7 @@ function step(dt, forced) {
     document.getElementById('helpBtn').textContent = helpOn ? 'HIDE CONTROLS' : 'CONTROLS';
   }
 
+  if (skyFx) skyFx.update(dt, camera.position);
   renderer.render(scene, camera);
 }
 

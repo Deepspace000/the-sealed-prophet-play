@@ -48,7 +48,7 @@ function oldStone(o) {
       while (pos < S) {
         let w = o.minW + Math.floor(rnd() * (o.maxW - o.minW));
         if (S - pos - w < o.minW) w = S - pos;
-        tones.push(0.68 + rnd() * 0.42);
+        tones.push(o.clean ? 0.93 + rnd() * 0.1 : 0.68 + rnd() * 0.42);
         for (let yy = y0; yy < y0 + h; yy++) for (let i = 0; i < w; i++) {
           id[ix(start + i, yy)] = tones.length - 1;
           if (i === 0 || yy === y0) joint[ix(start + i, yy)] = 1;
@@ -75,15 +75,16 @@ function oldStone(o) {
       let nearJoint = 0;
       for (const [ox, oy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) if (joint[ix(x + ox, y + oy)]) nearJoint = 1;
       const chipped = !joint[i] && nearJoint && M > 0.52;            // edges of blocks broken away
-      let k = tones[id[i]] * (0.72 + B * 0.56) * (0.88 + fine(x, y) * 0.24);
+      let k = o.clean ? tones[id[i]] * (0.9 + B * 0.12) * (0.95 + fine(x, y) * 0.08)           // clean: bright, even, sun-bleached
+        : tones[id[i]] * (0.72 + B * 0.56) * (0.88 + fine(x, y) * 0.24);
       const streak = Math.max(0, col(x, y * 0.15) - 0.58) / 0.42;     // dark runs down the wall
-      k *= 1 - 0.38 * streak * (0.4 + 0.6 * M);
-      if (joint[i]) k *= 0.36; else if (chipped) k *= 0.56;
+      k *= 1 - 0.38 * (o.clean ? 0.35 : 1) * streak * (0.4 + 0.6 * M);
+      if (joint[i]) k *= o.clean ? 0.72 : 0.36; else if (chipped) k *= o.clean ? 0.85 : 0.56;
       if (crack[i]) k *= 0.34; else if (crack[ix(x - 1, y)]) k *= 1.14;
-      if (rnd() < 0.035) k *= 0.62;                                   // pits
-      k += (rnd() - 0.5) * 0.1;
+      if (rnd() < 0.035) k *= o.clean ? 0.88 : 0.62;                  // pits
+      k += (rnd() - 0.5) * (o.clean ? 0.04 : 0.1);
       const c = [o.rgb[0] * k, o.rgb[1] * k, o.rgb[2] * k];
-      if (B < 0.4) mix(c, [52, 56, 44], (0.4 - B) * (o.dark ? 2.2 : 1.5));   // damp and soot
+      if (B < 0.4) mix(c, [52, 56, 44], (0.4 - B) * (o.dark ? 2.2 : o.clean ? 0.35 : 1.5));   // damp and soot (clean: sun-bleached stone, hardly any)
       const solid = !joint[i] && !chipped && !crack[i];
       if (o.paint && solid) {
         for (const [py, ph, prgb] of o.paint) {
@@ -127,12 +128,12 @@ function hieroStone(o) {
   g.lineCap = 'round'; g.lineJoin = 'round';
   const paint = o.signs || ['#2b5a8e', '#a8432a', '#c9a43c'];
   for (const y0 of o.regs || [18, 142]) {
-    g.lineWidth = 2; g.strokeStyle = 'rgba(30,18,8,.55)';            // the lines that bound a register
+    g.lineWidth = 2; g.strokeStyle = o.clean ? 'rgba(40,90,120,.45)' : 'rgba(30,18,8,.55)';      // the lines that bound a register
     g.beginPath(); g.moveTo(0, y0 - 6); g.lineTo(S, y0 - 6); g.moveTo(0, y0 + 56); g.lineTo(S, y0 + 56); g.stroke();
     for (let x = 18; x < S - 8; x += 36) {
       if (rnd() < 0.12) continue;                                     // a gap, where the paint has flaked away
       const kind = Math.floor(rnd() * 11), col = paint[Math.floor(rnd() * paint.length)];
-      for (const [ox, oy, style, a] of [[1.5, 1.5, 'rgb(22,14,8)', 0.75], [0, 0, col, 0.9]]) {
+      for (const [ox, oy, style, a] of [[1.5, 1.5, 'rgb(22,14,8)', o.clean ? 0.3 : 0.75], [0, 0, col, 0.9]]) {
         g.save(); g.globalAlpha = a; g.strokeStyle = g.fillStyle = style; g.lineWidth = 3;
         glyph(g, kind, x + ox, y0 + 25 + oy, 28);
         g.restore();
@@ -145,6 +146,21 @@ function hieroStone(o) {
   return t;
 }
 
+// Desert sand, 128 pixels for four metres: soft dunes of light and shade with wind ripples across them.
+function sand(o) {
+  return tex(128, (g, S) => {
+    const rnd = rng(o.seed), big = noiseMap(S, 3, rnd), mid = noiseMap(S, 8, rnd), fine = noiseMap(S, 32, rnd);
+    const img = g.createImageData(S, S), d = img.data;
+    for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
+      const ripple = Math.sin((y + mid(x, y) * 14) / S * Math.PI * 2 * 10) * 0.5 + 0.5;
+      let k = 0.86 + big(x, y) * 0.16 + ripple * 0.06 + fine(x, y) * 0.07 + (rnd() - 0.5) * 0.05;
+      const i = (y * S + x) * 4;
+      d[i] = o.rgb[0] * k; d[i + 1] = o.rgb[1] * k; d[i + 2] = o.rgb[2] * k; d[i + 3] = 255;
+    }
+    g.putImageData(img, 0, 0);
+  });
+}
+
 export function standinMaterials() {
   const lam = map => new THREE.MeshLambertMaterial({ map });
   return {
@@ -154,6 +170,11 @@ export function standinMaterials() {
     ceil: lam(oldStone({ seed: 37, rgb: [98, 84, 64], rows: [42, 43, 43], minW: 40, maxW: 64, cracks: 3, dark: true })),
     hiero: lam(hieroStone({ seed: 41, rgb: [168, 138, 96], rows: [22, 18, 26, 16, 24, 22], regs: [18, 142], minW: 22, maxW: 46, cracks: 5 })),
     hiero2: lam(hieroStone({ seed: 53, rgb: [150, 124, 92], rows: [32, 32, 32, 32], regs: [72], signs: ['#8a1d14', '#c9a43c', '#2b5a8e'], minW: 26, maxW: 40, cracks: 4 })),
+    // The White Tower of Nut: pale limestone, the walls carved and painted with signs in blue, turquoise, red and gold
+    white: lam(hieroStone({ seed: 61, rgb: [246, 242, 230], rows: [22, 18, 26, 16, 24, 22], regs: [18, 142], minW: 22, maxW: 46, cracks: 2, clean: true,
+      signs: ['#2b5a8e', '#1f9c96', '#a8432a', '#c9a43c'] })),
+    whiteplain: lam(oldStone({ seed: 67, rgb: [244, 240, 228], rows: [32, 32, 32, 32], minW: 26, maxW: 40, cracks: 1, clean: true })),
+    sand: lam(sand({ seed: 71, rgb: [222, 190, 134] })),
     dark: new THREE.MeshBasicMaterial({ color: 0x000000 }),      // the far sides of a void: black, whatever light falls on them
     water: new THREE.MeshLambertMaterial({
       color: 0x2a8c96, transparent: true, opacity: 0.6, side: THREE.DoubleSide, depthWrite: false,
