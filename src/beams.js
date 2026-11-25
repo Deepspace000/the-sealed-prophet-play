@@ -77,7 +77,7 @@ export class Windows {
     windows.forEach((w, i) => {
       const len = Math.hypot(w.b[0] - w.a[0], w.b[1] - w.a[1]), h = w.y1 - w.y0;
       const map = texture(i + 1); map.repeat.set(1, h / (len * 4));
-      const m = new THREE.MeshLambertMaterial({ map, emissiveMap: map, emissive: 0xffffff, emissiveIntensity: 0.32 });
+      const m = new THREE.MeshLambertMaterial({ map, emissiveMap: map, emissive: 0xffffff, emissiveIntensity: 0.6 });
       const mesh = new THREE.Mesh(new THREE.PlaneGeometry(len, h), m);
       mesh.position.set((w.a[0] + w.b[0]) / 2, (w.y0 + w.y1) / 2, (w.a[1] + w.b[1]) / 2);
       mesh.rotation.y = TURN[w.face] ?? 0;
