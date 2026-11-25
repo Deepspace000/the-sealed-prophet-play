@@ -480,7 +480,7 @@
     ".............................................................................................................."
   ],
   "start": {"cell": [55, 231], "face": "N"},
-  "carry": ["lantern", "pocket_knife", "matches", "notebook"],
+  "carry": ["knapsack", "curved_sword", "lantern", "club", "pitted_sword", "pocket_knife", "matches", "notebook"],
   "items": [
     {"id": "key_nut_sun", "cell": [48, 49]},
     {"id": "key_nut_sky", "cell": [52, 39]},
