@@ -33,25 +33,25 @@ export class Player {
   fits(x, z, y, stepUp) {
     const L = this.level;
     for (const [sx, sz] of this.samples(x, z)) {
-      const f = L.floorAt(sx, sz);
+      const f = L.floorAt(sx, sz, y);
       if (f > y + stepUp) return false;
-      if (L.ceilAt(sx, sz) - Math.max(f, y) < H - 1e-4) return false;       // (a small margin: pressed against a low ceiling you are exactly H under it)
+      if (L.ceilAt(sx, sz, y) - Math.max(f, y) < H - 1e-4) return false;       // (a small margin: pressed against a low ceiling you are exactly H under it)
     }
     return true;
   }
   ground(x, z, y, stepUp) {
     let g = -Infinity;
     for (const [sx, sz] of this.samples(x, z)) {
-      const f = this.level.floorAt(sx, sz);
+      const f = this.level.floorAt(sx, sz, y);
       if (f <= y + stepUp && f > g) g = f;
-      const e = this.extraFloor ? this.extraFloor(sx, sz) : -Infinity;      // a lift (see hazards.js) holds you up too
+      const e = this.extraFloor ? this.extraFloor(sx, sz, y + stepUp) : -Infinity;      // a lift or a beam holds you up too (the highest one you can reach)
       if (e <= y + stepUp && e > g) g = e;
     }
     return g;
   }
   ceiling(x, z) {
     let c = Infinity;
-    for (const [sx, sz] of this.samples(x, z)) c = Math.min(c, this.level.ceilAt(sx, sz));
+    for (const [sx, sz] of this.samples(x, z)) c = Math.min(c, this.level.ceilAt(sx, sz, this.pos.y));
     return c;
   }
 
@@ -75,21 +75,43 @@ export class Player {
     const flat = this.swimming ? Math.cos(this.pitch) : 1;
     const tx = (-sin * inp.mz * flat + cos * inp.mx) * speed;
     const tz = (-cos * inp.mz * flat - sin * inp.mx) * speed;
-    const acc = (this.swimming ? 5 : this.onGround ? 9 : 3) * dt;
+    const acc = (this.swimming ? 5 : this.sliding > 0 ? 1.2 : this.onGround ? 9 : 3) * dt;
     const ax = tx - this.vx, az = tz - this.vz, al = Math.hypot(ax, az);
     if (this.dashT > 0) {                              // a dodge: a short burst that steering cannot change
       this.dashT -= dt; this.vx = this.dvx; this.vz = this.dvz;
       if (this.dashT <= 0) { this.vx *= 0.3; this.vz *= 0.3; }
-    } else if (al <= acc || !(al > 0)) { this.vx = tx; this.vz = tz; }
+    } else if (this.sliding > 0) { this.vx += ax / (al || 1) * acc; this.vz += az / (al || 1) * acc; }
+    else if (al <= acc || !(al > 0)) { this.vx = tx; this.vz = tz; }
     else { this.vx += ax / al * acc; this.vz += az / al * acc; }
     const dx = this.vx * dt, dz = this.vz * dt;
 
-    const stepUp = this.swimming ? Math.max(STEP, water + 0.6 - p.y) : (this.onGround ? STEP : 0.25);
+    const step = L.data.step ?? STEP;            // a level may let you walk up taller steps ("step")
+    const stepUp = this.swimming ? Math.max(step, water + 0.6 - p.y) : (this.onGround ? step : 0.25);
     if (dx) { if (this.fits(p.x + dx, p.z, p.y, stepUp)) p.x += dx; else this.vx = 0; }
     if (dz) { if (this.fits(p.x, p.z + dz, p.y, stepUp)) p.z += dz; else this.vz = 0; }
 
     const g = this.ground(p.x, p.z, p.y, stepUp);
     const ceil = this.ceiling(p.x, p.z);
+    // A ladder (see main.js): facing it and pushing forward you climb, back you go down; no falling while you hold on.
+    const lad = this.ladderAt ? this.ladderAt(p.x, p.z, p.y, this.yaw) : null;
+    this.climbing = !!lad && !this.swimming;
+    if (this.climbing) {
+      const up = inp.mz > 0 ? 1 : inp.mz < 0 ? -1 : 0;
+      p.y = Math.max(g, Math.min(lad.to + 0.05, p.y + up * 2.6 * dt));
+      if (inp.pressed.has('jump')) { this.climbing = false; this.vy = 3; }       // let go
+      else {
+        this.vy = 0; this.onGround = p.y <= g + 0.01; this.jumping = false; this.fallFrom = p.y;
+        this.eyeY = p.y + EYE; this.underwater = false;
+        return;
+      }
+    }
+    // A slide (a cell with "slide": true): too steep and smooth to stand on, it carries you down its slope.
+    const sc = L.cellAt(p.x, p.z);
+    if (sc.slide && sc.slope && this.onGround && !this.swimming) {
+      const dir = { N: [0, 1], S: [0, -1], E: [-1, 0], W: [1, 0] }[sc.slope];          // downhill
+      this.vx += dir[0] * 16 * dt; this.vz += dir[1] * 16 * dt;
+      this.sliding = 0.25;
+    } else if (this.sliding > 0) this.sliding -= dt;
 
     if (this.swimming) {
       let vy = Math.sin(this.pitch) * inp.mz * SWIM + (inp.jumpHeld ? 2.2 : 0);
@@ -98,7 +120,7 @@ export class Player {
       p.y = Math.min(p.y + vy * dt, water - FLOAT);
       if (p.y < g) p.y = g;
       if (p.y + H > ceil) p.y = ceil - H;
-      this.onGround = false;
+      this.onGround = false; this.fallFrom = p.y;          // swimming: no fall is counted from before you went in
     } else {
       const wasOnGround = this.onGround;
       this.offFor = wasOnGround ? 0 : (this.offFor || 0) + dt;
@@ -112,6 +134,7 @@ export class Player {
       this.vy -= G * dt;
       p.y += this.vy * dt;
       if (p.y <= g) {
+        if (!wasOnGround) { this.landed = (this.fallFrom ?? p.y) - g; }      // how far you fell (main.js turns a long fall into harm)
         p.y = g; this.vy = 0; this.onGround = true; this.jumping = false;
         if (this.leap) {                                 // landing from a leap: back to running speed, so you do not skid off a small platform
           const v = Math.hypot(this.vx, this.vz);
@@ -123,6 +146,7 @@ export class Player {
       } else {
         this.onGround = false;
       }
+      if (this.onGround || this.vy > 0) this.fallFrom = p.y;        // a fall is measured from the top of it
       if (p.y + H > ceil) { p.y = ceil - H; if (this.vy > 0) this.vy = 0; }
     }
 

@@ -82,16 +82,25 @@ export class Level {
     return c.floor + c.rise * i / c.steps;
   }
 
-  floorAt(x, z) {
+  // y: how high the one asking is. A cell with a "cap" is a room with a solid top over it (at "cap"): from above its roof
+  // (y at or over its ceiling) the floor there is the top of that cap. Without y you get the room's own floor.
+  floorAt(x, z, y) {
     const s = this.size, cx = Math.floor(x / s), cz = Math.floor(z / s), c = this.cell(cx, cz);
-    return c.solid ? Infinity : Level.floorIn(c, x / s - cx, z / s - cz);
+    if (c.solid) return Infinity;
+    if (c.cap != null && y != null && y >= c.ceil - 0.05) return c.cap;
+    return Level.floorIn(c, x / s - cx, z / s - cz);
   }
   // The floor as it is drawn (a stair is stepped), for things that lie on it.
   surfAt(x, z) {
     const s = this.size, cx = Math.floor(x / s), cz = Math.floor(z / s), c = this.cell(cx, cz);
     return c.solid ? Infinity : Level.surfIn(c, x / s - cx, z / s - cz);
   }
-  ceilAt(x, z) { const c = this.cellAt(x, z); return c.solid ? -Infinity : c.ceil; }
+  ceilAt(x, z, y) {
+    const c = this.cellAt(x, z);
+    if (c.solid) return -Infinity;
+    if (c.cap != null && y != null && y >= c.ceil - 0.05) return c.capCeil ?? 1e4;
+    return c.ceil;
+  }
   waterAt(x, z) { const c = this.cellAt(x, z); return (c.solid || c.water == null) ? null : c.water; }
 
   cellCentre(cx, cz) { return { x: (cx + 0.5) * this.size, z: (cz + 0.5) * this.size }; }
@@ -141,6 +150,8 @@ export class Level {
       }
       // ceiling ("sky": none, it is open to the sky)
       if (c.ceilTex !== 'sky') geo(c.ceilTex || 'ceil').quad(P(0, 0, c.ceil), P(1, 0, c.ceil), P(1, 1, c.ceil), P(0, 1, c.ceil), true);
+      // the top of a cap: the solid roof over a room, walked on from above
+      if (c.cap != null) geo(c.capTex || 'floor').quad(P(0, 0, c.cap), P(0, 1, c.cap), P(1, 1, c.cap), P(1, 0, c.cap), true);
       // water surface
       if (c.water != null && c.ceil > c.water) {
         geo('water').quad(P(0, 0, c.water), P(0, 1, c.water), P(1, 1, c.water), P(1, 0, c.water), true);
@@ -160,7 +171,9 @@ export class Level {
             wl.quad(P(A[0], A[1], ba), P(B[0], B[1], bb), P(B[0], B[1], tb2), P(A[0], A[1], ta2), false);
           // A false wall: from outside, a secret cell looks like solid wall, but it can be walked through.
           if (n.solid && c.ceilTex === 'sky') continue;            // the edge of an open desert: nothing drawn, the land runs on into the haze
-          if (n.solid || (n.secret && !c.secret)) { wall(fa, fb, c.ceil, c.ceil); continue; }
+          const nTop = n.cap != null ? Math.min(c.ceil, n.cap) : c.ceil;       // the wall of a capped room stops at its cap
+          if (n.secret && !c.secret) { wall(fa, fb, nTop, nTop); continue; }
+          if (n.solid) { wall(fa, fb, c.ceil, c.ceil); continue; }
           let na, nb;
           if (n.steps) {
             na = nb = Level.surfIn(n, (A[0] + B[0]) / 2 - o[0], (A[1] + B[1]) / 2 - o[1]);
@@ -171,7 +184,7 @@ export class Level {
           na = Math.min(na, c.ceil); nb = Math.min(nb, c.ceil);
           // "deck": the neighbour is a bridge that many metres thick: its side is drawn only that deep, with open air under it
           if (na > fa + EPS || nb > fb + EPS) wall(n.deck ? Math.max(fa, na - n.deck) : fa, n.deck ? Math.max(fb, nb - n.deck) : fb, Math.max(fa, na), Math.max(fb, nb));
-          if (n.ceil < c.ceil - EPS) wall(Math.max(n.ceil, fa), Math.max(n.ceil, fb), c.ceil, c.ceil);
+          if (n.ceil < nTop - EPS) wall(Math.max(n.ceil, fa), Math.max(n.ceil, fb), nTop, nTop);
         }
       }
     }

@@ -2,7 +2,7 @@
 //   spikes   cells with "spikes": true. Their floor is a bed of spikes, and falling or stepping on to it kills at once.
 //   gates    "gates": a door that fills one cell. mode "key" opens once with the matching key item (item "key" = the gate's "key"),
 //            "lever" opens and shuts with a lever, "timed" opens and shuts by itself, "auto" slides open as you come near.
-//            Gates with the same "id" are one door (a wide passage needs a gate in each of its cells).
+//            Gates with the same "id" are one door (a wide passage needs a gate in each of its cells). h: its height (default: the cell's, at most 4.5 m).
 //   buttons  "buttons": a round stone button in a wall (cell, wall, h). Pressed once: rumbling and running water, then the gate named
 //            in "opens" (a gate with mode "button", drawn as plain wall) slides back for good. It stays open in the save.
 //   levers   "levers": a lever on a wall that works the gates it "opens". "hold": seconds before they shut again (0 = they stay open).
@@ -60,31 +60,46 @@ export function onSpikes(level, player) {
 // "lifts": stone platforms that float in a void and slowly rise and sink. cell: the north-west cell of it, w and d: how many cells
 // wide (east) and deep (south), hi and lo: the heights its top goes between, period: seconds for one trip down and back up,
 // phase: where in that trip it starts (0 to 1), thick: how thick the slab is. You can stand on them (the body asks topAt) but
-// they are not walls: a lift only ever holds you up.
+// they are not walls: a lift only ever holds you up. dx, dz (cells): a lift that also moves sideways, that far and back, in
+// the same time (with hi and lo the same, it only goes sideways). Standing on one, you are carried with it (carry).
 export class Lifts {
   constructor({ scene, level, lifts = [], mat }) {
     const s = level.size;
-    this.time = 0;
+    this.time = 0; this.size = s;
     this.list = lifts.map(l => {
       const w = (l.w || 1) * s, d = (l.d || 1) * s, th = l.thick || 1.1;
       const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, th, d), mat ? plainWall(mat, w, th) : new THREE.MeshLambertMaterial({ color: 0x7b6644 }));
       scene.add(mesh);
-      return { ...l, mesh, th, top: l.hi, x0: l.cell[0] * s, z0: l.cell[1] * s, x1: (l.cell[0] + (l.w || 1)) * s, z1: (l.cell[1] + (l.d || 1)) * s };
+      const x0 = l.cell[0] * s, z0 = l.cell[1] * s;
+      return { ...l, mesh, th, top: l.hi, bx0: x0, bz0: z0, x0, z0, x1: x0 + w, z1: z0 + d, w_: w, d_: d, mx: 0, my: 0, mz: 0 };
     });
     this.update(0);
   }
   update(dt) {
     this.time += dt;
+    const s = this.size || 2;
     for (const l of this.list) {
       const k = 0.5 - 0.5 * Math.cos((this.time / (l.period || 10) + (l.phase || 0)) * Math.PI * 2);      // 0 at the top of its trip, 1 at the bottom, easing at each end
-      l.top = l.hi + (l.lo - l.hi) * k;
+      const top = l.hi + (l.lo - l.hi) * k, x0 = l.bx0 + (l.dx || 0) * s * k, z0 = l.bz0 + (l.dz || 0) * s * k;
+      l.mx = x0 - l.x0; l.my = top - l.top; l.mz = z0 - l.z0;                 // how far it moved this frame (to carry whoever stands on it)
+      l.top = top; l.x0 = x0; l.z0 = z0; l.x1 = x0 + l.w_; l.z1 = z0 + l.d_;
       l.mesh.position.set((l.x0 + l.x1) / 2, l.top - l.th / 2, (l.z0 + l.z1) / 2);
     }
   }
-  // The top of a lift at this point, or -Infinity if there is none.
-  topAt(x, z) {
+  // Someone standing on a lift moves with it. Call after update.
+  carry(P) {
+    if (!P.onGround) return;
+    for (const l of this.list) {
+      const px = P.pos.x - l.mx, pz = P.pos.z - l.mz;             // where they stood on it a moment ago
+      if (px < l.x0 - l.mx || px > l.x1 - l.mx || pz < l.z0 - l.mz || pz > l.z1 - l.mz || Math.abs(P.pos.y - (l.top - l.my)) > 0.08) continue;
+      if (P.fits(P.pos.x + l.mx, P.pos.z + l.mz, P.pos.y, 0.6)) { P.pos.x += l.mx; P.pos.z += l.mz; }
+      return;
+    }
+  }
+  // The top of a lift at this point (the highest one no higher than lim), or -Infinity if there is none.
+  topAt(x, z, lim = Infinity) {
     let t = -Infinity;
-    for (const l of this.list) if (x >= l.x0 && x <= l.x1 && z >= l.z0 && z <= l.z1 && l.top > t) t = l.top;
+    for (const l of this.list) if (x >= l.x0 && x <= l.x1 && z >= l.z0 && z <= l.z1 && l.top > t && l.top <= lim) t = l.top;
     return t;
   }
 }
@@ -123,7 +138,7 @@ export class Gates {
     this.time = 0;
     this.list = gates.map((g, n) => {
       const c = level.cell(g.cell[0], g.cell[1]);
-      const h = c.ceil - c.floor, s = level.size;
+      const h = g.h ?? (c.ceilTex === 'sky' ? 4.5 : c.ceil - c.floor), s = level.size;       // h: a gate under the open sky is only so tall
       const slab = new THREE.Mesh(new THREE.BoxGeometry(s, h, 0.45), g.mode === 'button' && wallMat ? plainWall(wallMat, s, h) : new THREE.MeshLambertMaterial({ map: gateTex(g.mode, g.colour) }));
       slab.rotation.y = g.run === 'EW' ? Math.PI / 2 : 0;
       const gate = { ...g, n, id: g.id ?? 'g' + n, mesh: slab, h, floor: c.floor, t: 1, want: 1, x: (g.cell[0] + 0.5) * s, z: (g.cell[1] + 0.5) * s,

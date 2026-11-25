@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { Level } from './level.js';
 import { buildSky } from './sky.js';
+import { Beams, Ladders } from './beams.js';
 import { Player } from './player.js';
 import { Input } from './input.js';
 import { standinMaterials, standinTorch, egyptianTorch, standinDoor } from './standin.js';
@@ -187,8 +188,11 @@ if (rebuilt) setTimeout(() => ui.say('This place has been rebuilt since you were
 const gates = new Gates({ scene, level, gates: data.gates, levers: data.levers, buttons: data.buttons, wallMat: MATS.wall, saved: saved && saved.gates, say: t => ui.say(t),
   findKey: id => [...inv.all()].map(e => e[0]).find(it => it.def.key === id) || null, takeKey: it => inv.remove(it) });
 const fireballs = new Fireballs({ scene, level, shooters: data.shooters });
-const lifts = new Lifts({ scene, level, lifts: data.lifts, mat: MATS.wall });        // platforms that rise and sink in a void
-player.extraFloor = (x, z) => lifts.topAt(x, z);
+const lifts = new Lifts({ scene, level, lifts: data.lifts, mat: MATS[data.liftTex || 'wall'] });        // platforms that rise and sink in a void
+const beams = new Beams({ scene, level, beams: data.beams, mat: MATS.whiteplain });      // rays of white stone to walk on (src/beams.js)
+const ladders = new Ladders({ scene, level, ladders: data.ladders });
+player.extraFloor = (x, z, lim) => Math.max(lifts.topAt(x, z, lim), beams.topAt(x, z, lim));      // lifts and beams hold you up too (lim: none higher than this)
+player.ladderAt = (x, z, y, yaw) => ladders.at(x, z, y, yaw);
 const USE = { keys: 'Press F to use it.', pad: 'Press X to use it.', touch: 'Tap to use it.' };
 // The great seal in the hall has a socket for the relic of each realm. Carry one back and set it in. Which are set is kept in the save.
 const placed = new Set(run && run.relics || []);
@@ -297,7 +301,7 @@ const fade = (to, sec) => {
 // Dying takes you back to your newest save.
 fight.onDeath = (c, cause) => {
   leaving = true;
-  document.getElementById('dead').textContent = { drowned: 'YOU DROWNED', impaled: 'YOU WERE IMPALED', burned: 'YOU WERE BURNED' }[cause] || 'YOU ARE DEAD';
+  document.getElementById('dead').textContent = { drowned: 'YOU DROWNED', impaled: 'YOU WERE IMPALED', burned: 'YOU WERE BURNED', fell: 'YOU FELL' }[cause] || 'YOU ARE DEAD';
   document.getElementById('black').style.opacity = 0;
   fade(1, 2);
   document.getElementById('dead').style.display = 'flex';
@@ -685,7 +689,16 @@ function step(dt, forced) {
   if (cut && (inp.pressed.has('use') || inp.pressed.has('jump') || inp.pressed.has('back') || (inp.clicks && inp.clicks.length))) cut.t = cut.dur;      // F, Space, B or a click skips the cutscene
   if (cut) { inp.attackHeld = inp.blockHeld = inp.mouseAttack = inp.handR = inp.handL = false; inp.mx = inp.mz = inp.lookX = inp.lookY = 0; inp.jumpHeld = false; inp.pressed.clear(); inp.clicks = []; }
   lifts.update(dt);
+  lifts.carry(player);
   player.update(dt, inp);
+  // A level with "fallDamage": a fall of more than six metres hurts, more the further it is; sixteen metres or more kills.
+  if (player.landed) {
+    const h = player.landed; player.landed = 0;
+    if (data.fallDamage && h > 6 && !fight.dead) {
+      if (h >= 16) { ui.say('You fall a long way.'); fight.harm(9999, 'fell'); }
+      else { ui.say('You land hard.'); fight.harm(Math.round((h - 6) * 8), 'fell'); }
+    }
+  }
   if (dropWords && (player.onGround || player.swimming)) { ui.say(dropWords); dropWords = ''; }
   gates.update(dt, player);
   fireballs.update(dt, player, dmg => { ui.say('A fireball burns you.'); fight.harm(dmg, 'burned'); });
@@ -872,7 +885,7 @@ function step(dt, forced) {
     document.getElementById('helpBtn').textContent = helpOn ? 'HIDE CONTROLS' : 'CONTROLS';
   }
 
-  if (skyFx) skyFx.update(dt, camera.position);
+  if (skyFx) skyFx.update(dt, camera, renderer.domElement.height);
   renderer.render(scene, camera);
 }
 

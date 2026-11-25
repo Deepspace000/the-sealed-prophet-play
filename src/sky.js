@@ -3,7 +3,7 @@
 //   sun              { dir: [x, y, z], color, power }: the sunlight
 //   ground           { y, mat }: a plain of sand under the whole level, so the land runs on to the horizon past the level's edge
 //   clouds           { count, low, high, spread, size, wind: [x, z] }: soft clouds that drift with the wind and come round again
-// Clouds are drawn by code: lit heaps of billows (effects, not art).
+// Clouds are drawn by code: heaps of lit 3D puffs (effects, not art).
 import * as THREE from 'three';
 
 const hex = c => new THREE.Color(c);
@@ -18,62 +18,16 @@ function vnoise(x, y, s) {
 }
 const fbm = (x, y, s) => { let t = 0, a = 0.5, f = 1; for (let i = 0; i < 5; i++) { t += a * vnoise(x * f, y * f, s + i * 17); f *= 2.1; a *= 0.5; } return t; };
 
-function cumulusTexture(seed, sunX = -0.5) {
-  const W = 384, H = 192, c = document.createElement('canvas'); c.width = W; c.height = H;
-  const g = c.getContext('2d'), img = g.createImageData(W, H), d = img.data;
-  let st = seed;
-  const r = () => (st = (st * 16807) % 2147483647) / 2147483647;
-  const base = H * 0.74, puffs = [];
-  const n = 7 + Math.floor(r() * 5);
-  for (let i = 0; i < n; i++) {                                   // the bottom row of billows sits on the flat base
-    const x = W * (0.12 + 0.76 * (i + r() * 0.6) / n), rad = H * (0.13 + 0.08 * r());
-    puffs.push([x, base - rad * 0.55, rad]);
-  }
-  const peak = 0.35 + 0.3 * r(), reach = 0.18 + 0.14 * r();      // where the heap is highest, and how wide it is
-  for (let i = 0; i < n + 3; i++) {                               // more heaped on top, highest over its peak: a dome, not a loaf
-    const t = peak + (r() - 0.5) * 2 * reach, mid = Math.max(0, 1 - Math.abs(t - peak) / reach);
-    const rad = H * (0.08 + 0.15 * mid + 0.05 * r());
-    puffs.push([W * t, base - H * (0.12 + 0.4 * Math.pow(mid, 1.3) * (0.5 + 0.5 * r())) - rad * 0.3, rad]);
-  }
-  for (const p of puffs.slice()) {                              // small knobbly billows round the top of each big one, like a cauliflower
-    for (let k = 0; k < 4; k++) {
-      const ang = -Math.PI * (0.15 + 0.7 * r()), rad = p[2] * (0.28 + 0.2 * r());
-      puffs.push([p[0] + Math.cos(ang) * p[2] * 0.78, p[1] + Math.sin(ang) * p[2] * 0.78, rad]);
-    }
-  }
-  const L = [sunX * 0.55, -0.7, 0.45], ll = Math.hypot(...L); L[0] /= ll; L[1] /= ll; L[2] /= ll;
-  for (const p of puffs) p[1] = Math.max(p[1], p[2] + H * 0.04);           // nothing pokes out of the top of the picture
-  const SH = 9;                                                   // how softly neighbouring billows melt into each other
-  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
-    // a soft maximum over the billows: their shapes and their surfaces blend, so there are no seams where two meet
-    let sum = 0, best = -9, nx = 0, ny = 0, nz = 0;
-    for (const p of puffs) {
-      const dx = (x - p[0]) / p[2], dy = (y - p[1]) / p[2], q = dx * dx + dy * dy;
-      if (q > 2.3) continue;
-      const k = 1 - Math.sqrt(q), w = Math.exp(SH * k);
-      sum += w; if (k > best) best = k;
-      const z = Math.sqrt(Math.max(0, 1 - q));
-      nx += w * dx; ny += w * dy; nz += w * z;
-    }
-    const i4 = (y * W + x) * 4;
-    if (!sum) { d[i4 + 3] = 0; continue; }
-    const soft = Math.log(sum) / SH;
-    const rough = fbm(x / 16, y / 16, seed) - 0.5;
-    let dens = soft + rough * 0.4;
-    if (y > base) dens -= (y - base) / (H * 0.06);                // the flat underside
-    const a = Math.min(1, Math.max(0, (dens + 0.02) / 0.16));
-    if (a <= 0) { d[i4 + 3] = 0; continue; }
-    const nl = Math.hypot(nx, ny, nz) || 1;
-    let lit = Math.max(0, (nx * L[0] + ny * L[1] + nz * L[2]) / nl);
-    lit = lit * 0.72 + 0.28 * (1 - (y / base)) + (fbm(x / 7, y / 7, seed + 5) - 0.5) * 0.2;     // brighter higher up, and fine detail
-    const under = Math.max(0, Math.min(1, (y - (base - H * 0.2)) / (H * 0.26)));               // the shaded belly
-    lit = Math.max(0, Math.min(1, lit - under * 0.35));
-    const sh = [150, 182, 196], hi = [255, 253, 248];             // shade: blue-grey from the turquoise sky; light: warm white
-    for (let k = 0; k < 3; k++) d[i4 + k] = sh[k] + (hi[k] - sh[k]) * lit;
-    d[i4 + 3] = a * 255 * (0.84 + 0.16 * Math.min(1, Math.max(0, soft) * 3));
+// A tile of soft noise that wears the edges of each puff ragged and mottles its light.
+function noiseTile() {
+  const S = 128, c = document.createElement('canvas'); c.width = c.height = S;
+  const g = c.getContext('2d'), img = g.createImageData(S, S), d = img.data;
+  for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
+    const v = fbm(x / 14, y / 14, 77) * 255, i = (y * S + x) * 4;
+    d[i] = d[i + 1] = d[i + 2] = v; d[i + 3] = 255;
   }
   g.putImageData(img, 0, 0);
-  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
+  const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping;
   return t;
 }
 
@@ -114,39 +68,88 @@ void main(){ float t = clamp(vP.y * 1.6, 0.0, 1.0); gl_FragColor = vec4(mix(bot,
     scene.add(plain);
   }
 
+  // ---- clouds: each one a heap of soft round puffs in 3D (twenty to thirty of them), wider and darker at the base, piled
+  // higher over one spot, and lit by the sun on the side that faces it. They look solid from any side, even up among them.
   const cl = sky.clouds || {};
-  const clouds = [];
   const spread = cl.spread || 300, wind = cl.wind || [1.2, 0.4];
   let seed = 4242;
   const r = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
-  const texs = [1, 2, 3, 4, 5, 6, 7, 8].map(i => cumulusTexture(i * 7919, (sky.sun && sky.sun.dir ? Math.sign(sky.sun.dir[0]) : -1) * 0.6));
-  const mats_ = texs.map(map => new THREE.SpriteMaterial({ map, transparent: true, depthWrite: false, fog: true }));
-  // Each cloud is a little group of pictures, one behind another and a little apart, so it has some depth as you pass it.
+  const clouds = [], puffs = [];
   for (let i = 0; i < (cl.count || 0); i++) {
-    const size = (cl.size || 40) * (0.6 + r() * 0.9), grp = new THREE.Group();
-    const parts = 2 + Math.floor(r() * 3);
-    for (let j = 0; j < parts; j++) {
-      const k = j ? 0.55 + r() * 0.35 : 1;
-      const sp = new THREE.Sprite(mats_[Math.floor(r() * mats_.length)]);
-      sp.scale.set(size * k, size * k / 2, 1);
-      sp.position.set((r() - 0.5) * size * 0.7, (r() - 0.5) * size * 0.08 + (j ? size * 0.06 : 0), (r() - 0.5) * size * 0.5);
-      grp.add(sp);
+    const size = (cl.size || 40) * (0.6 + r() * 0.9), H = size * 0.42;
+    clouds.push({ x: centre.x + (r() - 0.5) * spread * 2, y: (cl.low ?? 80) + r() * ((cl.high ?? 160) - (cl.low ?? 80)), z: centre.z + (r() - 0.5) * spread * 2, k: 0.7 + r() * 0.6 });
+    const n = Math.round(16 + size / 5 + r() * 8), px = (r() - 0.5) * 0.4, pz = (r() - 0.5) * 0.4;      // px, pz: where its heap is highest
+    for (let j = 0; j < n; j++) {
+      const a = r() * Math.PI * 2, dd = Math.sqrt(r());
+      const ox = Math.cos(a) * dd * 0.55, oz = Math.sin(a) * dd * 0.34;
+      const hump = Math.max(0, 1 - Math.hypot(ox - px * 0.55, oz - pz * 0.34) / 0.6);
+      const oy = j < n * 0.35 ? r() * 0.08 : r() * hump * hump;                 // a third of them make the flat base
+      const rad = size * (0.11 + 0.11 * hump) * (0.75 + 0.5 * r()) * (1 - 0.3 * oy);
+      puffs.push({ c: i, ox: ox * size, oy: oy * H, oz: oz * size, size: rad * 2, shade: 0.55 + 0.45 * oy + 0.1 * r(), seed: r() });
     }
-    grp.position.set(centre.x + (r() - 0.5) * spread * 2, (cl.low ?? 80) + r() * ((cl.high ?? 160) - (cl.low ?? 80)), centre.z + (r() - 0.5) * spread * 2);
-    grp.userData.k = 0.7 + r() * 0.6;                    // some drift faster than others
-    scene.add(grp); clouds.push(grp);
+  }
+  const N = puffs.length, pos = new Float32Array(N * 3), aSize = new Float32Array(N), aShade = new Float32Array(N), aSeed = new Float32Array(N);
+  const geo = new THREE.BufferGeometry();
+  const attr = (name, arr, k) => { const b = new THREE.BufferAttribute(arr, k); b.setUsage(THREE.DynamicDrawUsage); geo.setAttribute(name, b); return b; };
+  const bPos = attr('position', pos, 3), bSize = attr('aSize', aSize, 1), bShade = attr('aShade', aShade, 1), bSeed = attr('aSeed', aSeed, 1);
+  const cloudMat = new THREE.ShaderMaterial({
+    transparent: true, depthWrite: false, fog: false,
+    uniforms: { uScale: { value: 300 }, uHaze: { value: sky.haze ?? 0.004 }, uNoise: { value: noiseTile() }, uSunV: { value: new THREE.Vector3() },
+      uLit: { value: hex('#fffdf6') }, uShadow: { value: hex(cl.shadow || '#8fb4bf') }, uFog: { value: hex(sky.horizon) } },
+    vertexShader: `attribute float aSize; attribute float aShade; attribute float aSeed;
+uniform float uScale; uniform float uHaze; varying float vShade; varying float vSeed; varying float vFog;
+void main(){ vec4 mv = modelViewMatrix * vec4(position, 1.0); gl_Position = projectionMatrix * mv;
+  gl_PointSize = aSize * uScale / max(-mv.z, 0.5); vShade = aShade; vSeed = aSeed;
+  float fd = uHaze * length(mv.xyz); vFog = 1.0 - exp(-fd * fd); }`,
+    fragmentShader: `uniform sampler2D uNoise; uniform vec3 uSunV; uniform vec3 uLit; uniform vec3 uShadow; uniform vec3 uFog;
+varying float vShade; varying float vSeed; varying float vFog;
+void main(){ vec2 p = gl_PointCoord * 2.0 - 1.0; p.y = -p.y; float r2 = dot(p, p); if (r2 > 1.0) discard;
+  float n = texture2D(uNoise, gl_PointCoord * 0.55 + vec2(vSeed, vSeed * 1.7)).r;
+  float a = smoothstep(1.0, 0.42, r2 + (n - 0.5) * 0.6); if (a < 0.01) discard;
+  vec3 nrm = vec3(p, sqrt(max(0.0, 1.0 - r2)));
+  float l = clamp(dot(nrm, uSunV) * 0.5 + 0.5, 0.0, 1.0) * 0.85 + (n - 0.5) * 0.3;
+  vec3 col = mix(uShadow, uLit, clamp(l * vShade + 0.12, 0.0, 1.0));
+  gl_FragColor = vec4(mix(col, uFog, vFog), a * 0.94);
+#include <colorspace_fragment>
+}`,
+  });
+  const cloudPts = new THREE.Points(geo, cloudMat);
+  cloudPts.frustumCulled = false; cloudPts.renderOrder = 1;
+  if (N) scene.add(cloudPts);
+  const order = puffs.map((_, i) => i), depth = new Float32Array(N), fwd = new THREE.Vector3();
+  // The puffs are drawn far to near (sorted by distance every frame), so the near ones cover the far ones properly.
+  function layout(camera) {
+    camera.getWorldDirection(fwd);
+    const cp = camera.position;
+    for (let i = 0; i < N; i++) {
+      const q = puffs[i], c = clouds[q.c];
+      q.x = c.x + q.ox; q.y = c.y + q.oy; q.z = c.z + q.oz;
+      depth[i] = (q.x - cp.x) * fwd.x + (q.y - cp.y) * fwd.y + (q.z - cp.z) * fwd.z;
+    }
+    order.sort((a, b) => depth[b] - depth[a]);
+    for (let k = 0; k < N; k++) {
+      const q = puffs[order[k]];
+      pos[k * 3] = q.x; pos[k * 3 + 1] = q.y; pos[k * 3 + 2] = q.z; aSize[k] = q.size; aShade[k] = q.shade; aSeed[k] = q.seed;
+    }
+    bPos.needsUpdate = bSize.needsUpdate = bShade.needsUpdate = bSeed.needsUpdate = true;
   }
 
   return {
-    update(dt, cam) {
+    update(dt, camera, heightPx) {
+      const cam = camera.position;
       dome.position.copy(cam);
       disc.position.copy(cam).addScaledVector(d, far * 0.8);
-      for (const s of clouds) {
-        s.position.x += wind[0] * s.userData.k * dt; s.position.z += wind[1] * s.userData.k * dt;
+      for (const c of clouds) {
+        c.x += wind[0] * c.k * dt; c.z += wind[1] * c.k * dt;
         // gone too far downwind: comes back in on the other side
-        if (s.position.x - centre.x > spread) s.position.x -= spread * 2; else if (s.position.x - centre.x < -spread) s.position.x += spread * 2;
-        if (s.position.z - centre.z > spread) s.position.z -= spread * 2; else if (s.position.z - centre.z < -spread) s.position.z += spread * 2;
+        if (c.x - centre.x > spread) c.x -= spread * 2; else if (c.x - centre.x < -spread) c.x += spread * 2;
+        if (c.z - centre.z > spread) c.z -= spread * 2; else if (c.z - centre.z < -spread) c.z += spread * 2;
       }
+      if (!N) return;
+      camera.updateMatrixWorld();
+      cloudMat.uniforms.uScale.value = heightPx * camera.projectionMatrix.elements[5] / 2;      // pixels across for one metre, one metre away
+      cloudMat.uniforms.uSunV.value.copy(d).transformDirection(camera.matrixWorldInverse);       // the sun's direction as the camera sees it
+      layout(camera);
     },
   };
 }
