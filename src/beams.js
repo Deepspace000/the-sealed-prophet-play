@@ -81,7 +81,8 @@ export class Windows {
     windows.forEach((w, i) => {
       const len = Math.hypot(w.b[0] - w.a[0], w.b[1] - w.a[1]), h = w.y1 - w.y0;
       const map = texture(i + 1); map.repeat.set(1, h / (len * 4));
-      const m = new THREE.MeshLambertMaterial({ map, emissiveMap: map, emissive: 0xffffff, emissiveIntensity: 0.8 });
+      // (polygonOffset: seen from far off the glass must still be drawn in front of the wall it lies on, without flickering)
+      const m = new THREE.MeshLambertMaterial({ map, emissiveMap: map, emissive: 0xffffff, emissiveIntensity: 0.8, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -8 });
       const mesh = new THREE.Mesh(new THREE.PlaneGeometry(len, h), m);
       mesh.position.set((w.a[0] + w.b[0]) / 2, (w.y0 + w.y1) / 2, (w.a[1] + w.b[1]) / 2);
       mesh.rotation.y = TURN[w.face] ?? 0;
@@ -90,7 +91,7 @@ export class Windows {
       for (const y of [w.y0, w.y1]) { const f = frame.clone(); f.position.set(mesh.position.x, y, mesh.position.z); f.rotation.y = mesh.rotation.y; scene.add(f); }
       // the glow on the wall round it: bands of its colours, fading away to each side
       const o = OUT[w.face] || [0, 1], c1 = COLOURS[i % COLOURS.length], c2 = COLOURS[(i * 3 + 2) % COLOURS.length];
-      const halo = new THREE.Mesh(new THREE.PlaneGeometry(len * 4.2, h + 2), new THREE.MeshBasicMaterial({ transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0.32, fog: true,
+      const halo = new THREE.Mesh(new THREE.PlaneGeometry(len * 4.2, h + 2), new THREE.MeshBasicMaterial({ transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0.32, fog: true, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -4,
         map: canvasTex(32, 64, (g, cw, ch) => { const img = g.createImageData(cw, ch), d = img.data, a = new THREE.Color(c1), b = new THREE.Color(c2);
           for (let y = 0; y < ch; y++) for (let x = 0; x < cw; x++) { const u = Math.abs(x / (cw - 1) - 0.5) * 2, v = y / (ch - 1), k = 0.5 + 0.5 * Math.sin(v * 9 + i);
             const al = Math.pow(1 - u, 2.4) * Math.min(1, v * 8, (1 - v) * 8), j = (y * cw + x) * 4;
@@ -128,13 +129,13 @@ export class Windows {
 Windows.prototype.update = function (dt) { this.time += dt; const k = 0.82 + 0.18 * Math.sin(this.time * 0.8); for (const m of this.glows) m.opacity = (m.opacity0 ??= m.opacity) * k; };
 
 // "shafts": light coming down a hole in a roof (cell, y0: the floor below, y1: the top of the hole). A faint column of light
-// leaning a little away from the sun, wider at the floor, that you see from the dark.
+// straight down from the hole to the patch of sun on the floor under it, that you see from the dark.
 export class Shafts {
   constructor({ scene, level, shafts = [], sun = [0.4, 0.8, 0.3] }) {
-    const s = level.size, lean = 0.22, l = Math.hypot(sun[0], sun[2]) || 1, lx = -sun[0] / l * lean, lz = -sun[2] / l * lean;
+    const s = level.size, lx = 0, lz = 0;                        // (it does not lean: the sun on the floor lies right under the hole)
     const mat = new THREE.MeshBasicMaterial({ color: 0xffe6b0, transparent: true, opacity: 0.11, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false });
     for (const sh of shafts) {
-      const x0 = sh.cell[0] * s, z0 = sh.cell[1] * s, hgt = sh.y1 - sh.y0, grow = 0.35;
+      const x0 = sh.cell[0] * s, z0 = sh.cell[1] * s, hgt = sh.y1 - sh.y0, grow = 0;
       const top = [[x0, z0], [x0 + s, z0], [x0 + s, z0 + s], [x0, z0 + s]].map(([x, z]) => [x, sh.y1, z]);
       const bot = [[x0 - grow, z0 - grow], [x0 + s + grow, z0 - grow], [x0 + s + grow, z0 + s + grow], [x0 - grow, z0 + s + grow]].map(([x, z]) => [x + lx * hgt, sh.y0 + 0.02, z + lz * hgt]);
       const v = [];

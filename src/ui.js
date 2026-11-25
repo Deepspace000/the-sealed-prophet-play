@@ -6,6 +6,8 @@ const GROUPS = [
   ['hands', 'Left hand &middot; Right hand', 2],
   ['belt', 'Belt', 4],
   ['back', 'Back', 1],
+  ['head', 'Head', 1],
+  ['body', 'Body', 1],
 ];
 const $ = id => document.getElementById(id);
 const SHORT = { 'OPEN THE MAP': 'MAP', 'LIGHT YOUR LAMP': 'LIGHT LAMP', 'FILL THE LAMP': 'FILL LAMP' };      // short words for the buttons
@@ -158,13 +160,15 @@ export class UI {
     const name = it.def.name.toLowerCase(), cap = it.def.name[0].toUpperCase() + name.slice(1);
     if (area === 'belt') return `The ${name} is too big for your belt.`;
     if (area === 'back') return `Only a knapsack can be worn on your back.`;
+    if (area === 'body') return `Only armour for the body can be worn there.`;
+    if (area === 'head') return `Only a helmet can be worn on your head.`;
     if (area === 'pack') return `The ${name} is too big for your pack.`;
     if (area === 'bag') return `The ${name} is too big for that bag.`;
     return `${cap} does not fit there.`;
   }
   showOpts(slotEl, it) {
-    const v = SHORT[verb(it)] || verb(it), area = slotEl.dataset.area, d = it.def, back = d.wear === 'back';
-    const equip = back ? area !== 'back' : (d.weapon || d.block || d.light) && area !== 'hands';
+    const v = SHORT[verb(it)] || verb(it), area = slotEl.dataset.area, d = it.def, back = !!d.wear;      // ("back": anything that is worn)
+    const equip = back ? area !== d.wear : (d.weapon || d.block || d.light) && area !== 'hands';
     // [label, what it does, can it be done]: the ones that cannot be done are greyed out, not taken away
     const all = [[v || 'USE', 'use', !!v], [back ? 'WEAR' : 'EQUIP', 'equip', !!equip], ['MOVE', 'move', true], ['DROP', 'drop', true]];
     this.opts = { it, area, i: +slotEl.dataset.i, all, focus: all.findIndex(a => a[2]), at: this.inv.version };
@@ -177,12 +181,12 @@ export class UI {
     [...this.optsEl.querySelectorAll('button')].forEach((b, n) => b.classList.toggle('focus', this.pad && n === this.opts.focus));
   }
   closeOpts() { if (this.opts) { this.opts = null; this.optsEl.style.display = 'none'; this.seen = ''; } }
-  // Put a thing in a hand (a weapon in the right, anything else in the left) or a knapsack on your back.
+  // Put a thing in a hand (a weapon in the right, anything else in the left), or put on a thing that is worn (a knapsack, armour).
   // What was there goes where the thing came from, or wherever there is room.
   equip(area, i) {
     const inv = this.inv, arr = inv.arr(area), it = arr && arr[i];
     if (!it) return;
-    const back = it.def.wear === 'back', to = back ? inv.back : inv.hands, usual = back ? 0 : it.def.weapon ? 1 : 0;
+    const back = !!it.def.wear, to = back ? inv[it.def.wear] : inv.hands, usual = back ? 0 : it.def.weapon ? 1 : 0;
     // a weapon goes in the right hand and anything else in the left; if that hand is taken and the other is free, use the other
     const n = !to[usual] || back ? usual : !to[1 - usual] ? 1 - usual : usual, old = to[n];
     arr[i] = null; to[n] = it;
@@ -321,9 +325,11 @@ export class UI {
       return '';
     };
     // what it does in a fight: the harm of a blow, and how much of a blow it stops when you guard with it
-    const stats = d => (d.weapon || d.block ? ' <i>' + [d.weapon ? `Damage ${d.weapon.damage} (${d.weapon.type})` : '', d.block ? `Block ${Math.round(d.block * 100)}%` : '']
+    const round1 = v => Math.round(v * 10) / 10;
+    const stats = (d, it) => (d.weapon || d.block || d.armour ? ' <i>' + [d.weapon ? `Level ${it.lvl || 1} &nbsp; Damage ${round1(d.weapon.damage * (it.might || 1))} (${d.weapon.type})` : '',
+      d.block ? `Block ${Math.round(d.block * 100)}%` : '', d.armour ? `Takes ${Math.round(d.armour * 100)}% of a blow when worn` : '']
       .filter(Boolean).join(' &nbsp; ') + '</i>' : '');
-    const describe = it => `<b>${it.def.name}.</b> ${it.def.text}${left(it)}${stats(it.def)} <span style="white-space:nowrap">(${kg(it.weight)})</span>`;
+    const describe = it => `<b>${it.name}.</b> ${it.def.text}${left(it)}${stats(it.def, it)} <span style="white-space:nowrap">(${kg(it.weight)})</span>`;
     if (inv.held) {
       this.info.innerHTML = `Holding: ${describe(inv.held)} `
         + (usable(inv.held.def) ? '<button data-btn="use">USE</button> ' : '') + '<button data-btn="drop">DROP</button>';
@@ -337,6 +343,6 @@ export class UI {
   }
   // Is the thing still somewhere on show (it may have moved since the pointer was over it)?
   holds(it) {
-    return ['hands', 'belt', 'back', 'pack', 'bag'].some(a => (this.inv.arr(a) || []).includes(it));
+    return ['hands', 'belt', 'back', 'head', 'body', 'pack', 'bag'].some(a => (this.inv.arr(a) || []).includes(it));
   }
 }

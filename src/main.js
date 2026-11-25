@@ -47,7 +47,9 @@ const RES_STEPS = [160, 200, 240, 300, 360, 480];
 let RES = +new URLSearchParams(location.search).get('res') || RES_STEPS[RES_STEPS.length - 1];      // the game starts at the finest picture
 
 const canvas = document.getElementById('view');
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance' });
+// antialias: the picture is still small and scaled up with hard pixels, but thin far things (the rays of the White Tower, seen
+// across the desert) are smoothed into it instead of sparkling as you move.
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: params.get('aa') !== '0', powerPreference: 'high-performance' });      // (?aa=0: without, to compare)
 renderer.setPixelRatio(1);
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(DARK.color);
@@ -182,18 +184,21 @@ const inv = new Inventory();
 const peopleDefs = (await (await fetch('data/people.json')).json()).people;
 const world = new WorldItems(scene, level);
 // Things are written into a save as plain data and made again from it.
-const pack = it => it && { id: it.def.id, n: it.n, lit: it.lit || undefined, inside: it.inside && it.inside.map(pack) };
+const pack = it => it && { id: it.def.id, n: it.n, lit: it.lit || undefined, lvl: it.lvl > 1 ? it.lvl : undefined, inside: it.inside && it.inside.map(pack) };
 const unpack = o => {
   if (!o || !defs[o.id]) return null;
   const it = make(o.id);
   if (o.n != null) it.n = o.n;
   it.lit = !!o.lit;
+  if (o.lvl && it.def.weapon) it.lvl = o.lvl;
   if (it.inside && o.inside) o.inside.forEach((c, i) => { if (i < it.inside.length) it.inside[i] = unpack(c); });
   return it;
 };
 const saved = run && run.levels && run.levels[LEVEL];      // this level as you left it, if you have been here before
-if (run) for (const a of ['hands', 'belt', 'back']) (run.inv[a] || []).forEach((o, i) => { if (i < inv[a].length) inv[a][i] = unpack(o); });
+if (run) for (const a of ['hands', 'belt', 'back', 'body', 'head']) (run.inv[a] || []).forEach((o, i) => { if (i < inv[a].length) inv[a][i] = unpack(o); });
 else for (const id of data.carry || []) inv.add(make(id));
+// ?kit=1 (for a test link): in a game already going, you are also given whatever of this level's "carry" you do not have
+if (run && params.get('kit') === '1') for (const id of data.carry || []) if (![...inv.all()].some(e => e[0].def.id === id)) inv.add(make(id));
 const ui = new UI(inv, () => dropHeld(), it => useThing(it));
 if (rebuilt) setTimeout(() => ui.say('This place has been rebuilt since you were last here. You start it again from its door.'), 1500);
 // Doors that need keys, levers, doors that slide, and fireballs from the walls (see hazards.js).
@@ -221,6 +226,7 @@ if (saved) {
   if (it.spare && [...inv.all()].some(e => e[0].def.id === it.id)) continue;      // a spare is only there if you do not have one already (the knapsack in the hall)
   const at = it.at || [0.5, 0.5];
   const thing = make(it.id);
+  if (it.lvl && thing.def.weapon) thing.lvl = it.lvl;                // a weapon lying in a level may be of a higher level ("lvl")
   (it.inside || []).forEach((id, i) => { if (thing.inside && i < thing.inside.length) thing.inside[i] = make(id); });     // what is in a bag
   world.place(thing, (it.cell[0] + at[0]) * level.size, (it.cell[1] + at[1]) * level.size, it.y);      // y: on a room's roof or a ray, not the floor below
 }
@@ -269,7 +275,7 @@ player.eyeY = player.pos.y + 1.55;
 
 // People you can speak to (src/people.js), and a shop for one who keeps one (src/shop.js).
 const people = new People({ scene, level, people: data.people, defs: peopleDefs, flags });
-const shop = new Shop({ defs, inv, make, say: t => ui.say(t), flags });
+const shop = new Shop({ defs, inv, make, say: t => ui.say(t), flags, weapon: () => { const w = inv.hands[fight.mainHand()]; return w && w.def.weapon ? w : null; } });
 function talk() {                         // F (or a tap) on someone in front of you. Returns true if there was someone.
   const p = people.near(player);
   if (!p) return false;
@@ -373,7 +379,7 @@ function capture() {
   return {
     v: 1, level: LEVEL, from: null,
     pos: { x: player.pos.x, y: player.pos.y, z: player.pos.z, yaw: player.yaw, pitch: player.pitch },
-    inv: { hands: inv.hands.map(pack), belt: inv.belt.map(pack), back: inv.back.map(pack) },
+    inv: { hands: inv.hands.map(pack), belt: inv.belt.map(pack), back: inv.back.map(pack), body: inv.body.map(pack), head: inv.head.map(pack) },
     relics: [...placed], prophet: { heard, unlocked: [...unlocked] }, flags, hp: fight.hp, food: life.food, rest: life.rest, played, levels, maps: map.pack(), seen: scenes.pack(), visits,
   };
 }
@@ -588,11 +594,11 @@ function pickUp(dir, tol) {          // returns true if there was something ther
   const e = world.target(camera.position, dir, 2.6, tol);
   if (!e) return false;
   if (e.item.def.relic && creatures.list.some(c => c.def.boss && c.state !== 'dead')) { ui.say('The colossus stands between you and the gem.'); return true; }
-  const where = inv.add(e.item), name = e.item.def.name;
+  const where = inv.add(e.item), name = e.item.name;
   if (!where) { ui.say(`You have nowhere to put the ${name.toLowerCase()}.`); return true; }
   world.remove(e);
   const put = { pack: ' It is in your pack.', belt: ' It is on your belt.', bag: ' It is in a bag.' }[where] || '';
-  ui.say(where === 'back' ? `You put on the ${name.toLowerCase()}.` : `Picked up: ${name}.${put}`);
+  ui.say(where === 'back' || where === 'body' || where === 'head' ? `You put on the ${name.toLowerCase()}.` : `Picked up: ${name}.${put}`);
   if (e.item.def.relic && e.item.def.relic === LEVEL) finishRealm();
   return true;
 }
@@ -624,7 +630,7 @@ function dropHeld() {
   it.lit = false;
   world.place(it, x, z, player.pos.y);
   inv.held = null; inv.version++;
-  ui.say(`Dropped: ${it.def.name}.`);
+  ui.say(`Dropped: ${it.name}.`);
 }
 function brightnessAt(x, y, z) {    // roughly how well lit a spot is, for flat pictures that light does not reach
   // under an open sky it is daylight (a little less in a room); otherwise a faint glow, the lamp and the torches
@@ -893,7 +899,7 @@ function step(dt, forced) {
   const seen = world.target(camera.position, viewDir, 2.6, 0.3);
   const beast = seen ? null : creatures.target(camera.position, viewDir);
   const gateWords = seen || beast ? '' : gates.look(player, USE[input.device]);
-  ui.setLook(seen ? seen.item.def.name : beast ? beast.def.name + '. ' + health(beast)
+  ui.setLook(seen ? seen.item.name : beast ? beast.def.name + '. ' + health(beast)
     : corpse ? (skinning.c ? '' : `${corpse.def.name}. It is dead. Hold a button to ${corpse.def.skin.verb} it.`)
     : gateWords ? gateWords
     : spot && spot.seal ? `A great seal is set in the stone. ${placed.size} of its eight sockets hold a gem.` + (relicsCarried().length && nearSeal() ? ' ' + SET[input.device] : '')

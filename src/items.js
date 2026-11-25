@@ -3,6 +3,8 @@
 import * as THREE from 'three';
 import { art } from './art.js';
 
+export const LEVEL_GAIN = 0.4, LEVEL_MAX = 6;      // each level of a weapon adds 40% of its first harm; the highest level
+
 export class Item {
   constructor(def) {
     this.def = def;
@@ -13,7 +15,13 @@ export class Item {
     else if (def.light) this.n = def.light.start ?? def.light.burn;
     else if (def.durability) this.n = def.durability;       // blows it can take before it breaks
     this.lit = false;
+    // A weapon has a level (1 and up): each level above the first adds to the harm of its blows (LEVEL_GAIN). You do not grow
+    // stronger yourself in this game: your weapons do (a whetstone, or the trader's work).
+    if (def.weapon) this.lvl = def.level || 1;
   }
+  // its name with its level, for the screen: "Curved sword, level 2"
+  get name() { return this.def.name + (this.lvl > 1 ? `, level ${this.lvl}` : ''); }
+  get might() { return 1 + LEVEL_GAIN * ((this.lvl || 1) - 1); }      // how much harder it hits than at level 1
   get weight() {
     let w = this.def.weight;
     if (this.inside) for (const it of this.inside) if (it) w += it.weight;
@@ -24,7 +32,7 @@ export class Item {
   }
 }
 
-// Places to keep things: two hands, four belt places (small things only), your back (a knapsack),
+// Places to keep things: two hands, four belt places (small things only), your back (a knapsack), your body and your head (armour),
 // the knapsack's own places ("pack"), and whichever bag is open ("bag").
 // "held" is the thing you have picked up and are moving about.
 export class Inventory {
@@ -32,6 +40,7 @@ export class Inventory {
     this.hands = [null, null];
     this.belt = [null, null, null, null];
     this.back = [null];
+    this.body = [null]; this.head = [null];       // armour ("wear": "body" or "head")
     this.held = null;
     this.open = null;
     this.capacity = 25;       // kilograms carried before you slow down
@@ -43,7 +52,7 @@ export class Inventory {
     return this[area];
   }
   fits(item, area) {
-    if (area === 'back') return item.def.wear === 'back';
+    if (area === 'back' || area === 'body' || area === 'head') return item.def.wear === area;
     if (area === 'belt') return item.def.size <= 1;
     if (area === 'pack') return item.def.size <= this.back[0].def.maxSize;
     if (area === 'bag') return item.def.size <= this.open.def.maxSize;
@@ -82,7 +91,7 @@ export class Inventory {
         if (it.inside) yield* walk(it.inside);
       }
     }
-    for (const a of ['hands', 'belt', 'back']) yield* walk(this[a]);
+    for (const a of ['hands', 'belt', 'back', 'body', 'head']) yield* walk(this[a]);
     if (this.held) { yield [this.held, null, -1]; if (this.held.inside) yield* walk(this.held.inside); }
   }
   remove(item) {
@@ -108,7 +117,7 @@ export class Inventory {
       return true;
     };
     const d = item.def;
-    if (d.wear === 'back' && tryArea('back')) return 'back';
+    if (d.wear && this[d.wear] && tryArea(d.wear)) return d.wear;       // a knapsack or armour goes straight on, if nothing is worn there
     if ((d.weapon || d.block || d.light) && tryArea('hands')) return 'hands';
     for (const area of ['pack', 'belt']) if (tryArea(area)) return area;
     for (const [bag] of this.all()) {                 // any other bag you carry
@@ -120,7 +129,7 @@ export class Inventory {
   }
   get weight() {
     let w = this.held ? this.held.weight : 0;
-    for (const area of ['hands', 'belt', 'back']) for (const it of this[area]) if (it) w += it.weight;
+    for (const area of ['hands', 'belt', 'back', 'body', 'head']) for (const it of this[area]) if (it) w += it.weight;
     return w;
   }
 }

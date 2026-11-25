@@ -39,7 +39,8 @@ export class Creatures {
     return { hp: 1 + 0.5 * k, hit: 1 + 0.33 * k };
   }
 
-  // "toughness" in a level: every creature in it, its boss too, has that much more health (1.4: 40% more)
+  // "toughness" in a level: every creature in it, its boss too, has that much more health (1.4: 40% more). "bite": and hits
+  // that much harder. (You stay as you are from realm to realm; the creatures get stronger, and so must your weapons.)
   spawn(id, x, z, n, dead, y) {
     const def = this.defs[id];
     if (!def) throw new Error(`No creature called "${id}"`);
@@ -49,7 +50,8 @@ export class Creatures {
     this.scene.add(spr);
     const frame = this.frame(def, 'idle');
     const y0 = y ?? this.level.floorAt(x, z) + (def.fly ? def.fly.cruise ?? 2 : 0), might = Creatures.might(def, y0);
-    const hp = def.health * might.hp * (this.level.data.toughness || 1);
+    // ("tougher" in a level: that much more health for the kinds named in it, in place of "toughness")
+    const hp = def.health * might.hp * ((this.level.data.tougher || {})[id] ?? this.level.data.toughness ?? 1);
     const c = {
       def, n, x, z, y: y0, vy: 0, hp, max: hp, hit: might.hit, state: def.still ? 'still' : 'idle', t: 0,
       home: { x, y: y0, z }, path: null, pathT: 0, seen: 99, last: null, pose: 'idle', flash: 0, kx: 0, kz: 0,
@@ -270,7 +272,7 @@ export class Creatures {
             c.state = 'strike'; c.t = 0.28;
             play(def.kind === 'beast' ? 'bite' : 'swing', dist);
             if (P.alive && los && dist < reach + 0.35 && Math.abs(dy + (fly ? fly.hover ?? 0.8 : 0)) < 1.4) {
-              this.hooks.onStrike(c, def.attack.damage * c.hit * (0.85 + Math.random() * 0.3), def.attack.type);
+              this.hooks.onStrike(c, def.attack.damage * c.hit * (this.level.data.bite || 1) * (0.85 + Math.random() * 0.3), def.attack.type);      // "bite" in a level: its creatures hit that much harder
             }
           }
           break;

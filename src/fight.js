@@ -174,7 +174,8 @@ export class Fight {
     const type = this.move === 'low' && wp.thrust ? wp.thrust : wp.type;
     const me = { x: P.pos.x, y: P.pos.y, z: P.pos.z, eyeY: P.eyeY };
     const hits = this.creatures.inArc(me, P.yaw, wp.reach + m.reach + 0.3, m.arc);
-    const blow = () => wp.damage * m.dmg * (0.35 + 2.0 * this.power) * (this.tired ? 0.5 : 1) * (0.9 + Math.random() * 0.2);
+    const held = this.inv.hands[this.hand], might = held && held.def === w ? held.might : 1;      // the weapon's level
+    const blow = () => wp.damage * might * m.dmg * (0.35 + 2.0 * this.power) * (this.tired ? 0.5 : 1) * (0.9 + Math.random() * 0.2);
     // nothing alive in the way: the blow may land on an urn
     if (!hits.length && this.onNone) this.onNone(wp.reach + m.reach + 0.3);
     if (!hits.length && this.onMiss) this.onMiss(me, P.yaw, wp.reach + m.reach + 0.2, m.arc, blow(), type, KIND[type]);
@@ -213,9 +214,12 @@ export class Fight {
     }
   }
 
-  // Harm that is not a blow (drowning). cause is passed on to onDeath.
+  // How much of a blow your armour takes (0 to 0.6): what you wear on your body and your head, added up.
+  armour() { let a = 0; for (const it of [this.inv.body[0], this.inv.head[0]]) if (it) a += it.def.armour || 0; return Math.min(0.6, a); }
+  // Harm that is not a blow (drowning, fire, a fall). cause is passed on to onDeath.
   harm(dmg, cause) {
     if (this.dead) return;
+    if (cause === 'burned') dmg *= 1 - this.armour() * 0.5;      // armour is half as much use against fire
     this.hp -= dmg; this.hurtT = 0.5; this.calm = 0;
     play('hurt');
     if (this.hp <= 0) { this.hp = 0; this.dead = true; this.winding = false; play('death'); this.onDeath(null, cause); }
@@ -238,6 +242,7 @@ export class Fight {
       play('block');
       if (this.st <= 0) this.ui.say('Your guard is broken.');
     }
+    dmg *= 1 - this.armour();                       // what you wear takes its share of the blow
     if (dmg < 0.5) return;
     this.hp -= dmg; this.hurtT = 0.5; this.calm = 0;
     this.jolt(-dx / d, -dz / d, dmg);

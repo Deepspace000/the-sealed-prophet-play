@@ -1,6 +1,7 @@
 // Staying alive: hunger, tiredness, and the light you carry. Also what happens when you use a thing.
 // The numbers for each thing are in data/items.json (food, heal, drinks, light, fuel, count, sleep).
 import { play } from './sound.js';
+import { LEVEL_MAX } from './items.js';
 
 const AIR_TIME = 20;            // seconds you can stay under water on one breath
 const AIR_BACK = 2.5;           // seconds to get your breath back at the surface
@@ -10,11 +11,11 @@ const REST_TIME = 70 * 60;      // seconds of play from rested to worn out
 const low = s => s.toLowerCase();
 const FUEL = { paraffin: 'paraffin', oil: 'oil' };
 
-export const usable = def => !!(def.food || def.drinks || def.light || def.fuel || def.sleep || def.potion || def.count || def.refill || def.map || def.bandage);
+export const usable = def => !!(def.food || def.drinks || def.light || def.fuel || def.sleep || def.potion || def.count || def.refill || def.map || def.bandage || def.whet);
 // What using a thing does, in a word or two, for the button. '' if there is nothing to do with it.
 export function verb(it) {
   const d = it.def;
-  return d.map ? 'OPEN THE MAP' : d.bandage ? 'BIND' : d.food ? 'EAT' : d.potion ? 'DRINK' : d.drinks ? (it.n > 0 ? 'DRINK' : 'FILL') : d.light ? (it.lit ? 'PUT OUT' : 'LIGHT')
+  return d.map ? 'OPEN THE MAP' : d.whet ? 'SHARPEN' : d.bandage ? 'BIND' : d.food ? 'EAT' : d.potion ? 'DRINK' : d.drinks ? (it.n > 0 ? 'DRINK' : 'FILL') : d.light ? (it.lit ? 'PUT OUT' : 'LIGHT')
     : d.refill ? 'REFILL MATCHES' : d.count ? 'LIGHT YOUR LAMP' : d.fuel ? 'FILL THE LAMP' : d.sleep ? 'SLEEP' : it.inside ? 'OPEN' : '';
 }
 
@@ -67,6 +68,13 @@ export class Survival {
   use(it, inWater) {
     const d = it.def, name = low(d.name), F = this.fight;
     if (d.map) this.onMap();
+    else if (d.whet) {               // a whetstone: the weapon in your hand goes up a level, and the stone is used up
+      const w = this.inv.hands[F.mainHand()];
+      if (!w || !w.def.weapon) { this.ui.say('Hold a weapon in your hand to work on it.'); return; }
+      if (w.lvl >= LEVEL_MAX) { this.ui.say(`The ${low(w.def.name)} cannot be made any better.`); return; }
+      w.lvl++; this.inv.remove(it); this.inv.version++; play('chip');
+      this.ui.say(`You work the stone along the ${low(w.def.name)}. It is level ${w.lvl} now: it hits harder.`);
+    }
     else if (d.refill) {             // a bundle of matches fills the box again
       const box = [...this.inv.all()].map(e => e[0]).find(x => x.def.id === d.refill && x.n < x.def.count);
       if (!box) { this.ui.say(this.inv.all && [...this.inv.all()].some(e => e[0].def.id === d.refill) ? 'Your box of matches is full.' : 'You have no box to put them in.'); return; }

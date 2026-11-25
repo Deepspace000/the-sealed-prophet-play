@@ -104,7 +104,7 @@ vec4 sign_at(float h, float y, float face) {
     float cl = vn(p * 0.07) * 0.6 + vn(p * 0.23) * 0.4;
     float mott = vn(p * 0.9) * 0.55 + vn(p * 2.7) * 0.3 + vn(p * 8.0) * 0.15;
     float grain = vn(p * 31.0);
-    float scour = vn(vec2(h * 0.11 + 3.0, y * 3.1)) * 0.6 + vn(vec2(h * 0.37, y * 9.0)) * 0.4;
+    float scour = vn(vec2(h * 0.11 + 3.0, y * 3.1)) * 0.6 + mix(0.5, vn(vec2(h * 0.37, y * 9.0)), near) * 0.4;      // (the fine streaks only near by: far off they would shimmer)
     float pit = smoothstep(0.78, 0.92, vn(p * 13.0) * 0.65 + vn(p * 37.0) * 0.35) * near;
     float crack = smoothstep(0.014, 0.0, abs(vn(vec2(h * 0.31 + y * 0.12, y * 0.21 - h * 0.05)) - 0.5)) * step(0.52, vn(p * 0.05 + 9.0)) * near;
     float veinL = smoothstep(0.035, 0.0, abs(vn(vec2(h * 0.18 + y * 0.05, y * 0.11)) - 0.5));
@@ -125,15 +125,17 @@ vec4 sign_at(float h, float y, float face) {
     float see = mix(1.0, s.z > 1.5 ? 1.0 : mix(0.32, 0.9, s.z), smoothstep(40.0, 130.0, dist));
     // Three thousand years of sand: in patches the gold has gone, most near the foot, and the sign is left as a hollow cut in
     // the stone. What gold is left is dulled in places.
-    float wear = vn(p * 0.55 + 20.0) * 0.5 + vn(p * 1.9 + 7.0) * 0.3 + vn(p * 6.5) * 0.2 + exp(-max(y - ${f2(y0)}, 0.0) / 10.0) * 0.07;
+    float wear = vn(p * 0.55 + 20.0) * 0.5 + vn(p * 1.9 + 7.0) * 0.3 + mix(0.5, vn(p * 6.5), near) * 0.2 + exp(-max(y - ${f2(y0)}, 0.0) / 10.0) * 0.07;
     float gone = smoothstep(0.52, 0.585, wear);
-    float dull = smoothstep(0.42, 0.72, vn(p * 3.3 + 1.0));
+    float dull = smoothstep(0.42, 0.72, mix(0.5, vn(p * 3.3 + 1.0), near));
     // the plain band between two runs of writing, edged with gold; fine lines between the columns
     float yy = mod(y - Y0, PER);
     bool written = !top && y > Y0 && y < Y1;
-    float rule = written ? max(step(abs(yy - TEXT - 0.12), 0.07), step(abs(yy - PER + 0.12), 0.07)) : 0.0;
+    float rw = 0.07 + dist * 0.0012;                                 // (the gold rules are drawn a little thicker far off, so they stay whole lines)
+    float rule = written ? max(step(abs(yy - TEXT - 0.12 - rw + 0.07), rw), step(abs(yy - PER + 0.12 + rw - 0.07), rw)) * mix(0.6, 1.0, 1.0 - smoothstep(60.0, 200.0, dist)) : 0.0;
     float cx = fract(h / COL);
-    float colLine = (written && yy < TEXT && s.z < 0.5) ? step(min(cx, 1.0 - cx) * COL, 0.022) * 0.45 * see : 0.0;
+    float calm = 1.0 - smoothstep(35.0, 110.0, dist);                // thin lines and glints are for near by: far off they flicker
+    float colLine = (written && yy < TEXT && s.z < 0.5) ? step(min(cx, 1.0 - cx) * COL, 0.022) * 0.45 * see * calm : 0.0;
     float sheen = 0.84 + 0.24 * vn(vec2(h * 1.7, y * 1.7)) + 0.10 * fract(yy / ROW);
     vec3 gold = vec3(0.66, 0.43, 0.08) * sheen * (1.0 + 0.55 * bev);
     gold = mix(gold, gold * vec3(0.60, 0.54, 0.50), dull * 0.65);     // dulled
@@ -169,7 +171,7 @@ vec4 sign_at(float h, float y, float face) {
     float breath = 0.8 + 0.2 * sin(gTime * 0.5);
     gGlow = vec3(1.0, 0.93, 0.78) * (0.035 + 0.075 * smoothstep(0.0, 140.0, y)) * breath * (1.0 - keep)
       + vec3(1.0, 0.78, 0.36) * veinL * (0.24 + 0.24 * sin(y * 0.09 - gTime * 0.7 + h * 0.03)) * near;
-    gGlint = lit * (pow(max(dot(n2, hv), 0.0), 60.0) * 2.4 * gGold * (1.0 - s.y) + pow(max(dot(vWN, hv), 0.0), 80.0) * 0.10);
+    gGlint = lit * (pow(max(dot(n2, hv), 0.0), 60.0) * 2.4 * gGold * (1.0 - s.y) * (1.0 - smoothstep(50.0, 140.0, dist)) + pow(max(dot(vWN, hv), 0.0), 80.0) * 0.10);
     // the sides the sun does not reach are cool and blue, not grey
     col *= mix(mix(vec3(0.66, 0.70, 0.98), vec3(1.18, 1.05, 0.82), gGold), vec3(1.0), lit);       // (the gold keeps its own colour)
     // the height of it: it pales and blues toward the top, into the sky (the gold much less: it must still read up there)
