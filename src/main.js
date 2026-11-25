@@ -38,7 +38,7 @@ const WET = { color: 0x06323a, density: 0.22 };
 
 // The picture is drawn small and scaled up with hard pixels. RES is its height in pixels.
 const RES_STEPS = [160, 200, 240, 300, 360, 480];
-let RES = +new URLSearchParams(location.search).get('res') || 240;
+let RES = +new URLSearchParams(location.search).get('res') || RES_STEPS[RES_STEPS.length - 1];      // the game starts at the finest picture
 
 const canvas = document.getElementById('view');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance' });
