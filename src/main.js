@@ -213,6 +213,10 @@ if (run) for (const a of ['hands', 'belt', 'back', 'body', 'head']) (run.inv[a] 
 else for (const id of data.carry || []) inv.add(make(id));
 // ?kit=1 (for a test link): in a game already going, you are also given whatever of this level's "carry" you do not have
 if (run && params.get('kit') === '1') for (const id of data.carry || []) if (![...inv.all()].some(e => e[0].def.id === id)) inv.add(make(id));
+// ?give=a,b,c (for a test link): you are also given these things; ?drop=a,b: and these you do not carry (to make room)
+const notKept = (params.get('drop') || '').split(',');
+for (const e of [...inv.all()]) if (notKept.includes(e[0].def.id)) inv.remove(e[0]);
+for (const id of (params.get('give') || '').split(',')) if (defs[id] && ![...inv.all()].some(e => e[0].def.id === id)) inv.add(make(id));
 const ui = new UI(inv, () => dropHeld(), it => useThing(it));
 if (rebuilt) setTimeout(() => ui.say('This place has been rebuilt since you were last here. You start it again from its door.'), 1500);
 // Doors that need keys, levers, doors that slide, and fireballs from the walls (see hazards.js).
