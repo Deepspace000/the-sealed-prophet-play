@@ -33,9 +33,15 @@ export class Beams {
   constructor({ scene, level, beams = [], mat }) {
     const s = level.size;
     const stone = mat ? mat.clone() : new THREE.MeshLambertMaterial({ color: 0xf4efe2 });
-    if (stone.map) { stone.map = stone.map.clone(); stone.map.needsUpdate = true; }
+    if (stone.map) { stone.map = stone.map.clone(); stone.map.minFilter = THREE.LinearMipmapLinearFilter; stone.map.anisotropy = 8; stone.map.needsUpdate = true; }      // (seen from far off and edge on: smoothed, or it shimmers)
     stone.emissive = new THREE.Color(0xfff4d8); stone.emissiveIntensity = 0.22;          // a faint glow, like light
-    const gold = new THREE.MeshLambertMaterial({ color: 0xe0b445, emissive: 0x6a4a10 });
+    // The gilded edges are 12 cm wide. Far off that is much less than a pixel, and a thing that thin flickers on and off as you
+    // move; so they fade away as they get thinner than the pixels (the ray itself is still there).
+    const gold = new THREE.MeshLambertMaterial({ color: 0xe0b445, emissive: 0x6a4a10, transparent: true, depthWrite: false });
+    gold.onBeforeCompile = sh => {
+      sh.vertexShader = 'varying vec3 vWP;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n  vWP = (modelMatrix * vec4(transformed, 1.0)).xyz;');
+      sh.fragmentShader = 'varying vec3 vWP;\n' + sh.fragmentShader.replace('#include <map_fragment>', '#include <map_fragment>\n  diffuseColor.a *= 1.0 - smoothstep(0.1, 0.3, length(fwidth(vWP)));');
+    };
     this.list = beams.map(b => {
       const len = b.len, w = b.w ?? 1.4, w2 = b.w2 ?? w, y = b.y, y2 = b.y2 ?? y, th = b.thick ?? 0.7;
       const [dx, dz] = DIRV(b.dir || 0);
@@ -151,6 +157,14 @@ export class Ladders {
   constructor({ scene, level, ladders = [] }) {
     const s = level.size, wood = new THREE.MeshLambertMaterial({ color: 0x8a5a2b }), OFF = { N: [0, -1], E: [1, 0], S: [0, 1], W: [-1, 0] };
     this.level = level;
+    // A ladder's rails are 7 cm thick: from across the desert a tall one is a line much thinner than a pixel, and it flickers.
+    // So a tall ladder has a second shape for far off: one flat board with the ladder drawn on it. The picture on it is
+    // smoothed as it gets small, so from far away the ladder is a faint steady line.
+    const c = document.createElement('canvas'); c.width = 32; c.height = 16;
+    const cg = c.getContext('2d'); cg.fillStyle = '#8a5a2b';
+    cg.fillRect(0, 0, 3, 16); cg.fillRect(29, 0, 3, 16); cg.fillRect(0, 7, 32, 2);      // two rails and a rung: 71 cm by 35 cm
+    const pic = new THREE.CanvasTexture(c); pic.colorSpace = THREE.SRGBColorSpace; pic.wrapT = THREE.RepeatWrapping; pic.anisotropy = 8;
+    this.far = [];
     this.list = ladders.map(l => {
       const c = level.cell(l.cell[0], l.cell[1]), o = OFF[l.wall], bottom = c.floor, h = l.to - bottom + 1.0;
       const grp = new THREE.Group();
@@ -166,8 +180,23 @@ export class Ladders {
       grp.position.set(x, bottom, z);
       grp.rotation.y = { N: 0, S: Math.PI, E: -Math.PI / 2, W: Math.PI / 2 }[l.wall];
       scene.add(grp);
+      if (h > 12) {
+        const map = pic.clone(); map.repeat.set(1, h / 0.35); map.needsUpdate = true;
+        const board = new THREE.Mesh(new THREE.PlaneGeometry(0.71, h), new THREE.MeshLambertMaterial({ map, transparent: true, depthWrite: false, side: THREE.DoubleSide }));
+        board.position.set(x, bottom + h / 2, z); board.rotation.y = grp.rotation.y; board.visible = false;
+        scene.add(board);
+        this.far.push({ grp, board, x, z, y: bottom + h / 2, h });
+      }
       return { ...l, bottom, wx: (l.cell[0] + 0.5 + o[0] * 0.5) * s, wz: (l.cell[1] + 0.5 + o[1] * 0.5) * s, o, yaw: { N: 0, W: Math.PI / 2, S: Math.PI, E: -Math.PI / 2 }[l.wall] };
     });
+  }
+  // which shape each tall ladder shows: the real one within about 45 m, the board beyond
+  update(cam) {
+    for (const f of this.far) {
+      const dy = Math.max(0, Math.abs(cam.y - f.y) - f.h / 2), d = Math.hypot(cam.x - f.x, cam.z - f.z, dy);
+      const near = d < (f.grp.visible ? 48 : 42);
+      f.grp.visible = near; f.board.visible = !near;
+    }
   }
   // The ladder you are on: in its cell, close to its wall, between its foot and its top, and not facing away from it.
   at(x, z, y, yaw) {

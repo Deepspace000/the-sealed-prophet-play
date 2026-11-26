@@ -53,6 +53,15 @@ const float GIANT = ${f2(giant)}, COL = ${f2(col)}, ROW = ${f2(row)}, PER = ${f2
 float h21(vec2 p) { p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32 + gSeed); return fract(p.x * p.y); }
 float vn(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
   return mix(mix(h21(i), h21(i + vec2(1, 0)), f.x), mix(h21(i + vec2(0, 1)), h21(i + vec2(1, 1)), f.x), f.y); }
+vec2 gPix = vec2(1.0);                          // the size of one pixel on the wall, in metres (along it, and up it)
+// how much of this pixel the band from a to b covers (v: where the pixel's middle is, w: its size): a thin band far off is
+// drawn faint and steady, not on and off from one frame to the next
+float cover(float v, float a, float b, float w) { return clamp((min(v + 0.5 * w, b) - max(v - 0.5 * w, a)) / w, 0.0, 1.0); }
+// noise with F lumps to the metre: where the lumps are smaller than the pixels it fades to its mean, so it cannot shimmer
+float vnf(vec2 q, vec2 F) {
+  float k = 1.0 - smoothstep(0.22, 0.6, max(gPix.x * F.x, gPix.y * F.y));
+  return k > 0.0 ? mix(0.5, vn(q), k) : 0.5;
+}
 vec2 glyph(float id, vec2 q, float flip, vec2 g) {
   if (flip > 0.5) q.x = 1.0 - q.x;
   if (q.x < 0.004 || q.x > 0.996 || q.y < 0.004 || q.y > 0.996) return vec2(0.0);
@@ -100,16 +109,24 @@ vec4 sign_at(float h, float y, float face) {
     // Old marble, scoured by wind and sand. No joints: one skin of stone, but mottled, grained and pitted, with pale streaks
     // along the wind, hollows the sand has stained, dark runs down from above, a few cracks, and sand drifted up from its foot.
     vec2 p = vec2(h, y);
-    float near = 1.0 - 0.75 * smoothstep(30.0, 110.0, dist);        // (fine things fade with distance, or they turn to speckle)
+    // Everything here is drawn to suit the size of a pixel on the wall (gPix): a thing finer than the pixels is not drawn
+    // sharp (it would flicker as you move), it is drawn as what it comes to on average. So the tower is steady from far
+    // off at any picture size, and has all its detail near by.
+    gPix = max(fwidth(p), vec2(0.0005));
+    float pix = max(gPix.x, gPix.y);
+    float near = 1.0 - smoothstep(0.08, 0.35, pix);                 // (the finest things are for near by)
     float cl = vn(p * 0.07) * 0.6 + vn(p * 0.23) * 0.4;
-    float mott = vn(p * 0.9) * 0.55 + vn(p * 2.7) * 0.3 + vn(p * 8.0) * 0.15;
-    float grain = vn(p * 31.0);
-    float scour = vn(vec2(h * 0.11 + 3.0, y * 3.1)) * 0.6 + mix(0.5, vn(vec2(h * 0.37, y * 9.0)), near) * 0.4;      // (the fine streaks only near by: far off they would shimmer)
-    float pit = smoothstep(0.78, 0.92, vn(p * 13.0) * 0.65 + vn(p * 37.0) * 0.35) * near;
-    float crack = smoothstep(0.014, 0.0, abs(vn(vec2(h * 0.31 + y * 0.12, y * 0.21 - h * 0.05)) - 0.5)) * step(0.52, vn(p * 0.05 + 9.0)) * near;
-    float veinL = smoothstep(0.035, 0.0, abs(vn(vec2(h * 0.18 + y * 0.05, y * 0.11)) - 0.5));
-    float run = smoothstep(0.62, 0.9, vn(vec2(h * 1.3, y * 0.07))) * smoothstep(0.3, 0.7, vn(vec2(h * 0.2, y * 0.3 + 4.0)));
-    vec3 stone = vec3(0.80, 0.765, 0.70) * (0.80 + 0.13 * cl + 0.17 * mott * mix(0.5, 1.0, near) + 0.07 * grain * near);
+    float mott = vnf(p * 0.9, vec2(0.9)) * 0.55 + vnf(p * 2.7, vec2(2.7)) * 0.3 + vnf(p * 8.0, vec2(8.0)) * 0.15;
+    float grain = vnf(p * 31.0, vec2(31.0));
+    float scour = vnf(vec2(h * 0.11 + 3.0, y * 3.1), vec2(0.11, 3.1)) * 0.6 + vnf(vec2(h * 0.37, y * 9.0), vec2(0.37, 9.0)) * 0.4;
+    float pit = smoothstep(0.78, 0.92, vnf(p * 13.0, vec2(13.0)) * 0.65 + vnf(p * 37.0, vec2(37.0)) * 0.35);
+    // (a crack or a vein is a line where the noise crosses its middle: the line is never drawn thinner than a pixel, only fainter)
+    float nC = vn(vec2(h * 0.31 + y * 0.12, y * 0.21 - h * 0.05)), wC = fwidth(nC);
+    float crack = smoothstep(0.014 + wC, 0.0, abs(nC - 0.5)) * (0.014 / (0.014 + wC)) * step(0.52, vn(p * 0.05 + 9.0));
+    float nV = vn(vec2(h * 0.18 + y * 0.05, y * 0.11)), wV = fwidth(nV);
+    float veinL = smoothstep(0.035 + wV, 0.0, abs(nV - 0.5)) * (0.035 / (0.035 + wV));
+    float run = smoothstep(0.62, 0.9, vnf(vec2(h * 1.3, y * 0.07), vec2(1.3, 0.07))) * smoothstep(0.3, 0.7, vn(vec2(h * 0.2, y * 0.3 + 4.0)));
+    vec3 stone = vec3(0.80, 0.765, 0.70) * (0.80 + 0.13 * cl + 0.17 * mott + 0.07 * grain);
     stone = mix(stone, vec3(0.87, 0.83, 0.74), smoothstep(0.55, 0.85, scour) * 0.5);            // scoured pale by the wind
     stone = mix(stone, stone * vec3(0.80, 0.72, 0.58), smoothstep(0.38, 0.12, scour) * 0.55);   // hollows the sand has stained
     stone *= 1.0 - pit * 0.32 - crack * 0.5 - run * 0.17;
@@ -125,17 +142,20 @@ vec4 sign_at(float h, float y, float face) {
     float see = mix(1.0, s.z > 1.5 ? 1.0 : mix(0.32, 0.9, s.z), smoothstep(40.0, 130.0, dist));
     // Three thousand years of sand: in patches the gold has gone, most near the foot, and the sign is left as a hollow cut in
     // the stone. What gold is left is dulled in places.
-    float wear = vn(p * 0.55 + 20.0) * 0.5 + vn(p * 1.9 + 7.0) * 0.3 + mix(0.5, vn(p * 6.5), near) * 0.2 + exp(-max(y - ${f2(y0)}, 0.0) / 10.0) * 0.07;
-    float gone = smoothstep(0.52, 0.585, wear);
-    float dull = smoothstep(0.42, 0.72, mix(0.5, vn(p * 3.3 + 1.0), near));
+    float wear = vnf(p * 0.55 + 20.0, vec2(0.55)) * 0.5 + vnf(p * 1.9 + 7.0, vec2(1.9)) * 0.3 + vnf(p * 6.5, vec2(6.5)) * 0.2 + exp(-max(y - ${f2(y0)}, 0.0) / 10.0) * 0.07;
+    float wW = fwidth(wear);                                         // (the edge of a worn patch is never sharper than a pixel)
+    float gone = smoothstep(0.52 - wW, 0.585 + wW, wear);
+    float chip = smoothstep(0.56 - wW, 0.62 + wW, wear);
+    float dull = smoothstep(0.42, 0.72, vnf(p * 3.3 + 1.0, vec2(3.3)));
     // the plain band between two runs of writing, edged with gold; fine lines between the columns
     float yy = mod(y - Y0, PER);
     bool written = !top && y > Y0 && y < Y1;
     float rw = 0.07 + dist * 0.0012;                                 // (the gold rules are drawn a little thicker far off, so they stay whole lines)
-    float rule = written ? max(step(abs(yy - TEXT - 0.12 - rw + 0.07), rw), step(abs(yy - PER + 0.12 + rw - 0.07), rw)) * mix(0.6, 1.0, 1.0 - smoothstep(60.0, 200.0, dist)) : 0.0;
+    float yb = mod(y - Y0 - TEXT - ${f2(band / 2)} + PER * 0.5, PER) - PER * 0.5;      // height from the middle of the nearest plain band
+    float rule = written ? max(cover(yb, ${f2(-band / 2 + 0.05)}, ${f2(-band / 2 + 0.05)} + 2.0 * rw, gPix.y), cover(yb, ${f2(band / 2 - 0.05)} - 2.0 * rw, ${f2(band / 2 - 0.05)}, gPix.y)) * mix(0.6, 1.0, 1.0 - smoothstep(60.0, 200.0, dist)) : 0.0;
     float cx = fract(h / COL);
     float calm = 1.0 - smoothstep(35.0, 110.0, dist);                // thin lines and glints are for near by: far off they flicker
-    float colLine = (written && yy < TEXT && s.z < 0.5) ? step(min(cx, 1.0 - cx) * COL, 0.022) * 0.45 * see * calm : 0.0;
+    float colLine = (written && yy < TEXT && s.z < 0.5) ? cover(min(cx, 1.0 - cx) * COL, -0.022, 0.022, gPix.x) * 0.45 * see * calm : 0.0;
     float sheen = 0.84 + 0.24 * vn(vec2(h * 1.7, y * 1.7)) + 0.10 * fract(yy / ROW);
     vec3 gold = vec3(0.66, 0.43, 0.08) * sheen * (1.0 + 0.55 * bev);
     gold = mix(gold, gold * vec3(0.60, 0.54, 0.50), dull * 0.65);     // dulled
@@ -148,19 +168,24 @@ vec4 sign_at(float h, float y, float face) {
     // the foot of the tier: dark lapis under a line of gold. Its top: a cornice of gold, darker underneath.
     float keep = 0.0;                                               // the dark parts keep their colour up in the haze
     if (!top) {
-      float yd = y - ${f2(y0)}, yc = ${f2(y1)} - y;
-      if (yd >= 0.0 && yd < ${f2(DADO)}) {                            // dark at the ground, lapis by its top
-        col = mix(vec3(0.012, 0.022, 0.07), vec3(0.04, 0.075, 0.21), smoothstep(0.0, 1.5, yd)) * (0.85 + 0.3 * cl); gGold = 0.0; keep = 1.0;
-        ${y0 < 1 ? 'col = mix(col, vec3(0.62, 0.50, 0.30), 0.3 * (1.0 - yd / 2.0));     // sand blown against it' : ''}
-      }
-      if (yd >= ${f2(DADO)} && yd < ${f2(DADO + 0.3)}) { col = vec3(0.64, 0.44, 0.10); gGold = 1.0; }
-      if (yc >= 0.0 && yc < ${f2(CORN)}) { col = vec3(0.70, 0.50, 0.15) * (0.86 + 0.24 * smoothstep(0.0, ${f2(CORN)}, yc)); gGold = 1.0; }
-      if (yc >= 0.9 && yc < 1.5) { col = vec3(0.045, 0.10, 0.30); gGold = 0.0; keep = 1.0; }                 // a stripe of lapis in the cornice
-      if (yc >= ${f2(CORN)} && yc < ${f2(CORN + 0.4)}) { col = vec3(0.12, 0.075, 0.015); gGold = 0.0; keep = 1.0; }      // its dark underside
-      if (keep > 0.5 || yc < ${f2(CORN)} || yd < ${f2(DADO + 0.3)}) {                    // worn like the rest: chipped to the stone in patches, pitted
-        col = mix(col, stone * 0.82, smoothstep(0.56, 0.62, wear) * 0.6) * (1.0 - pit * 0.3) * (0.86 + 0.28 * mott);
-        gGold *= 1.0 - smoothstep(0.56, 0.62, wear);
-      }
+      // (each band is laid on by how much of the pixel it covers, so its edges do not jump from one line of pixels to the next;
+      // only between this tier's own foot and top: a wall that runs on past them is plain there, as before)
+      float yd = y - ${f2(y0)}, yc = ${f2(y1)} - y, fy = gPix.y;
+      float cD = cover(yd, -fy, ${f2(DADO)}, fy);                   // dark at the ground, lapis by its top
+      vec3 dado = mix(vec3(0.012, 0.022, 0.07), vec3(0.04, 0.075, 0.21), smoothstep(0.0, 1.5, yd)) * (0.85 + 0.3 * cl);
+      ${y0 < 1 ? 'dado = mix(dado, vec3(0.62, 0.50, 0.30), 0.3 * clamp(1.0 - yd / 2.0, 0.0, 1.0));     // sand blown against it' : ''}
+      col = mix(col, dado, cD); gGold *= 1.0 - cD; keep = cD;
+      float cL = cover(yd, ${f2(DADO)}, ${f2(DADO + 0.3)}, fy);        // a line of gold over it
+      col = mix(col, vec3(0.64, 0.44, 0.10), cL); gGold = mix(gGold, 1.0, cL);
+      float cC = cover(yc, -fy, ${f2(CORN)}, fy);                   // the cornice
+      col = mix(col, vec3(0.70, 0.50, 0.15) * (0.86 + 0.24 * smoothstep(0.0, ${f2(CORN)}, yc)), cC); gGold = mix(gGold, 1.0, cC);
+      float cS = cover(yc, 0.9, 1.5, fy);                             // a stripe of lapis in the cornice
+      col = mix(col, vec3(0.045, 0.10, 0.30), cS); gGold *= 1.0 - cS; keep = max(keep, cS);
+      float cU = cover(yc, ${f2(CORN)}, ${f2(CORN + 0.4)}, fy);        // its dark underside
+      col = mix(col, vec3(0.12, 0.075, 0.015), cU); gGold *= 1.0 - cU; keep = max(keep, cU);
+      float trim = clamp(cD + cL + cC + cU, 0.0, 1.0);                // worn like the rest: chipped to the stone in patches, pitted
+      col = mix(col, mix(col, stone * 0.82, chip * 0.6) * (1.0 - pit * 0.3) * (0.86 + 0.28 * mott), trim);
+      gGold *= 1.0 - chip * trim;
     }
     // the gold glints: each sign is set at its own slight tilt, so they catch the sun one after another as you move
     vec3 tang = ew ? vec3(0.0, 0.0, 1.0) : vec3(1.0, 0.0, 0.0);
@@ -170,7 +195,7 @@ vec4 sign_at(float h, float y, float face) {
     // and still it radiates: a faint warm light in the stone itself, stronger toward the top, and a slow light that climbs its veins
     float breath = 0.8 + 0.2 * sin(gTime * 0.5);
     gGlow = vec3(1.0, 0.93, 0.78) * (0.035 + 0.075 * smoothstep(0.0, 140.0, y)) * breath * (1.0 - keep)
-      + vec3(1.0, 0.78, 0.36) * veinL * (0.24 + 0.24 * sin(y * 0.09 - gTime * 0.7 + h * 0.03)) * near;
+      + vec3(1.0, 0.78, 0.36) * veinL * (0.24 + 0.24 * sin(y * 0.09 - gTime * 0.7 + h * 0.03)) * (1.0 - 0.75 * smoothstep(30.0, 110.0, dist));      // (fainter far off, so the tower stays calm from the desert)
     gGlint = lit * (pow(max(dot(n2, hv), 0.0), 60.0) * 2.4 * gGold * (1.0 - s.y) * (1.0 - smoothstep(50.0, 140.0, dist)) + pow(max(dot(vWN, hv), 0.0), 80.0) * 0.10);
     // the sides the sun does not reach are cool and blue, not grey
     col *= mix(mix(vec3(0.66, 0.70, 0.98), vec3(1.18, 1.05, 0.82), gGold), vec3(1.0), lit);       // (the gold keeps its own colour)

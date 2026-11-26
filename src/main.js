@@ -42,9 +42,16 @@ const TORCH_LIGHTS = 5;            // how many wall torches cast light at once (
 const DARK = { color: 0x000000, density: 0.045 };
 const WET = { color: 0x06323a, density: 0.22 };
 
-// The picture is drawn small and scaled up with hard pixels. RES is its height in pixels.
-const RES_STEPS = [160, 200, 240, 300, 360, 480];
-let RES = +new URLSearchParams(location.search).get('res') || RES_STEPS[RES_STEPS.length - 1];      // the game starts at the finest picture
+// RES is the height of the picture in pixels. (Mirko: a higher picture.) The game used to draw 480 lines at most and scale
+// them up with hard pixels; now it starts as fine as the screen itself, up to 1080 lines (720 on a touch screen, to spare a
+// phone or a tablet). [-] and [=] step it down and up, and the choice is kept. The low steps are still there: at 480 lines
+// and under the picture is scaled up with hard pixels as before, above that it is scaled smoothly.
+const RES_STEPS = [160, 200, 240, 300, 360, 480, 600, 720, 900, 1080];
+const RES_START = (() => {
+  const real = Math.round(innerHeight * (window.devicePixelRatio || 1)), cap = matchMedia('(pointer: coarse)').matches ? 720 : 1080;
+  return RES_STEPS.filter(v => v <= Math.min(cap, Math.max(480, real * 1.08))).pop();
+})();
+let RES = +new URLSearchParams(location.search).get('res') || +(() => { try { return localStorage.getItem('tsp_res'); } catch (e) { return 0; } })() || RES_START;
 
 const canvas = document.getElementById('view');
 // antialias: the picture is still small and scaled up with hard pixels, but thin far things (the rays of the White Tower, seen
@@ -60,6 +67,7 @@ scene.add(camera);
 
 function resize() {
   renderer.setSize(Math.round(RES * innerWidth / innerHeight), RES, false);
+  canvas.style.imageRendering = RES > 480 ? 'auto' : 'pixelated';
   camera.aspect = innerWidth / innerHeight;
   camera.updateProjectionMatrix();
 }
@@ -750,6 +758,8 @@ function step(dt, forced) {
     const i = RES_STEPS.reduce((b, v, j) => Math.abs(v - RES) < Math.abs(RES_STEPS[b] - RES) ? j : b, 0);
     RES = RES_STEPS[Math.max(0, Math.min(RES_STEPS.length - 1, i + d))];
     resize(); shownDevice = '';
+    ui.say(`Picture: ${RES} lines.`);
+    if (params.get('nosave') !== '1') try { localStorage.setItem('tsp_res', RES); } catch (e) {}
   }
   const pad = input.device === 'pad';
   let padPress = false;
@@ -969,6 +979,7 @@ function step(dt, forced) {
     towerTick(dt); windows.update(dt);
     wind(Math.min(1, Math.max(0, player.pos.y / 140)));          // the wind is harder the higher you are
   }
+  ladders.update(camera.position);
   renderer.render(scene, camera);
 }
 
