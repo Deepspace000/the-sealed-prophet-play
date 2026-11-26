@@ -440,7 +440,7 @@ function openMap() {
   if (fight.dead || asleep > 0 || leaving || menu.open) return;
   if (!hasBook()) return ui.say('You need your notebook to see the map.');
   ui.closeAll();
-  map.show({ x: player.pos.x / level.size, z: player.pos.z / level.size, yaw: player.yaw }, input.device);
+  map.show({ x: player.pos.x / level.size, z: player.pos.z / level.size, y: player.pos.y, yaw: player.yaw }, input.device);
 }
 
 // Sleeping. You need a bedroll and a quiet place.

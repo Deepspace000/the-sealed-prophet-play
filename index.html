@@ -122,6 +122,8 @@
   #mapTop button:hover { background: #d9b65a; color: #17120a; }
   #mapPage { position: relative; width: min(96vw, 1040px); flex: 0 1 740px; min-height: 0; box-shadow: 0 10px 40px #000; }
   #mapCanvas { position: absolute; inset: 0; width: 100%; height: 100%; cursor: crosshair; }
+  #map3d { display: none; position: absolute; inset: 0; width: 100%; height: 100%; cursor: grab; touch-action: none; }
+  #map3dNone { display: none; position: absolute; left: 0; right: 0; top: 46%; text-align: center; font: italic 20px var(--book); color: rgba(52,50,48,.75); pointer-events: none; }
   #mapNote { display: none; position: absolute; width: 190px; box-sizing: border-box; padding: 0 4px; font: italic 17px var(--book);
              color: #2b2a28; background: rgba(255,255,255,.45); border: 0; border-bottom: 1px solid #6b665c; outline: 0;
              user-select: text; -webkit-user-select: text; }
@@ -421,11 +423,11 @@
   <div id="shopSum"></div><div id="shopBtns"><button id="shopTrade">TRADE</button><button id="shopClose">CLOSE</button></div></div></div>
 <div id="menu"><div id="menuIn"></div><input id="menuFile" type="file" accept=".json,application/json" hidden></div>
 <div id="map">
-  <div id="mapTop"><button data-m="prev">&#9664;</button><button data-m="close">CLOSE</button><button data-m="next">&#9654;</button></div>
-  <div id="mapPage"><canvas id="mapCanvas"></canvas><input id="mapNote" maxlength="36" autocomplete="off" spellcheck="false"></div>
+  <div id="mapTop"><button data-m="prev">&#9664;</button><button data-m="3d" id="map3dBtn">3D VIEW</button><button data-m="close">CLOSE</button><button data-m="next">&#9654;</button></div>
+  <div id="mapPage"><canvas id="mapCanvas"></canvas><input id="mapNote" maxlength="36" autocomplete="off" spellcheck="false"><div id="map3dNone">Nothing of this place has been seen yet.</div></div>
   <div id="mapHint"></div>
 </div>
-<div id="title">THE SEALED PROPHET <span class="ver">v0.2.34</span><small><span id="levelName"></span> &middot; <span id="state">Walking</span></small></div>
+<div id="title">THE SEALED PROPHET <span class="ver">v0.2.35</span><small><span id="levelName"></span> &middot; <span id="state">Walking</span></small></div>
 <button id="helpBtn">HIDE CONTROLS</button>
 <div id="help"></div>
 <div id="look"></div>
@@ -486,7 +488,7 @@ window.loading = (() => {
       <div class="fan"></div>
       <h1 id="bloodTitle">THE SEALED<br>PROPHET</h1>
       <div class="sub">A JOURNAL &middot; 1924</div>
-      <div class="ver" style="margin-top:8px;text-align:center">v0.2.34</div>
+      <div class="ver" style="margin-top:8px;text-align:center">v0.2.35</div>
       <div class="rule"></div>
       <button id="continueBtn" style="display:none">CONTINUE</button>
       <button id="beginBtn">BEGIN</button>

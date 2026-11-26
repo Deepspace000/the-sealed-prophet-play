@@ -1,4 +1,6 @@
 // The map: one page of your notebook for each level. It draws itself as you walk, and you can write notes on it.
+// A page can also be looked at in three dimensions (map3d.js): the same seen cells as slabs at their heights.
+import { Map3D } from './map3d.js';
 // What a save keeps for each level:  { name, w, h, seen, notes: [{ x, z, t }] }
 //   seen  = one character for each cell, row after row: 1 if you have seen it, 0 if not
 //   notes = your own words; x and z say where on the level, measured in cells
@@ -8,9 +10,14 @@ import { Level } from './level.js';
 const WORDS = ['Door', 'Locked', 'Danger', 'Treasure', 'Food', 'Come back here'];
 const DIRS = [[0, -1], [1, 0], [0, 1], [-1, 0]];                 // north, east, south, west
 const EDGE = [[0.5, 0], [1, 0.5], [0.5, 1], [0, 0.5]];           // the middle of each side of a cell
+const HINT3 = {
+  keys: 'Drag to turn &nbsp; Shift-drag to slide &nbsp; wheel to zoom &nbsp; arrow keys turn the page &nbsp; Tab: back to the page &nbsp; M closes',
+  pad: 'Left stick turns and tilts &nbsp; A zooms in, X zooms out &nbsp; D-pad turns the page &nbsp; Y: back to the page &nbsp; B closes',
+  touch: 'One finger turns &nbsp; two fingers slide and zoom',
+};
 const HINT = {
-  keys: 'Click the page to write a note &nbsp; click a note to change it, or empty it to rub it out &nbsp; arrow keys turn the page &nbsp; M closes',
-  pad: 'Left stick moves the cross &nbsp; A writes a word, press again for the next word &nbsp; X rubs it out &nbsp; D-pad turns the page &nbsp; B closes',
+  keys: 'Click the page to write a note &nbsp; click a note to change it, or empty it to rub it out &nbsp; arrow keys turn the page &nbsp; Tab: 3D view &nbsp; M closes',
+  pad: 'Left stick moves the cross &nbsp; A writes a word, press again for the next word &nbsp; X rubs it out &nbsp; D-pad turns the page &nbsp; Y: 3D view &nbsp; B closes',
   touch: 'Tap the page to write a note &nbsp; tap a note to change it, or empty it to rub it out',
 };
 const PENCIL = 'rgba(52,50,48,.82)', FAINT = 'rgba(52,50,48,.6)', BLUE = 'rgba(50,95,150,.5)', RED = 'rgba(175,45,30,.9)';
@@ -48,10 +55,13 @@ export class GameMap {
     this.hint = document.getElementById('mapHint');
     this.el.addEventListener('pointerdown', e => {
       const b = e.target.closest('button');
-      if (b) { e.preventDefault(); const a = b.dataset.m; if (a === 'close') this.close(); else this.flip(a === 'prev' ? -1 : 1); }
+      if (b) { e.preventDefault(); const a = b.dataset.m; if (a === 'close') this.close(); else if (a === '3d') this.set3d(!this.three); else this.flip(a === 'prev' ? -1 : 1); }
       else if (e.target === this.el) this.close();
     });
     this.cv.addEventListener('click', e => this.click(e));
+    // the 3D view of a page (Mirko): made the first time it is asked for; which view you last used is remembered
+    this.m3 = null; this.three = false;
+    try { this.three = localStorage.getItem('tsp_map3d') === '1'; } catch (e) { /* no storage: the page view */ }
     this.field.addEventListener('keydown', e => {
       if (e.key === 'Enter') this.commit();
       else if (e.key === 'Escape') { this.editing = null; this.field.style.display = 'none'; this.dirty = true; }
@@ -119,11 +129,35 @@ export class GameMap {
     const many = this.pagesInOrder().length > 1;
     for (const b of this.el.querySelectorAll('[data-m=prev],[data-m=next]')) b.style.visibility = many ? 'visible' : 'hidden';
     this.dirty = true;
+    this.set3d(this.three, true);
+  }
+  // Switch between the page and the 3D view of it. fresh: the map has just been opened (look from behind where you stand).
+  set3d(on, fresh) {
+    this.commit();
+    this.three = on;
+    if (!fresh) try { localStorage.setItem('tsp_map3d', on ? '1' : '0'); } catch (e) { /* not kept */ }
+    if (on && !this.m3) this.m3 = new Map3D(this.cv.parentNode);
+    this.cv.style.display = on ? 'none' : '';
+    if (this.m3) this.m3.show(on);
+    document.getElementById('map3dBtn').textContent = on ? 'PAGE VIEW' : '3D VIEW';
+    this.hint.innerHTML = (on ? HINT3 : HINT)[this.device];
+    this.fresh3 = true;
+    this.dirty = true;
+  }
+  // draw the 3D view of the page being looked at (when its level is known)
+  draw3() {
+    const wd = this.world[this.view], none = document.getElementById('map3dNone');
+    if (!wd) { none.style.display = 'none'; return; }
+    this.m3.build(wd.level, this.seen[this.view], this.view === this.id ? this.me : null, this.fresh3);
+    this.fresh3 = false;
+    none.style.display = this.m3.empty ? 'block' : 'none';
+    this.m3.render();
   }
   close() {
     this.commit();
     this.open = false;
     this.el.style.display = 'none';
+    document.getElementById('map3dNone').style.display = 'none';
   }
   flip(d) {
     const list = this.pagesInOrder();
@@ -136,11 +170,18 @@ export class GameMap {
       const id = this.view;
       this.load(id).then(w => { this.world[id] = w; this.page(id); this.dirty = true; });
     }
-    this.dirty = true;
+    this.dirty = true; this.fresh3 = true;
   }
 
   // Controller: the stick moves a cross about the page.
   control(inp, dt) {
+    if (inp.pressed.has('mode') || (this.device === 'pad' && inp.pressed.has('bag'))) this.set3d(!this.three);
+    if (this.three) {
+      if (this.device === 'pad') { if (inp.pressed.has('left')) this.flip(-1); if (inp.pressed.has('right')) this.flip(1); }
+      this.m3.control(inp, dt);
+      this.draw3();
+      return;
+    }
     if (this.device === 'pad') {
       const p = this.pages[this.view];
       if (inp.mx || inp.mz) {
