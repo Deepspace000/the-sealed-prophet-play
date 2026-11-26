@@ -10,7 +10,7 @@
 import * as THREE from 'three';
 import { art } from './art.js';
 import { play } from './sound.js';
-import { modelMesh } from './models.js';
+import { modelMesh, walkGrid } from './models.js';
 
 // The outline of an urn one metre tall: [how wide, how high] from the foot to the lip.
 const OUTLINE = [[0.13, 0], [0.19, 0.03], [0.3, 0.2], [0.36, 0.42], [0.37, 0.58], [0.32, 0.75], [0.21, 0.87], [0.155, 0.92], [0.165, 0.97], [0.21, 1]];
@@ -129,13 +129,14 @@ export function strikeUrn(urns, me, yaw, reach, half, dmg, type) {
 
 // Puts the level's props into the scene. Returns { solid: what the player must walk round, as [{ x, y, z, r }],
 // flat: the flat pictures, which the game must shade itself, as [{ spr, x, y, z }],
+// walks: the models you walk on and through (ruins), as [{ at(x, z) }] (models.js, walkGrid),
 // fires: where a fire burns on a brazier, as [{ x, y, z }] }.
 // smashed: the numbers of the urns the player has already broken (from a save).
 export function buildProps(scene, level, list, smashed) {
-  if (!list.length) return { solid: [], flat: [], fires: [], seal: null };
+  if (!list.length) return { solid: [], flat: [], fires: [], seal: null, walks: [] };
   const mat = new THREE.MeshLambertMaterial({ map: clay(), side: THREE.DoubleSide, flatShading: true });
   const dark = new THREE.MeshBasicMaterial({ color: 0x050302 });
-  const solid = [], flat = [], fires = [];
+  const solid = [], flat = [], fires = [], walks = [];
   let seal = null;
   list.forEach((p, n) => {
     const at = p.at || [0.5, 0.5], x = (p.cell[0] + at[0]) * level.size, z = (p.cell[1] + at[1]) * level.size;
@@ -190,6 +191,7 @@ export function buildProps(scene, level, list, smashed) {
       mesh.scale.set(tall * wide, tall, tall * wide);
       scene.add(mesh);
       if (p.fire) fires.push({ x, y: y + mesh.userData.height + 0.12, z });
+      if (p.walk) { walks.push(walkGrid(mesh, p.walk[0], p.walk[1])); return; }      // a ruin: walked on and through (models.js)
       const r = p.solid ?? mesh.userData.radius * 0.8 * wide;
       if (r > 0) solid.push({ n, x, y, z, r, kind: 'broken', tall: true });
       return;
@@ -205,5 +207,5 @@ export function buildProps(scene, level, list, smashed) {
     scene.add(grp);
     solid.push(u);
   });
-  return { solid, flat, fires, seal };
+  return { solid, flat, fires, seal, walks };
 }

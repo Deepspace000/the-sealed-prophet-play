@@ -219,7 +219,10 @@ const ladders = new Ladders({ scene, level, ladders: data.ladders });
 const windows = new Windows({ scene, windows: data.windows, texture: glassTexture, level });
 new Shafts({ scene, level, shafts: data.shafts, sun: data.sky && data.sky.sun && data.sky.sun.dir });      // light down holes in a roof            // long stained glass windows
 const terrain = data.terrain ? new Terrain({ scene, level, terrain: data.terrain, mat: MATS[data.terrain.mat || 'sand'] }) : null;      // dunes (src/terrain.js)
-player.extraFloor = (x, z, lim) => Math.max(lifts.topAt(x, z, lim), beams.topAt(x, z, lim), terrain ? terrain.topAt(x, z, lim) : -Infinity);      // lifts, beams and dunes hold you up too (lim: none higher than this)
+// A ruin (a prop with "walk"): its base and steps are ground, its columns are in the way.
+const ruinTop = (x, z, lim) => { let t = -Infinity; for (const w of props.walks) { const y = w.at(x, z); if (y <= lim && y > t) t = y; } return t; };
+if (props.walks.length) player.blocked = (x, z, y, stepUp) => props.walks.some(w => w.at(x, z) > y + stepUp);
+player.extraFloor = (x, z, lim) => Math.max(lifts.topAt(x, z, lim), beams.topAt(x, z, lim), terrain ? terrain.topAt(x, z, lim) : -Infinity, ruinTop(x, z, lim));      // lifts, beams and dunes hold you up too (lim: none higher than this)
 player.ladderAt = (x, z, y, yaw) => ladders.at(x, z, y, yaw);
 // Where a thing lies: the floor, or a room's roof or a ray or a lift if it was left up there (near: the height it was left at).
 world.ground = (x, z, near) => {

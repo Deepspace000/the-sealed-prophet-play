@@ -32,9 +32,12 @@ export class Player {
   // Can the body stand at x,z with its feet at y, stepping up at most stepUp?
   fits(x, z, y, stepUp) {
     const L = this.level;
+    // "blocked": other things that stand in the way (the stone of a ruin). If you are somehow inside one already, it lets you out.
+    const wall = this.blocked && !this.samples(this.pos.x, this.pos.z).some(s => this.blocked(s[0], s[1], this.pos.y, stepUp)) ? this.blocked : null;
     for (const [sx, sz] of this.samples(x, z)) {
       const f = L.floorAt(sx, sz, y);
       if (f > y + stepUp) return false;
+      if (wall && wall(sx, sz, y, stepUp)) return false;
       if (L.ceilAt(sx, sz, y) - Math.max(f, y) < H - 1e-4) return false;       // (a small margin: pressed against a low ceiling you are exactly H under it)
     }
     return true;
