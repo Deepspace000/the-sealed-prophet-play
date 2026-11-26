@@ -1,6 +1,20 @@
-// STAND-IN ART ONLY. These textures are drawn by code so the test level is visible.
-// They are to be replaced by real painted textures before anything is shown as finished.
+// The stone of the levels. The dungeons' walls, floor, ceiling and walls of hieroglyphs are painted pictures (art/walls,
+// made with Gemini, see tools/make_walls.py): Mirko found the drawn bricks too simple once the picture got finer.
+// The rest here is still drawn by code (stand-in art), and so is any of those five whose picture is missing.
 import * as THREE from 'three';
+import { art } from './art.js';
+
+// The painted picture of this stone if there is one (512 pixels for four metres), or else the drawn one.
+function stone(name, drawn) {
+  const im = art.walls[name];
+  if (!im) return drawn();
+  const t = new THREE.Texture(im);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping; t.colorSpace = THREE.SRGBColorSpace;
+  t.magFilter = THREE.NearestFilter;              // chunky pixels up close, like everything else
+  t.minFilter = THREE.LinearMipmapLinearFilter; t.anisotropy = 8;      // (smoothed far off and edge on, or it shimmers)
+  t.needsUpdate = true;
+  return t;
+}
 
 function tex(size, draw) {
   const c = document.createElement('canvas');
@@ -164,12 +178,12 @@ function sand(o) {
 export function standinMaterials() {
   const lam = map => new THREE.MeshLambertMaterial({ map });
   return {
-    wall: lam(oldStone({ seed: 11, rgb: [176, 146, 100], rows: [22, 18, 26, 16, 24, 22], minW: 22, maxW: 46, cracks: 6,
-      paint: [[40, 5, [52, 82, 120]], [46, 2, [150, 74, 44]]] })),
-    floor: lam(oldStone({ seed: 23, rgb: [138, 116, 80], rows: [32, 32, 32, 32], minW: 26, maxW: 40, cracks: 4, sand: true })),
-    ceil: lam(oldStone({ seed: 37, rgb: [98, 84, 64], rows: [42, 43, 43], minW: 40, maxW: 64, cracks: 3, dark: true })),
-    hiero: lam(hieroStone({ seed: 41, rgb: [168, 138, 96], rows: [22, 18, 26, 16, 24, 22], regs: [18, 142], minW: 22, maxW: 46, cracks: 5 })),
-    hiero2: lam(hieroStone({ seed: 53, rgb: [150, 124, 92], rows: [32, 32, 32, 32], regs: [72], signs: ['#8a1d14', '#c9a43c', '#2b5a8e'], minW: 26, maxW: 40, cracks: 4 })),
+    wall: lam(stone('wall', () => oldStone({ seed: 11, rgb: [176, 146, 100], rows: [22, 18, 26, 16, 24, 22], minW: 22, maxW: 46, cracks: 6,
+      paint: [[40, 5, [52, 82, 120]], [46, 2, [150, 74, 44]]] }))),
+    floor: lam(stone('floor', () => oldStone({ seed: 23, rgb: [138, 116, 80], rows: [32, 32, 32, 32], minW: 26, maxW: 40, cracks: 4, sand: true }))),
+    ceil: lam(stone('ceil', () => oldStone({ seed: 37, rgb: [98, 84, 64], rows: [42, 43, 43], minW: 40, maxW: 64, cracks: 3, dark: true }))),
+    hiero: lam(stone('hiero', () => hieroStone({ seed: 41, rgb: [168, 138, 96], rows: [22, 18, 26, 16, 24, 22], regs: [18, 142], minW: 22, maxW: 46, cracks: 5 }))),
+    hiero2: lam(stone('hiero2', () => hieroStone({ seed: 53, rgb: [150, 124, 92], rows: [32, 32, 32, 32], regs: [72], signs: ['#8a1d14', '#c9a43c', '#2b5a8e'], minW: 26, maxW: 40, cracks: 4 }))),
     // The White Tower of Nut: pale limestone, the walls carved and painted with signs in blue, turquoise, red and gold
     white: lam(hieroStone({ seed: 61, rgb: [246, 242, 230], rows: [22, 18, 26, 16, 24, 22], regs: [18, 142], minW: 22, maxW: 46, cracks: 2, clean: true,
       signs: ['#2b5a8e', '#1f9c96', '#a8432a', '#c9a43c'] })),

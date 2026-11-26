@@ -625,17 +625,11 @@
     {"id": "sky_lizard", "cell": [55, 18], "y": 70},
     {"id": "sky_jelly", "cell": [24, 24], "y": 144.3},
     {"id": "sky_lizard", "cell": [29, 27], "y": 143},
-    {"id": "jackal", "cell": [55, 220]},
     {"id": "jackal", "cell": [54, 214]},
-    {"id": "jackal", "cell": [61, 207]},
     {"id": "rotting_dead", "cell": [58, 211]},
     {"id": "wrapped_dead", "cell": [57, 195]},
     {"id": "jackal", "cell": [55, 187]},
-    {"id": "jackal", "cell": [54, 182]},
-    {"id": "jackal", "cell": [47, 142], "y": 1.53},
-    {"id": "jackal", "cell": [64, 136], "y": 2.4},
     {"id": "jackal", "cell": [49, 118], "y": 0.1},
-    {"id": "jackal", "cell": [63, 104], "y": 1.15},
     {"id": "thin_demon", "cell": [55, 124]},
     {"id": "thin_demon", "cell": [56, 92]},
     {"id": "sky_lizard", "cell": [55, 140], "y": 17},
@@ -644,8 +638,7 @@
     {"id": "rotting_dead", "cell": [83, 117]},
     {"id": "jackal", "cell": [88, 118]},
     {"id": "thin_demon", "cell": [27, 65]},
-    {"id": "jackal", "cell": [89, 150]},
-    {"id": "jackal", "cell": [89, 152]}
+    {"id": "jackal", "cell": [89, 150]}
   ],
   "spots": [
     {"cell": [55, 231], "wall": "S", "text": "The way back to the hall.", "to": "hub"},

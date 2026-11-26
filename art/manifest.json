@@ -1,5 +1,5 @@
 {
- "v": 1795646917,
+ "v": 1795664582,
  "items": [
   "bandage",
   "bedroll",
@@ -115,5 +115,12 @@
   "wrapped_dead_step",
   "wrapped_dead_strike",
   "wrapped_dead_windup"
+ ],
+ "walls": [
+  "ceil",
+  "floor",
+  "hiero",
+  "hiero2",
+  "wall"
  ]
 }
