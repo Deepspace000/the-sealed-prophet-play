@@ -34,7 +34,11 @@ const params = new URLSearchParams(location.search);
 const fresh = params.get('intro') !== '0';
 if (fresh) clearRun();
 let run = getRun();
-const wanted = params.get('level');
+// The second realm was the White Tower of Nut. Mirko wanted another Egyptian name, so the god is now Horus, lord of the sky (the
+// sun and the moon are his eyes; the tower already bears an eye and wings). Only the name shown has changed: the level, its
+// keys and the saves still say "nut" inside, so nothing saved is lost. (?level=horus opens it too.)
+const GOD_NAME = { nut: 'Horus' }, LEVEL_ALIAS = { horus: 'nut' };
+const wanted = LEVEL_ALIAS[params.get('level')] || params.get('level');
 if (run && wanted && wanted !== run.level) run = { ...run, from: run.level, level: wanted, pos: null };   // a jump made for testing
 const LEVEL = run ? run.level : (wanted || 'test');
 const go = () => { location.search = '?intro=0' + (params.get('nosave') === '1' ? '&nosave=1' : '') + (params.get('sound') === '1' ? '&sound=1' : ''); };
@@ -102,7 +106,7 @@ data.name = known(LEVEL) ? REAL_NAME : 'Unknown area';
 for (const s of data.spots || []) if (s.to && s.textUnknown && !known(s.to)) s.text = s.textUnknown;     // a door that would name a place you do not know yet
 LOAD.name(known(LEVEL) ? REAL_NAME.toUpperCase() : 'LOADING GAME');      // (a place you do not know yet is not named on the loading page)
 const setDoor = s => {
-  const name = s.realm[0].toUpperCase() + s.realm.slice(1);
+  const name = GOD_NAME[s.realm] || s.realm[0].toUpperCase() + s.realm.slice(1);
   if (!unlocked.has(s.realm)) return;
   if (s.exists) { s.to = s.realm; s.text = `The door of ${name}.`; }
   else s.text = `The door of ${name}. It is unlocked, but nothing lies beyond it yet.`;
@@ -112,7 +116,9 @@ await Promise.all((data.spots || []).filter(s => s.realm && !s.to).map(async s =
   setDoor(s);
 }));
 LOAD.set(0.1);
-await loadArt(p => LOAD.set(0.1 + 0.55 * p));
+// (only the stone this level uses: every level has the dungeon's wall, floor and ceiling and the false door; the others by name)
+const levelText = JSON.stringify(data);
+await loadArt(p => LOAD.set(0.1 + 0.55 * p), kind => ['wall', 'floor', 'ceil', 'door'].includes(kind) || levelText.includes(`"${kind}"`) || (!!data.sky && ['whiteplain', 'sand'].includes(kind)));
 LOAD.set(0.66);
 const level = new Level(data);
 if (data.fog != null) scene.fog.density = DARK.density = data.fog;      // how fast things fade into the dark
@@ -126,9 +132,9 @@ if (data.sky) {
     .replace('irradiance += getHemisphereLightIrradiance( hemisphereLights[ i ], geometryNormal );', 'irradiance += getHemisphereLightIrradiance( hemisphereLights[ i ], geometryNormal ) * 0.02;')
     .replace('vec3 irradiance = getAmbientLightIrradiance( ambientLightColor );', 'vec3 irradiance = getAmbientLightIrradiance( ambientLightColor ) * 0.1;');
   for (const [name, from] of [['underWall', 'wall'], ['underFloor', 'floor'], ['underCeil', 'ceil']]) {
-    const m = MATS[from].clone();
-    m.onBeforeCompile = sh => { sh.fragmentShader = sh.fragmentShader.replace('#include <lights_fragment_begin>', C); };
-    m.customProgramCacheKey = () => 'under';
+    const m = MATS[from].clone(), first = m.onBeforeCompile, key = m.customProgramCacheKey();      // (the stone may already pick its own variants: keep that)
+    m.onBeforeCompile = (sh, r) => { first.call(m, sh, r); sh.fragmentShader = sh.fragmentShader.replace('#include <lights_fragment_begin>', C); };
+    m.customProgramCacheKey = () => 'under' + key;
     MATS[name] = m;
   }
 }
@@ -476,7 +482,7 @@ function useThing(it) {
 const WALL = { N: [0, -1, 0], S: [0, 1, Math.PI], E: [1, 0, -Math.PI / 2], W: [-1, 0, Math.PI / 2] };
 const spots = (data.spots || []).map(s => {
   if (s.wall) {
-    const [ox, oz, turn] = WALL[s.wall], door = standinDoor(!!s.to);
+    const [ox, oz, turn] = WALL[s.wall], door = standinDoor(!!s.to, s.cell[0] + s.cell[1]);
     s.mesh = door;
     door.position.set((s.cell[0] + 0.5 + ox * 0.49) * level.size, level.cell(s.cell[0], s.cell[1]).floor + 1.22,
       (s.cell[1] + 0.5 + oz * 0.49) * level.size);
@@ -532,7 +538,7 @@ function unlockRealm(realm) {
   const was = !!s.to;
   setDoor(s);
   if (s.mesh && s.to && !was) {                       // the closed door picture is swapped for an open one
-    const open = standinDoor(true);
+    const open = standinDoor(true, s.cell[0] + s.cell[1]);
     open.position.copy(s.mesh.position); open.rotation.copy(s.mesh.rotation);
     scene.remove(s.mesh); scene.add(open); s.mesh = open;
   }

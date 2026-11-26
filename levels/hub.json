@@ -123,7 +123,7 @@
   ],
   "spots": [
     {"cell": [10, 3], "wall": "N", "text": "The false door of Ptah. It is sealed.", "realm": "ptah"},
-    {"cell": [16, 3], "wall": "N", "text": "The false door of Nut. It is sealed.", "realm": "nut"},
+    {"cell": [16, 3], "wall": "N", "text": "The false door of Horus. It is sealed.", "realm": "horus"},
     {"cell": [23, 10], "wall": "E", "text": "The false door of Thoth. It is sealed.", "realm": "thoth"},
     {"cell": [23, 16], "wall": "E", "text": "The false door of Sekhmet. It is sealed.", "realm": "sekhmet"},
     {"cell": [16, 23], "wall": "S", "text": "The false door of Anubis. It is sealed.", "realm": "anubis"},

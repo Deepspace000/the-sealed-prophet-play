@@ -1,5 +1,5 @@
 {
-  "name": "The White Tower of Nut",
+  "name": "The White Tower of Horus",
   "rev": 8,
   "fallDamage": true,
   "toughness": 1.5,
@@ -10,7 +10,7 @@
   "wayupText": "The gem is yours. Stone grinds beside you: the slab has slid off the shaft in the top of the tower.",
   "notes": [
     "Built by tools/make_nut.py. Change that file and run it again, rather than editing this one. Format: see levels/test.json.",
-    "You go UP here: the gem of Nut is at the top of the tower, among the clouds.",
+    "You go UP here: the gem of Horus is at the top of the tower, among the clouds.",
     "sky: this level is outdoors (see src/sky.js). ceilTex 'sky' = open to the sky: no roof is drawn, and nothing at the level's edge.",
     "cap: a room under solid stone; its top, at the height 'cap', is ground you walk on above. slide: a slope too smooth to stand on.",
     "beams: rays of stone to walk on, ladders: climb them (src/beams.js). lifts with dx/dz also move sideways and carry you.",
@@ -651,7 +651,7 @@
     {"cell": [48, 49], "text": "A small dark room under the stair. Sand has blown in."},
     {"cell": [52, 40], "text": "Cold air comes through the west wall here."},
     {"cell": [52, 39], "text": "The chute ends in a small room. A ladder goes back up."},
-    {"cell": [54, 42], "text": "The gem of Nut lies on a plinth at the top of the tower, among the clouds."},
+    {"cell": [54, 42], "text": "The gem of Horus lies on a plinth at the top of the tower, among the clouds."},
     {"cell": [56, 43], "text": "A square shaft goes down into the tower. A slab of stone lies over it."},
     {"cell": [57, 41], "text": "Someone is shouting behind the bars of a small stone house."},
     {"cell": [56, 42], "auto": true, "delay": 0.35, "to": "hub", "via": "drop", "text": ""},

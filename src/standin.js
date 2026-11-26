@@ -4,16 +4,60 @@
 import * as THREE from 'three';
 import { art } from './art.js';
 
-// The painted picture of this stone if there is one (512 pixels for four metres), or else the drawn one.
-function stone(name, drawn) {
-  const im = art.walls[name];
-  if (!im) return drawn();
+function painted(im, repeat = true) {
   const t = new THREE.Texture(im);
-  t.wrapS = t.wrapT = THREE.RepeatWrapping; t.colorSpace = THREE.SRGBColorSpace;
+  if (repeat) t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.colorSpace = THREE.SRGBColorSpace;
   t.magFilter = THREE.NearestFilter;              // chunky pixels up close, like everything else
   t.minFilter = THREE.LinearMipmapLinearFilter; t.anisotropy = 8;      // (smoothed far off and edge on, or it shimmers)
   t.needsUpdate = true;
   return t;
+}
+
+// A material of one kind of stone: its painted pictures if there are any (512 pixels for four metres), or else the drawn one.
+// (Mirko: make lots of variants, so it does not look cut and pasted.) A kind has several pictures, <name>, <name>_2, _3 ...,
+// which all share the same rim, so any of them fits next to any other. Each four-metre square of wall (one repeat of the
+// picture) shows one of them, picked by where it is, and never the same one as the square beside it or above it.
+// The pictures go to the graphics card as one stack (a texture array), made the first time the stone is drawn.
+function stone(name, drawn) {
+  const ims = [];
+  for (let n = 1; ; n++) { const im = art.walls[n === 1 ? name : `${name}_${n}`]; if (!im) break; ims.push(im); }
+  if (!ims.length) return new THREE.MeshLambertMaterial({ map: drawn() });
+  const m = new THREE.MeshLambertMaterial({ map: painted(ims[0]) });
+  if (ims.length < 2) return m;
+  let stack = null;
+  const S = ims[0].width, N = ims.length;
+  const pile = { n: N, get tex() {
+    if (stack) return stack;
+    const data = new Uint8Array(S * S * 4 * N), c = document.createElement('canvas');
+    c.width = c.height = S;
+    const g = c.getContext('2d', { willReadFrequently: true });
+    g.translate(0, S); g.scale(1, -1);                      // (upside down: the first row of a stack is the bottom of the picture)
+    ims.forEach((im, i) => { g.drawImage(im, 0, 0, S, S); data.set(g.getImageData(0, 0, S, S).data, i * S * S * 4); });
+    stack = new THREE.DataArrayTexture(data, S, S, N);
+    stack.format = THREE.RGBAFormat; stack.type = THREE.UnsignedByteType; stack.colorSpace = THREE.SRGBColorSpace;
+    stack.wrapS = stack.wrapT = THREE.RepeatWrapping;
+    stack.magFilter = THREE.NearestFilter; stack.minFilter = THREE.LinearMipmapLinearFilter;
+    stack.generateMipmaps = true; stack.anisotropy = 8; stack.needsUpdate = true;
+    return stack;
+  } };
+  return vary(m, pile);
+}
+// Makes a material show the variants in "pile". A copy of the material (m.clone()) shows them too. Something that gives the
+// material its own onBeforeCompile afterwards must call the one that is there first (as main.js does for the stone under the ground).
+function vary(m, pile) {
+  m.onBeforeCompile = sh => {
+    sh.uniforms.variants = { value: pile.tex };
+    sh.fragmentShader = 'precision highp sampler2DArray;\nuniform sampler2DArray variants;\n' + sh.fragmentShader.replace('#include <map_fragment>', `
+#ifdef USE_MAP
+  vec2 vTile = floor(vMapUv);
+  float vPick = mod(2.0 * vTile.x + 2.0 * vTile.y + floor(2.0 * fract(sin(dot(vTile, vec2(127.1, 311.7))) * 43758.5453)), ${pile.n.toFixed(1)});
+  diffuseColor *= texture(variants, vec3(vMapUv, vPick));
+#endif`);
+  };
+  m.customProgramCacheKey = () => 'vary' + pile.n;
+  m.clone = function () { return vary(THREE.MeshLambertMaterial.prototype.clone.call(this), pile); };
+  return m;
 }
 
 function tex(size, draw) {
@@ -176,19 +220,18 @@ function sand(o) {
 }
 
 export function standinMaterials() {
-  const lam = map => new THREE.MeshLambertMaterial({ map });
   return {
-    wall: lam(stone('wall', () => oldStone({ seed: 11, rgb: [176, 146, 100], rows: [22, 18, 26, 16, 24, 22], minW: 22, maxW: 46, cracks: 6,
-      paint: [[40, 5, [52, 82, 120]], [46, 2, [150, 74, 44]]] }))),
-    floor: lam(stone('floor', () => oldStone({ seed: 23, rgb: [138, 116, 80], rows: [32, 32, 32, 32], minW: 26, maxW: 40, cracks: 4, sand: true }))),
-    ceil: lam(stone('ceil', () => oldStone({ seed: 37, rgb: [98, 84, 64], rows: [42, 43, 43], minW: 40, maxW: 64, cracks: 3, dark: true }))),
-    hiero: lam(stone('hiero', () => hieroStone({ seed: 41, rgb: [168, 138, 96], rows: [22, 18, 26, 16, 24, 22], regs: [18, 142], minW: 22, maxW: 46, cracks: 5 }))),
-    hiero2: lam(stone('hiero2', () => hieroStone({ seed: 53, rgb: [150, 124, 92], rows: [32, 32, 32, 32], regs: [72], signs: ['#8a1d14', '#c9a43c', '#2b5a8e'], minW: 26, maxW: 40, cracks: 4 }))),
-    // The White Tower of Nut: pale limestone, the walls carved and painted with signs in blue, turquoise, red and gold
-    white: lam(hieroStone({ seed: 61, rgb: [246, 242, 230], rows: [22, 18, 26, 16, 24, 22], regs: [18, 142], minW: 22, maxW: 46, cracks: 2, clean: true,
+    wall: stone('wall', () => oldStone({ seed: 11, rgb: [176, 146, 100], rows: [22, 18, 26, 16, 24, 22], minW: 22, maxW: 46, cracks: 6,
+      paint: [[40, 5, [52, 82, 120]], [46, 2, [150, 74, 44]]] })),
+    floor: stone('floor', () => oldStone({ seed: 23, rgb: [138, 116, 80], rows: [32, 32, 32, 32], minW: 26, maxW: 40, cracks: 4, sand: true })),
+    ceil: stone('ceil', () => oldStone({ seed: 37, rgb: [98, 84, 64], rows: [42, 43, 43], minW: 40, maxW: 64, cracks: 3, dark: true })),
+    hiero: stone('hiero', () => hieroStone({ seed: 41, rgb: [168, 138, 96], rows: [22, 18, 26, 16, 24, 22], regs: [18, 142], minW: 22, maxW: 46, cracks: 5 })),
+    hiero2: stone('hiero2', () => hieroStone({ seed: 53, rgb: [150, 124, 92], rows: [32, 32, 32, 32], regs: [72], signs: ['#8a1d14', '#c9a43c', '#2b5a8e'], minW: 26, maxW: 40, cracks: 4 })),
+    // The White Tower (of Horus): pale limestone, the walls carved and painted with signs in blue, turquoise, red and gold
+    white: stone('white', () => hieroStone({ seed: 61, rgb: [246, 242, 230], rows: [22, 18, 26, 16, 24, 22], regs: [18, 142], minW: 22, maxW: 46, cracks: 2, clean: true,
       signs: ['#2b5a8e', '#1f9c96', '#a8432a', '#c9a43c'] })),
-    whiteplain: lam(oldStone({ seed: 67, rgb: [244, 240, 228], rows: [32, 32, 32, 32], minW: 26, maxW: 40, cracks: 1, clean: true })),
-    sand: lam(sand({ seed: 71, rgb: [222, 190, 134] })),
+    whiteplain: stone('whiteplain', () => oldStone({ seed: 67, rgb: [244, 240, 228], rows: [32, 32, 32, 32], minW: 26, maxW: 40, cracks: 1, clean: true })),
+    sand: stone('sand', () => sand({ seed: 71, rgb: [222, 190, 134] })),
     dark: new THREE.MeshBasicMaterial({ color: 0x000000 }),      // the far sides of a void: black, whatever light falls on them
     water: new THREE.MeshLambertMaterial({
       color: 0x2a8c96, transparent: true, opacity: 0.6, side: THREE.DoubleSide, depthWrite: false,
@@ -196,8 +239,11 @@ export function standinMaterials() {
   };
 }
 
-// A false door: frames set one inside another. Open ones are black in the middle.
-export function standinDoor(open) {
+// A false door: frames set one inside another. Open ones are black in the middle. Painted if there is a picture of it
+// (art/walls/door.jpg, door_open.jpg; door_2 is a second one: "which" picks between them), or else drawn.
+export function standinDoor(open, which = 0) {
+  const name = (which % 2 && art.walls.door_2 ? 'door_2' : 'door') + (open ? '_open' : '');
+  if (art.walls[name]) return new THREE.Mesh(new THREE.PlaneGeometry(1.5, 2.44), new THREE.MeshLambertMaterial({ map: painted(art.walls[name], false) }));
   const t = tex(32, g => {
     g.canvas.height = 52;
     const frames = [['#6b5433', 0], ['#c9a44c', 2], ['#3a2a18', 4], ['#2f5f8f', 6], ['#3a2a18', 8], ['#c9a44c', 10]];
