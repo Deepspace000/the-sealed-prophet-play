@@ -6,6 +6,7 @@ import * as THREE from 'three';
 const SOLID = { solid: true };
 const EPS = 1e-4;
 const TILE = 4;      // one texture covers this many metres
+const CRACKS = 3;    // art/crack.png holds this many cracks side by side, each 192 x 512 (tools/make_crack.py)
 
 // Each edge of a cell, as seen from inside it: left corner, right corner (u east, v south), neighbour offset.
 const EDGES = [
@@ -124,6 +125,7 @@ export class Level {
     const geos = {};
     const geo = name => geos[name] || (geos[name] = new Geo());
     const s = this.size;
+    const crackP = [], crackUv = [];
 
     for (let cz = 0; cz < this.h; cz++) for (let cx = 0; cx < this.w; cx++) {
       const c = this.cells[cz][cx];
@@ -160,7 +162,7 @@ export class Level {
 
       // walls on each edge
       const base = (u, v) => c.steps ? c.floor : Level.floorIn(c, u, v);
-      for (const [, L, R, o] of EDGES) {
+      for (const [side, L, R, o] of EDGES) {
         const n = this.cell(cx + o[0], cz + o[1]);
         const k = (!n.solid && n.steps) || 1;
         for (let j = 0; j < k; j++) {
@@ -173,7 +175,22 @@ export class Level {
           // A false wall: from outside, a secret cell looks like solid wall, but it can be walked through.
           if (n.solid && c.ceilTex === 'sky') continue;            // the edge of an open desert: nothing drawn, the land runs on into the haze
           const nTop = n.cap != null ? Math.min(c.ceil, n.cap) : c.ceil;       // the wall of a capped room stops at its cap
-          if (n.secret && !c.secret) { wall(fa, fb, nTop, nTop); continue; }
+          if (n.secret && !c.secret) {
+            wall(fa, fb, nTop, nTop);
+            // A crack marks a false wall (Mirko: "put a crack on the walls of the hidden rooms"), on both of its sides, and
+            // only where there is a way through: where the room on this side and the false wall's own room overlap in height.
+            const lo = Math.max(fa, fb, n.floor), hi = Math.min(nTop, n.ceil);
+            if (j === 0 && hi - lo >= 1.2) {            // (j: a false wall that is a stair is walled in pieces, one crack is enough)
+              const pick = (cx * 7 + cz * 13 + side.charCodeAt(0)) % (CRACKS * 2), i = pick % CRACKS, flip = pick >= CRACKS;
+              const h = Math.min(hi - lo, 2.3), w = h * 0.375 / s, t = 0.5 + ((cx * 31 + cz * 17) % 5 - 2) * 0.06;
+              const at = (tt, y) => P(L[0] + (R[0] - L[0]) * tt - o[0] * 0.002, L[1] + (R[1] - L[1]) * tt - o[1] * 0.002, y);
+              const u0 = (i + (flip ? 1 : 0)) / CRACKS, u1 = (i + (flip ? 0 : 1)) / CRACKS;
+              const a = at(t - w / 2, lo), b = at(t + w / 2, lo), d = at(t + w / 2, lo + h), e = at(t - w / 2, lo + h);
+              crackP.push(...a, ...b, ...d, ...a, ...d, ...e);
+              crackUv.push(u0, 0, u1, 0, u1, 1, u0, 0, u1, 1, u0, 1);
+            }
+            continue;
+          }
           if (n.solid) { wall(fa, fb, c.ceil, c.ceil); continue; }
           let na, nb;
           if (n.steps) {
@@ -222,6 +239,16 @@ export class Level {
       const m = geos[name].mesh(mats[name] || mats.wall);
       m.name = name;
       if (name === 'water') m.renderOrder = 2;
+      group.add(m);
+    }
+    if (crackP.length) {
+      const g = new THREE.BufferGeometry();
+      g.setAttribute('position', new THREE.Float32BufferAttribute(crackP, 3));
+      g.setAttribute('uv', new THREE.Float32BufferAttribute(crackUv, 2));
+      const t = new THREE.TextureLoader().load('art/crack.png?v=2');
+      t.magFilter = THREE.NearestFilter;
+      const m = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ map: t, transparent: true, opacity: 0.9, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }));
+      m.name = 'cracks'; m.renderOrder = 1;
       group.add(m);
     }
     return group;
