@@ -1,6 +1,6 @@
 {
   "name": "The Tower of Ptah",
-  "rev": 6,
+  "rev": 7,
   "toughness": 1.4,
   "notes": [
     "Built by tools/make_ptah.py. Change that file and run it again, rather than editing this one. Format: see levels/test.json.",
@@ -568,6 +568,10 @@
     {"id": "torch", "cell": [7, 0]},
     {"id": "bandage", "cell": [8, 0]},
     {"id": "match_bundle", "cell": [7, 2]},
+    {"id": "compass", "cell": [9, 0], "at": [0.7, 0.3]},
+    {"id": "whetstone", "cell": [8, 70], "at": [0.7, 0.7]},
+    {"id": "whetstone", "cell": [36, 71], "at": [0.6, 0.7]},
+    {"id": "whetstone", "cell": [39, 56], "at": [0.3, 0.3]},
     {"id": "skull", "cell": [28, 35], "at": [0.4, 0.4]},
     {"id": "club", "cell": [28, 35], "at": [0.75, 0.7]},
     {"id": "paraffin_tin", "cell": [28, 36], "at": [0.3, 0.6]},

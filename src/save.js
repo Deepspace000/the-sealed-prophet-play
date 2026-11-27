@@ -6,6 +6,7 @@
 const RUN = 'sp_run', SAVE = 'sp_save_';
 const OFF = new URLSearchParams(location.search).get('nosave') === '1';
 export const SLOTS = ['1', '2', '3'];
+export const saveOff = OFF;        // (so the game can say why nothing was written)
 const parse = s => { try { return JSON.parse(s || 'null'); } catch (e) { return null; } };
 
 export const getRun = () => parse(sessionStorage.getItem(RUN));

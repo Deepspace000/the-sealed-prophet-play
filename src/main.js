@@ -24,7 +24,7 @@ import { play, wind } from './sound.js';
 import { buildProps, strikeUrn } from './props.js';
 import { loadModels } from './models.js';
 import { Gates, Fireballs, Lifts, buildSpikes, onSpikes } from './hazards.js';
-import { getRun, setRun, clearRun, writeSlot, readSlot, newest, toFile, fromFile } from './save.js';
+import { getRun, setRun, clearRun, writeSlot, readSlot, newest, toFile, fromFile, saveOff } from './save.js';
 
 const LOAD = window.loading || { set() {}, name() {}, finish: async () => {} };      // the loading page (see index.html)
 const LEVELS = ['test', 'shaft', 'hub'];
@@ -198,13 +198,14 @@ const inv = new Inventory();
 const peopleDefs = (await (await fetch('data/people.json')).json()).people;
 const world = new WorldItems(scene, level);
 // Things are written into a save as plain data and made again from it.
-const pack = it => it && { id: it.def.id, n: it.n, lit: it.lit || undefined, lvl: it.lvl > 1 ? it.lvl : undefined, inside: it.inside && it.inside.map(pack) };
+const pack = it => it && { id: it.def.id, n: it.n, lit: it.lit || undefined, lvl: it.lvl > 1 ? it.lvl : undefined, edge: it.edge || undefined, inside: it.inside && it.inside.map(pack) };
 const unpack = o => {
   if (!o || !defs[o.id]) return null;
   const it = make(o.id);
   if (o.n != null) it.n = o.n;
   it.lit = !!o.lit;
   if (o.lvl && it.def.weapon) it.lvl = o.lvl;
+  if (o.edge && it.def.weapon) it.edge = o.edge;
   if (it.inside && o.inside) o.inside.forEach((c, i) => { if (i < it.inside.length) it.inside[i] = unpack(c); });
   return it;
 };
@@ -216,8 +217,9 @@ if (run && params.get('kit') === '1') for (const id of data.carry || []) if (![.
 // ?give=a,b,c (for a test link): you are also given these things; ?drop=a,b: and these you do not carry (to make room)
 const notKept = (params.get('drop') || '').split(',');
 for (const e of [...inv.all()]) if (notKept.includes(e[0].def.id)) inv.remove(e[0]);
-for (const id of (params.get('give') || '').split(',')) if (defs[id] && ![...inv.all()].some(e => e[0].def.id === id)) inv.add(make(id));
+for (const id of (params.get('give') || '').split(',')) if (defs[id] && defs[id].compass) flags.compass = true; else if (defs[id] && ![...inv.all()].some(e => e[0].def.id === id)) inv.add(make(id));
 const ui = new UI(inv, () => dropHeld(), it => useThing(it));
+ui.compass = !!flags.compass;          // the compass, once found, is on the screen for good (it is not a thing you carry)
 if (rebuilt) setTimeout(() => ui.say('This place has been rebuilt since you were last here. You start it again from its door.'), 1500);
 // Doors that need keys, levers, doors that slide, and fireballs from the walls (see hazards.js).
 const gates = new Gates({ scene, level, gates: data.gates, levers: data.levers, buttons: data.buttons, wallMat: MATS[data.liftTex || 'wall'], saved: saved && saved.gates, say: t => ui.say(t),
@@ -241,8 +243,9 @@ world.ground = (x, z, near) => {
 };
 // The things lying in the level: as you left them, or as the level puts them the first time.
 if (saved) {
-  for (const o of saved.items) { const it = unpack(o); if (it) world.place(it, o.x, o.z, o.gy); }
+  for (const o of saved.items) { const it = unpack(o); if (it && !(it.def.compass && flags.compass)) world.place(it, o.x, o.z, o.gy); }
 } else for (const it of data.items || []) {
+  if (flags.compass && defs[it.id] && defs[it.id].compass) continue;      // you have a compass already: there is no second one
   if (it.starter && run) continue;              // starter things are only there if you arrive with nothing
   if (it.spare && [...inv.all()].some(e => e[0].def.id === it.id)) continue;      // a spare is only there if you do not have one already (the knapsack in the hall)
   const at = it.at || [0.5, 0.5];
@@ -615,6 +618,11 @@ function pickUp(dir, tol) {          // returns true if there was something ther
   const e = world.target(camera.position, dir, 2.6, tol);
   if (!e) return false;
   if (e.item.def.relic && creatures.list.some(c => c.def.boss && c.state !== 'dead')) { ui.say('The colossus stands between you and the gem.'); return true; }
+  if (e.item.def.compass) {            // the compass is not put in the pack: from now on it is on the screen
+    world.remove(e); flags.compass = ui.compass = true; play('glance');
+    ui.say('You found a compass. It is on the screen now and shows which way you face.');
+    return true;
+  }
   const where = inv.add(e.item), name = e.item.name;
   if (!where) { ui.say(`You have nowhere to put the ${name.toLowerCase()}.`); return true; }
   world.remove(e);
@@ -731,7 +739,7 @@ function step(dt, forced) {
   if (inp.pressed.has('map')) { openMap(); if (map.open) { map.control(inp, 0); return; } }
   // The menu. The game stands still while it is open.
   if (inp.pressed.has('quicksave') && !fight.dead && asleep <= 0 && !leaving && !menu.open && !map.open) {
-    ui.say(writeSlot('quick', capture(), data.name || LEVEL) ? 'Quicksaved.' : 'The quicksave could not be written.');
+    ui.say(writeSlot('quick', capture(), data.name || LEVEL) ? 'Quicksaved.' : saveOff ? 'Saving is switched off in this test link (nosave=1 in the address).' : 'The quicksave could not be written.');
   }
   if (inp.pressed.has('menu') && !shop.isOpen && !fight.dead && asleep <= 0 && !leaving) { menu.pad = input.device === 'pad'; menu.toggle(); }
   if (menu.open) {
@@ -928,6 +936,7 @@ function step(dt, forced) {
     : spot && spot.seal ? `A great seal is set in the stone. ${placed.size} of its eight sockets hold a gem.` + (relicsCarried().length && nearSeal() ? ' ' + SET[input.device] : '')
     : spot && spot.text && spot.to && !spot.auto ? spot.text + ' ' + GO[input.device]
     : spotWords);
+  ui.setCompass(player.yaw);
   ui.update(dt, pad);
   hud.hp.style.width = (fight.hp / fight.hpMax * 100) + '%';
   hud.st.style.width = (fight.st / fight.stMax * 100) + '%';

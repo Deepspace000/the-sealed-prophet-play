@@ -67,6 +67,13 @@
   .slot.sel { border-color: #ffe39a; background: #2a2110; box-shadow: inset 0 0 0 2px #d9b65a; }
   body.touch #bar button { padding: calc(15px * var(--k)) calc(16px * var(--k)); font-size: calc(13px * var(--t)); }      /* the one PACK button, beside the hot bar, big enough for a finger */
   #inv #opts button:not(.off):hover, #inv #opts button.focus { background: #d9b65a; color: #17120a; }
+  #inv #opts.pick { flex-wrap: wrap; max-width: 94vw; }      /* a choice among things: as many buttons as there are things */
+  #inv #opts.pick button, #inv #opts.pick button:first-child { width: auto; padding-left: 12px; padding-right: 12px; }
+  /* the compass, once found: above the cursor / camera switch. The brass stays still, the card turns. (art: tools/make_compass.py) */
+  #compass { display: none; position: absolute; width: calc(92px * var(--k)); height: calc(92px * var(--k)); pointer-events: none;
+             filter: drop-shadow(0 3px 5px rgba(0,0,0,.7)); }
+  #compass img { position: absolute; inset: 0; width: 100%; height: 100%; }
+  html.phone #compass { width: 60px; height: 60px; }
   /* the cursor / camera switch above PACK: the gold knob sits under the one in use */
   .mode { position: relative; display: flex; width: calc(64px * var(--k)); height: calc(24px * var(--k)); background: #17120a; border: 1px solid #7d6a3c;
           border-radius: calc(12px * var(--k)); cursor: pointer; }
@@ -443,12 +450,12 @@
   <div id="mapPage"><canvas id="mapCanvas"></canvas><input id="mapNote" maxlength="36" autocomplete="off" spellcheck="false"><div id="map3dNone">Nothing of this place has been seen yet.</div></div>
   <div id="mapHint"></div>
 </div>
-<div id="title">THE SEALED PROPHET <span class="ver">v0.2.37</span><small><span id="levelName"></span> &middot; <span id="state">Walking</span></small></div>
+<div id="title">THE SEALED PROPHET <span class="ver">v0.2.38</span><small><span id="levelName"></span> &middot; <span id="state">Walking</span></small></div>
 <button id="helpBtn">HIDE CONTROLS</button>
 <div id="help"></div>
 <div id="look"></div>
 <div id="msg"></div>
-<div id="inv"><div id="panel"></div><div id="info"></div><div id="opts"></div><div id="bar"></div></div>
+<div id="inv"><div id="panel"></div><div id="info"></div><div id="opts"></div><div id="bar"></div><div id="compass"><img src="art/ui/compass_rim.png" alt=""><img src="art/ui/compass_card.png" alt=""></div></div>
 <div id="heldIcon"></div>
 <div id="touch">
   <div id="stick"><div id="knob"></div></div>
@@ -504,7 +511,7 @@ window.loading = (() => {
       <div class="fan"></div>
       <h1 id="bloodTitle">THE SEALED<br>PROPHET</h1>
       <div class="sub">A JOURNAL &middot; 1924</div>
-      <div class="ver" style="margin-top:8px;text-align:center">v0.2.37</div>
+      <div class="ver" style="margin-top:8px;text-align:center">v0.2.38</div>
       <div class="rule"></div>
       <button id="continueBtn" style="display:none">CONTINUE</button>
       <button id="beginBtn">BEGIN</button>

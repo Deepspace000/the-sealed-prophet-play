@@ -1,7 +1,7 @@
 // Staying alive: hunger, tiredness, and the light you carry. Also what happens when you use a thing.
 // The numbers for each thing are in data/items.json (food, heal, drinks, light, fuel, count, sleep).
 import { play } from './sound.js';
-import { LEVEL_MAX } from './items.js';
+import { EDGE_MAX } from './items.js';
 
 const AIR_TIME = 20;            // seconds you can stay under water on one breath
 const AIR_BACK = 2.5;           // seconds to get your breath back at the surface
@@ -68,12 +68,17 @@ export class Survival {
   use(it, inWater) {
     const d = it.def, name = low(d.name), F = this.fight;
     if (d.map) this.onMap();
-    else if (d.whet) {               // a whetstone: the weapon in your hand goes up a level, and the stone is used up
-      const w = this.inv.hands[F.mainHand()];
-      if (!w || !w.def.weapon) { this.ui.say('Hold a weapon in your hand to work on it.'); return; }
-      if (w.lvl >= LEVEL_MAX) { this.ui.say(`The ${low(w.def.name)} cannot be made any better.`); return; }
-      w.lvl++; this.inv.remove(it); this.inv.version++; play('chip');
-      this.ui.say(`You work the stone along the ${low(w.def.name)}. It is level ${w.lvl} now: it hits harder.`);
+    else if (d.whet) {               // a sharpening stone (Mirko): you choose which of your weapons; it does 1 more damage, 3 times at most; the stone breaks
+      const ws = [...this.inv.all()].map(e => e[0]).filter(x => x.def.weapon && !x.def.light);
+      if (!ws.length) { this.ui.say('You have no weapon to sharpen.'); return; }
+      if (!ws.some(w => w.edge < EDGE_MAX)) { this.ui.say(ws.length > 1 ? 'Your weapons cannot be sharpened any more.' : `The ${low(ws[0].def.name)} cannot be sharpened any more.`); return; }
+      const sharpen = w => {
+        if (![...this.inv.all()].some(e => e[0] === it) || w.edge >= EDGE_MAX) return;
+        w.edge++; this.inv.remove(it); this.inv.version++; play('chip');
+        this.ui.say(`You sharpen the ${low(w.def.name)}. Damage ${Math.round(w.harm * 10) / 10} now (sharpened ${w.edge} of ${EDGE_MAX}). The stone breaks.`);
+      };
+      if (ws.length === 1) sharpen(ws[0]);
+      else this.ui.choose('Choose the weapon to sharpen.', ws.map(w => [`${w.def.name} ${w.edge}/${EDGE_MAX}`, w.edge < EDGE_MAX, () => sharpen(w)]));
     }
     else if (d.refill) {             // a bundle of matches fills the box again
       const box = [...this.inv.all()].map(e => e[0]).find(x => x.def.id === d.refill && x.n < x.def.count);

@@ -188,6 +188,33 @@ export class Level {
           if (n.ceil < nTop - EPS) wall(Math.max(n.ceil, fa), Math.max(n.ceil, fb), nTop, nTop);
         }
       }
+      // The stone that stands higher than a cap, beside it (Mirko: "there are areas in the white tower where walls disappear").
+      // A capped cell is a room with solid stone over it, walked on at "cap". The walls above reach only to the room's own
+      // roof, so a neighbour that stands higher than the cap showed no side at all from up there: a gap in the tower's wall
+      // that looked open and was not. Its side is drawn here: the stone under its floor, and the stone over its room.
+      if (c.cap != null) {
+        const top = c.capCeil ?? Infinity;
+        for (const [, L, R, o] of EDGES) {
+          const n = this.cell(cx + o[0], cz + o[1]);
+          if (n.solid) continue;
+          const side = geo(c.capSide || n.wallTex || 'wall'), k = n.steps || 1;
+          for (let j = 0; j < k; j++) {
+            const ta = j / k, tb = (j + 1) / k;
+            const A = [L[0] + (R[0] - L[0]) * ta, L[1] + (R[1] - L[1]) * ta];
+            const B = [L[0] + (R[0] - L[0]) * tb, L[1] + (R[1] - L[1]) * tb];
+            let na, nb;
+            if (n.steps) na = nb = Level.surfIn(n, (A[0] + B[0]) / 2 - o[0], (A[1] + B[1]) / 2 - o[1]);
+            else { na = Level.floorIn(n, A[0] - o[0], A[1] - o[1]); nb = Level.floorIn(n, B[0] - o[0], B[1] - o[1]); }
+            const face = (lo, ha, hb) => {
+              ha = Math.min(ha, top); hb = Math.min(hb, top);
+              if (ha > lo + EPS || hb > lo + EPS) side.quad(P(A[0], A[1], lo), P(B[0], B[1], lo), P(B[0], B[1], Math.max(lo, hb)), P(A[0], A[1], Math.max(lo, ha)), false);
+            };
+            face(c.cap, na, nb);
+            if (n.cap != null) face(Math.max(n.ceil, c.cap), n.cap, n.cap);
+            else if (n.ceil < top && Number.isFinite(top)) face(Math.max(n.ceil, c.cap), top, top);
+          }
+        }
+      }
     }
 
     const group = new THREE.Group();

@@ -1,6 +1,6 @@
 // The menu (the SETTINGS button, Esc, Start on a controller, MENU on a touch screen): sleep, save, load, and leaving the game.
 // The game stands still while it is open.
-import { SLOTS, readSlot, describe } from './save.js';
+import { SLOTS, readSlot, describe, saveOff } from './save.js';
 
 export class Menu {
   // actions: { sleep(), save(slot), load(slot), toFile(), fromFile(file), toTitle(), toDesktop() }
@@ -35,7 +35,7 @@ export class Menu {
     const a = b.dataset.m, slot = b.dataset.s;
     if (a === 'close') this.toggle();
     else if (a === 'sleep') { this.toggle(); this.actions.sleep(); }
-    else if (a === 'save') this.say(this.actions.save(slot) ? `Saved in place ${slot}.` : 'The save could not be written.');
+    else if (a === 'save') this.say(this.actions.save(slot) ? `Saved in place ${slot}.` : saveOff ? 'Saving is switched off in this test link (nosave=1 in the address).' : 'The save could not be written.');
     else if (a === 'load') this.actions.load(slot);
     else if (a === 'export') { this.actions.toFile(); this.say('Save file made. It is in your downloads.'); }
     else if (a === 'import') this.file.click();

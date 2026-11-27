@@ -4,6 +4,7 @@
 // story is somewhere else is not there. A level may name the first part ("caged"): with no flag yet, that is where they are.
 import * as THREE from 'three';
 import { creatureFrames } from './standin_creatures.js';
+import { art } from './art.js';
 
 export class People {
   constructor({ scene, level, people = [], defs = {}, flags = {} }) {
@@ -13,12 +14,15 @@ export class People {
       if (!def) continue;
       const now = flags[p.id] || def.start;
       if (now !== p.when) continue;
-      const frames = creatureFrames({ id: 'person_' + p.id, look: def.look });
-      const tex = new THREE.CanvasTexture(frames.idle); tex.magFilter = tex.minFilter = THREE.NearestFilter; tex.colorSpace = THREE.SRGBColorSpace;
+      // their picture: painted (art/people/<id>.png) if there is one, else the code-drawn stand-in
+      const img = art.people[p.id] || creatureFrames({ id: 'person_' + p.id, look: def.look }).idle;
+      const tex = art.people[p.id] ? new THREE.Texture(img) : new THREE.CanvasTexture(img);
+      if (art.people[p.id]) tex.needsUpdate = true; else tex.magFilter = tex.minFilter = THREE.NearestFilter;
+      tex.colorSpace = THREE.SRGBColorSpace;
       const spr = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, alphaTest: 0.5, fog: true, transparent: true }));
       spr.center.set(0.5, 0);
       const at = p.at || [0.5, 0.5], s = level.size, x = (p.cell[0] + at[0]) * s, z = (p.cell[1] + at[1]) * s;
-      const y = p.y ?? level.floorAt(x, z), h = def.height || 1.75, img = frames.idle;
+      const y = p.y ?? level.floorAt(x, z), h = def.height || 1.75;
       spr.scale.set(h * img.width / img.height, h, 1);
       spr.position.set(x, y, z);
       scene.add(spr);

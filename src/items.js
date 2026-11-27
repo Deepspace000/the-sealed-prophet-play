@@ -3,6 +3,7 @@
 import * as THREE from 'three';
 import { art } from './art.js';
 
+export const EDGE_MAX = 3;              // how many times one weapon can be sharpened with a stone (1 damage each time)
 export const LEVEL_GAIN = 0.4, LEVEL_MAX = 6;      // each level of a weapon adds 40% of its first harm; the highest level
 
 export class Item {
@@ -17,10 +18,11 @@ export class Item {
     this.lit = false;
     // A weapon has a level (1 and up): each level above the first adds to the harm of its blows (LEVEL_GAIN). You do not grow
     // stronger yourself in this game: your weapons do (a whetstone, or the trader's work).
-    if (def.weapon) this.lvl = def.level || 1;
+    if (def.weapon) { this.lvl = def.level || 1; this.edge = 0; }       // edge: how many times it has been sharpened
   }
   // its name with its level, for the screen: "Curved sword, level 2"
   get name() { return this.def.name + (this.lvl > 1 ? `, level ${this.lvl}` : ''); }
+  get harm() { return this.def.weapon ? this.def.weapon.damage * this.might + (this.edge || 0) : 0; }      // the damage of a full blow
   get might() { return 1 + LEVEL_GAIN * ((this.lvl || 1) - 1); }      // how much harder it hits than at level 1
   get weight() {
     let w = this.def.weight;

@@ -1,12 +1,14 @@
 {
- "v": 1795666597,
+ "v": 1795737992,
  "items": [
   "bandage",
   "bedroll",
   "bone",
+  "bronze_helmet",
   "bully_beef",
   "canteen",
   "club",
+  "compass",
   "cracked_jar",
   "curved_sword",
   "dagger",
@@ -26,6 +28,7 @@
   "knapsack",
   "lantern",
   "lapis_amulet",
+  "linen_armour",
   "mace",
   "match_bundle",
   "matches",
@@ -34,20 +37,31 @@
   "oil_lamp",
   "paraffin_tin",
   "pick",
+  "pickled_eyeballs",
   "pocket_knife",
   "potsherd",
   "pouch",
   "rag",
   "red_bottle",
+  "relic_anubis",
+  "relic_nut",
+  "relic_osiris",
+  "relic_ptah",
+  "relic_ra",
+  "relic_sekhmet",
+  "relic_sobek",
+  "relic_thoth",
   "rope",
   "rustic_knife",
   "sack",
+  "scale_shirt",
   "scarab",
   "shield",
   "silver_ring",
   "skull",
   "spear",
-  "torch"
+  "torch",
+  "whetstone"
  ],
  "held": [
   "club",
@@ -174,5 +188,8 @@
   "whiteplain_6",
   "whiteplain_7",
   "whiteplain_8"
+ ],
+ "people": [
+  "trader"
  ]
 }

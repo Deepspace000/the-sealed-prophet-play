@@ -4,9 +4,10 @@
 //   art/items/<item id>.png             a thing, in the pack and lying in the level
 //   art/held/<item id>.png, fist.png    a right hand holding that weapon, seen by the player. The fist is at HELD_AT.
 //   art/creatures/<creature id>_<pose>.png   poses: idle, step, windup, strike, dead
+//   art/people/<person id>.png          someone you can speak to, standing (painted: tools/make_person_art.py)
 //   art/walls/<name>.jpg                the stone of the levels, painted (tools/make_walls.py): wall, floor, ceil, hiero, hiero2,
 //                                       white, whiteplain, sand; <name>_2, _3 ... are variants of it; door, door_open: the false door
-export const art = { items: {}, held: {}, creatures: {}, walls: {} };
+export const art = { items: {}, held: {}, creatures: {}, walls: {}, people: {} };
 export const HELD_AT = [176 / 384, 200 / 384];      // where the middle of the fist is in a held picture, from its top left corner
 
 // wantWall(kind): only the stone a level uses is fetched (there are over fifty pictures of it).

@@ -233,11 +233,11 @@ export class Creatures {
         case 'idle':
           if (aware) this.rouse(c, dist);
           else if (heard) { c.last = { x: P.x, z: P.z }; c.state = 'search'; c.t = 9; c.pathT = 0; }
-          else if (def.kind === 'beast') {                   // beasts pad about near where they live
+          else if (def.kind === 'beast' || def.prowl) {      // beasts pad about near where they live; so does anything with "prowl" (metres), a little
             c.wanderT -= dt;
             if (c.wanderT <= 0) {
               c.wanderT = 2 + Math.random() * 4;
-              const a = Math.random() * 6.28, r = Math.random() * 2.2;
+              const a = Math.random() * 6.28, r = Math.random() * (def.prowl || 2.2);
               c.goal = { x: c.home.x + Math.cos(a) * r, z: c.home.z + Math.sin(a) * r };
             }
             if (c.goal) {

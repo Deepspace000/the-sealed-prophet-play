@@ -174,8 +174,8 @@ export class Fight {
     const type = this.move === 'low' && wp.thrust ? wp.thrust : wp.type;
     const me = { x: P.pos.x, y: P.pos.y, z: P.pos.z, eyeY: P.eyeY };
     const hits = this.creatures.inArc(me, P.yaw, wp.reach + m.reach + 0.3, m.arc);
-    const held = this.inv.hands[this.hand], might = held && held.def === w ? held.might : 1;      // the weapon's level
-    const blow = () => wp.damage * might * m.dmg * (0.35 + 2.0 * this.power) * (this.tired ? 0.5 : 1) * (0.9 + Math.random() * 0.2);
+    const held = this.inv.hands[this.hand], mine = held && held.def === w, might = mine ? held.might : 1, edge = mine ? held.edge || 0 : 0;      // the weapon's level, and how often it has been sharpened
+    const blow = () => (wp.damage * might + edge) * m.dmg * (0.35 + 2.0 * this.power) * (this.tired ? 0.5 : 1) * (0.9 + Math.random() * 0.2);
     // nothing alive in the way: the blow may land on an urn
     if (!hits.length && this.onNone) this.onNone(wp.reach + m.reach + 0.3);
     if (!hits.length && this.onMiss) this.onMiss(me, P.yaw, wp.reach + m.reach + 0.2, m.arc, blow(), type, KIND[type]);

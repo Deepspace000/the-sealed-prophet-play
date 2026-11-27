@@ -1,5 +1,5 @@
 // The belt bar along the bottom, the pack panel above it, and short messages.
-import { iconURL, hasArt } from './items.js';
+import { iconURL, hasArt, EDGE_MAX } from './items.js';
 import { usable, verb } from './survival.js';
 
 const GROUPS = [
@@ -76,6 +76,7 @@ export class UI {
       const el = this.slots().find(s => s.dataset.area === c.area && +s.dataset.i === c.i);      // it was only a click
       if (el) this.clickSlot(el, { pointerType: c.type, button: c.button });
     });
+    addEventListener('resize', () => { this.seen = ''; });
     addEventListener('pointercancel', e => {
       if (this.cand && this.cand.id === e.pointerId) { if (this.drag) this.putBack(); this.cand = null; this.drag = null; }
     });
@@ -180,7 +181,42 @@ export class UI {
   markOpt() {
     [...this.optsEl.querySelectorAll('button')].forEach((b, n) => b.classList.toggle('focus', this.pad && n === this.opts.focus));
   }
-  closeOpts() { if (this.opts) { this.opts = null; this.optsEl.style.display = 'none'; this.seen = ''; } }
+  closeOpts() { if (this.opts) { this.opts = null; this.optsEl.style.display = 'none'; this.optsEl.classList.remove('pick'); this.optsEl.style.maxWidth = ''; this.seen = ''; } }
+  // A choice among things (which weapon to sharpen): the row of buttons above the belt shows them, and one press picks.
+  // list: [label, can it be picked, what picking it does]. The ones that cannot be picked are greyed out.
+  choose(title, list) {
+    this.closeOpts();
+    const all = list.map(([label, on, fn]) => [label, fn, on]).concat([['CANCEL', () => {}, true]]);
+    this.opts = { pick: true, all, focus: all.findIndex(a => a[2]), at: this.inv.version };
+    this.optsEl.innerHTML = all.map(([label, , on], n) => `<button data-opt="${n}"${on ? '' : ' class="off"'}>${label}</button>`).join('');
+    this.optsEl.classList.add('pick');
+    // (the row is kept narrower than the belt, so that it wraps clear of the compass at the belt's end)
+    if (this.compass && this.compassEl) this.optsEl.style.maxWidth = Math.max(220, this.bar.offsetWidth - 2 * this.compassEl.offsetWidth - 24) + 'px';
+    this.optsEl.style.display = 'flex';
+    this.say(title); this.msgT = 6;
+    this.seen = '';
+    this.markOpt();
+  }
+  // The compass (Mirko): once found it is on the screen for good, above the cursor and camera switch. Its card turns as you turn.
+  setCompass(yaw) {
+    const el = this.compassEl || (this.compassEl = $('compass'));
+    if (!this.compass) { if (el.style.display !== 'none') el.style.display = 'none'; return; }
+    if (el.style.display !== 'block') { el.style.display = 'block'; this.seen = ''; }
+    const deg = Math.round(yaw * 1800 / Math.PI) / 10;
+    if (deg !== this.compassDeg) { this.compassDeg = deg; el.lastElementChild.style.transform = `rotate(${deg}deg)`; }
+  }
+  placeCompass() {
+    const el = this.compassEl;
+    if (!el || !this.compass) return;
+    const group = this.bar.lastElementChild, inv = $('inv').getBoundingClientRect();
+    if (!group) return;
+    // above the belt (or the open pack); on a phone the row of buttons is as wide as the belt, so above everything there
+    const phone = document.documentElement.classList.contains('phone');
+    const g = group.getBoundingClientRect(), top = phone ? inv.top : (this.panel.style.display !== 'none' && this.panel.offsetHeight ? this.panel : this.bar).getBoundingClientRect().top;
+    const size = el.offsetWidth;
+    el.style.left = Math.round(Math.min(g.left + g.width / 2 - size / 2, innerWidth - size - 4) - inv.left) + 'px';
+    el.style.top = Math.round(top - inv.top - size - 6) + 'px';
+  }
   // Put a thing in a hand (a weapon in the right, anything else in the left), or put on a thing that is worn (a knapsack, armour).
   // What was there goes where the thing came from, or wherever there is room.
   equip(area, i) {
@@ -204,6 +240,7 @@ export class UI {
     if (!o.all[n][2]) return;
     const act = o.all[n][1], arr = this.inv.arr(o.area);
     this.closeOpts();
+    if (o.pick) return act();
     if (!arr || arr[o.i] !== o.it) return;
     if (act === 'use') {
       if (usable(o.it.def)) this.onUse(o.it);
@@ -308,6 +345,7 @@ export class UI {
     }
     this.panel.innerHTML = panel;
     this.panel.style.display = panel ? 'flex' : 'none';
+    this.placeCompass();
 
     const slots = this.slots();
     if (this.focus >= slots.length) this.focus = slots.length - 1;
@@ -326,7 +364,7 @@ export class UI {
     };
     // what it does in a fight: the harm of a blow, and how much of a blow it stops when you guard with it
     const round1 = v => Math.round(v * 10) / 10;
-    const stats = (d, it) => (d.weapon || d.block || d.armour ? ' <i>' + [d.weapon ? `Level ${it.lvl || 1} &nbsp; Damage ${round1(d.weapon.damage * (it.might || 1))} (${d.weapon.type})` : '',
+    const stats = (d, it) => (d.weapon || d.block || d.armour ? ' <i>' + [d.weapon ? `Level ${it.lvl || 1} &nbsp; Damage ${round1(it.harm ?? d.weapon.damage)} (${d.weapon.type})` + (d.light ? '' : ` &nbsp; Sharpened ${it.edge || 0} of ${EDGE_MAX}`) : '',
       d.block ? `Block ${Math.round(d.block * 100)}%` : '', d.armour ? `Takes ${Math.round(d.armour * 100)}% of a blow when worn` : '']
       .filter(Boolean).join(' &nbsp; ') + '</i>' : '');
     const describe = it => `<b>${it.name}.</b> ${it.def.text}${left(it)}${stats(it.def, it)} <span style="white-space:nowrap">(${kg(it.weight)})</span>`;
