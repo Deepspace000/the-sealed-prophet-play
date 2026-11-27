@@ -613,6 +613,7 @@
     {"id": "pickled_eyeballs", "cell": [91, 85], "at": [0.6, 0.4]},
     {"id": "gold_cup", "cell": [91, 85], "at": [0.6, 0.7]},
     {"id": "pickled_eyeballs", "cell": [90, 87], "at": [0.6, 0.5]},
+    {"id": "hide_sack", "cell": [90, 87], "at": [0.3, 0.75]},
     {"id": "dates", "cell": [90, 87], "at": [0.4, 0.3]},
     {"id": "pickled_eyeballs", "cell": [87, 93], "at": [0.3, 0.3]},
     {"id": "dates", "cell": [102, 85]},

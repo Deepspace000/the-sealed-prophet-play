@@ -22,6 +22,8 @@ export function blowOf(w, move) {
   return { ...m, name, all: !!m.all && (kind === 'cut' || kind === 'crush'), arc: kind === 'stab' && move === 'mid' ? 0.45 : m.arc };
 }
 const SWING = 0.26;       // seconds a blow takes
+const VITAL = 2.5, GRAZE = 0.6;      // an arrow in a vital place, and one that only catches a limb
+const DRAW_MIN = 0.35;    // how far a bow must be drawn before letting go shoots (a quick click does not shoot)
 const KIND = { cut: 'Cutting', stab: 'Stabbing', crush: 'Crushing' };
 const lerp = (a, b, t) => a + (b - a) * t;
 // The hand and weapon in the view (a picture from art/held, turned about the fist).
@@ -101,7 +103,12 @@ export class Fight {
   // A bow in the striking hand ("bow" in data/items.json: damage, speed in metres a second, wind, recover), or null.
   // With one, attacking draws it and letting go shoots an arrow, if you carry any ("arrow": true). See src/bow.js.
   bow() { const it = this.inv.hands[this.hand]; return it && it.def.bow ? it.def.bow : null; }
-  arrows() { for (const [it] of this.inv.all()) if (it.def.arrow && it.n > 0) return it; return null; }
+  arrows() {                    // the quiver's first, then any others you carry
+    const q = this.inv.quiver[0];
+    if (q && q.n > 0) return q;
+    for (const [it] of this.inv.all()) if (it.def.arrow && it.n > 0) return it;
+    return null;
+  }
   // The hand that strikes when a key or a trigger is used, where no hand is named: the one with a weapon in it.
   mainHand() {
     const h = this.inv.hands, free = i => !h[i] || !h[i].def.light;
@@ -150,7 +157,8 @@ export class Fight {
       this.move = ctl.aim || 'mid';
     } else if (this.winding && bow) {                                  // let go: the arrow flies
       this.winding = false;
-      this.loose(bow);
+      // (Mirko: "only fire after the mouse button is held down and released. Save the single click for picking the arrows up.")
+      if (this.charge >= DRAW_MIN) this.loose(bow);
     } else if (this.winding) {                                         // let go: the blow
       this.winding = false;
       const cost = (7 + 14 * this.charge + (w.weight || 0) * 2) * MOVES[this.move].cost;
@@ -184,7 +192,7 @@ export class Fight {
   loose(bow) {
     const a = this.arrows();
     if (!a) return;
-    const power = Math.max(0.15, this.charge);
+    const power = this.charge;
     this.st = Math.max(0, this.st - 4 - 6 * power); this.stWait = 0.6;
     a.n--; if (a.n <= 0) this.inv.remove(a);
     this.inv.version++;
@@ -194,13 +202,31 @@ export class Fight {
   }
   // An arrow strikes a creature (src/bow.js). Arrows are their own kind of harm ("arrow" in a creature's "weak"): little to
   // bone and shell, most to things that fly.
-  arrowHit(c, dmg, fromX, fromZ) {
-    const res = this.creatures.hurt(c, dmg, 'arrow', fromX, fromZ, 0.4);
+  // Where it lands matters (Mirko: "give the enemies a critical zone in the middle of their body, and a less damage zone ...
+  // make sure it makes sense. On a zombie, it would be their heart or head"). A creature's "zones" (data/creatures.json) name
+  // its vital places as bands of its height: an arrow in one of them, near its middle line, does VITAL times the harm. One in
+  // a leg (below "low") or out at its edge (an arm, a wing) does GRAZE times. at: { f, lat } from src/bow.js.
+  arrowHit(c, dmg, fromX, fromZ, at) {
+    const Z = c.def.zones, name = c.def.name.toLowerCase();
+    let part = null, less = null;
+    if (Z && at) {
+      const v = at.lat <= 0.5 && (Z.vital || []).find(b => at.f >= b[0] && at.f <= b[1]);
+      if (v) part = v[2];
+      else if (Z.low && at.f < Z.low[0]) less = Z.low[1];
+      else if (Z.side && at.lat > 0.8) less = Z.side;
+    }
+    const res = this.creatures.hurt(c, dmg * (part ? VITAL : less ? GRAZE : 1), 'arrow', fromX, fromZ, part ? 0.9 : 0.4);
     if (!res) return;
+    res.vital = !!part; res.graze = !!less;
     play(res.weak <= 0.6 ? 'glance' : 'hit');
     if (this.onHit) this.onHit(c, res);
-    const name = c.def.name.toLowerCase(), key = c.def.id + 'arrow';
-    if (res.killed) this.ui.say(`The ${name} is dead.`);
+    if ((part || less) && this.onWord) this.onWord(c, (part || less)[0].toUpperCase() + (part || less).slice(1));      // "Heart", "Leg": the word rises from it
+    const key = c.def.id + 'arrow', zkey = c.def.id + (part ? 'vital' : 'graze');
+    if (res.killed) this.ui.say(part ? `An arrow in the ${part}. The ${name} is dead.` : `The ${name} is dead.`);
+    else if ((part || less) && !this.told.has(zkey)) {
+      this.told.add(zkey);
+      this.ui.say(part ? `You hit the ${name} in the ${part}. An arrow there does much more harm.` : `Your arrow only catches the ${name} in the ${less}. That does less harm.`);
+    }
     else if (!this.told.has(key) && (res.weak <= 0.6 || res.weak >= 1.5)) {
       this.told.add(key);
       this.ui.say(res.weak <= 0.2 ? `Arrows do almost nothing to the ${name}.` : res.weak < 1 ? `Arrows do little to the ${name}.` : `Arrows hurt the ${name} badly.`);

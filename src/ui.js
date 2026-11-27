@@ -5,6 +5,7 @@ import { usable, verb } from './survival.js';
 const GROUPS = [
   ['hands', 'Left hand &middot; Right hand', 2],
   ['belt', 'Belt', 4],
+  ['quiver', 'Quiver', 1],       // (only while a bow is in a hand, or there are arrows in it)
   ['back', 'Back', 1],
   ['head', 'Head', 1],
   ['body', 'Body', 1],
@@ -160,6 +161,8 @@ export class UI {
   noFit(it, area) {
     const name = it.def.name.toLowerCase(), cap = it.def.name[0].toUpperCase() + name.slice(1);
     if (area === 'belt') return `The ${name} is too big for your belt.`;
+    if (area === 'quiver') return 'Only arrows go in the quiver.';
+    if ((area === 'pack' || area === 'bag') && it.inside) return 'A bag will not go into another bag.';
     if (area === 'back') return `Only a knapsack can be worn on your back.`;
     if (area === 'body') return `Only armour for the body can be worn there.`;
     if (area === 'head') return `Only a helmet can be worn on your head.`;
@@ -293,6 +296,9 @@ export class UI {
     if (this.opts && this.inv.version !== this.opts.at) this.closeOpts();
     if (!usingPad && this.focus >= 0) { this.focus = -1; this.seen = ''; }
     this.fuelLines();
+    const bow = this.inv.bowInHand();             // taking up the bow fills the quiver from the pack
+    if (bow && !this.hadBow) this.inv.fillQuiver();
+    this.hadBow = bow;
     const sw = this.bar.querySelector('.mode');
     if (sw) sw.classList.toggle('cam', this.camera());
     const key = this.inv.version + '|' + this.open + '|' + this.focus;
@@ -327,7 +333,7 @@ export class UI {
 
   render() {
     const inv = this.inv;
-    let bar = GROUPS.map(([area, title]) => this.grid(area, title)).join('');
+    let bar = GROUPS.filter(([area]) => area !== 'quiver' || inv.bowInHand() || inv.quiver[0]).map(([area, title]) => this.grid(area, title)).join('');
     // The switch between the cursor (the mouse points at things) and the camera (the mouse turns your head), above PACK.
     const mode = `<label class="modeKey">Tab</label><div class="mode${this.camera() ? ' cam' : ''}" data-btn="mode" title="Cursor or camera [Tab]">`
       + `<span class="knob"></span><b class="cur">${CURSOR_ICON}</b><b class="eye">${CAMERA_ICON}</b></div>`;
@@ -383,6 +389,6 @@ export class UI {
   }
   // Is the thing still somewhere on show (it may have moved since the pointer was over it)?
   holds(it) {
-    return ['hands', 'belt', 'back', 'head', 'body', 'pack', 'bag'].some(a => (this.inv.arr(a) || []).includes(it));
+    return ['hands', 'belt', 'quiver', 'back', 'head', 'body', 'pack', 'bag'].some(a => (this.inv.arr(a) || []).includes(it));
   }
 }

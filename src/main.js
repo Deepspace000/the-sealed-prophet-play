@@ -211,7 +211,7 @@ const unpack = o => {
   return it;
 };
 const saved = run && run.levels && run.levels[LEVEL];      // this level as you left it, if you have been here before
-if (run) for (const a of ['hands', 'belt', 'back', 'body', 'head']) (run.inv[a] || []).forEach((o, i) => { if (i < inv[a].length) inv[a][i] = unpack(o); });
+if (run) for (const a of ['hands', 'belt', 'quiver', 'back', 'body', 'head']) (run.inv[a] || []).forEach((o, i) => { if (i < inv[a].length) inv[a][i] = unpack(o); });
 else for (const id of data.carry || []) inv.add(make(id));
 // ?kit=1 (for a test link): in a game already going, you are also given whatever of this level's "carry" you do not have
 if (run && params.get('kit') === '1') for (const id of data.carry || []) if (![...inv.all()].some(e => e[0].def.id === id)) inv.add(make(id));
@@ -355,7 +355,7 @@ const creatures = new Creatures(scene, level, kinds, {
 const fight = new Fight({ camera, player, inv, creatures, ui });
 // The creature you are fighting is marked, and numbers rise from it when it is hit.
 const target = new Target({ camera, creatures, player, fight });
-fight.onHit = (c, res) => target.float(c, res.real >= 0.5 ? String(Math.round(res.real)) : '0', res.weak >= 1.5 ? 'big' : res.weak <= 0.6 ? 'dull' : '');
+fight.onHit = (c, res) => target.float(c, res.real >= 0.5 ? String(Math.round(res.real)) : '0', res.weak >= 1.5 || res.vital ? 'big' : res.weak <= 0.6 || res.graze ? 'dull' : '');
 fight.onNone = reach => target.whiff(reach);
 // A blow that meets no creature may break an urn. Crushing blows smash clay at once; others only chip it.
 const chipped = new Set();
@@ -371,7 +371,8 @@ fight.onMiss = (me, yaw, reach, half, dmg, type, kind) => {
 // Arrows in the air (src/bow.js). One that stops, on a creature or on stone, lies there to be picked up again.
 const arrows = new Arrows({ scene, level, creatures, ground: (x, z, near) => world.ground(x, z, near),
   land: (x, y, z) => world.place(make('arrow'), x, z, y),
-  hit: (c, a) => fight.arrowHit(c, a.dmg, a.from.x, a.from.z) });
+  hit: (c, a) => fight.arrowHit(c, a.dmg, a.from.x, a.from.z, a.at) });
+fight.onWord = (c, text) => target.float(c, text, 'word');
 fight.onShoot = (speed, dmg) => arrows.shoot(camera.position, (input.device === 'keys' && !input.locked() ? dirAt(...input.pointer) : viewDir).clone(), speed, dmg);
 const life = new Survival({ inv, fight, ui, onSleep: () => sleep(), onMap: () => openMap() });
 // Text scenes: your thoughts the first time you meet an enemy, a body, water, a hidden room. ?scenes=0 turns them off for tests.
@@ -415,7 +416,7 @@ function capture() {
   return {
     v: 1, level: LEVEL, from: null,
     pos: { x: player.pos.x, y: player.pos.y, z: player.pos.z, yaw: player.yaw, pitch: player.pitch },
-    inv: { hands: inv.hands.map(pack), belt: inv.belt.map(pack), back: inv.back.map(pack), body: inv.body.map(pack), head: inv.head.map(pack) },
+    inv: { hands: inv.hands.map(pack), belt: inv.belt.map(pack), quiver: inv.quiver.map(pack), back: inv.back.map(pack), body: inv.body.map(pack), head: inv.head.map(pack) },
     relics: [...placed], prophet: { heard, unlocked: [...unlocked] }, flags, hp: fight.hp, food: life.food, rest: life.rest, played, levels, maps: map.pack(), seen: scenes.pack(), visits,
   };
 }
@@ -638,7 +639,7 @@ function pickUp(dir, tol) {          // returns true if there was something ther
   const name = e.item.name, where = inv.add(e.item);
   if (!where) { ui.say(`You have nowhere to put the ${name.toLowerCase()}.`); return true; }
   world.remove(e);
-  const put = e.item.def.stack ? ` You have ${inv.count(e.item.def.id)}.` : { pack: ' It is in your pack.', belt: ' It is on your belt.', bag: ' It is in a bag.' }[where] || '';
+  const put = e.item.def.stack ? ` You have ${inv.count(e.item.def.id)}.` : where === 'quiver' ? ' It is in your quiver.' : { pack: ' It is in your pack.', belt: ' It is on your belt.', bag: ' It is in a bag.' }[where] || '';
   ui.say(where === 'back' || where === 'body' || where === 'head' ? `You put on the ${name.toLowerCase()}.` : `Picked up: ${name}.${put}`);
   if (e.item.def.relic && e.item.def.relic === LEVEL) finishRealm();
   return true;

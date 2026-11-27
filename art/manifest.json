@@ -1,5 +1,5 @@
 {
- "v": 1795765716,
+ "v": 1795766751,
  "items": [
   "arrow",
   "arrow_fly",
@@ -19,6 +19,7 @@
   "dates",
   "gold_cup",
   "hammer",
+  "hide_sack",
   "honey",
   "jackal_hide",
   "jawbone",
@@ -32,7 +33,9 @@
   "knapsack",
   "lantern",
   "lapis_amulet",
+  "leather_sack",
   "linen_armour",
+  "linen_sack",
   "mace",
   "match_bundle",
   "matches",

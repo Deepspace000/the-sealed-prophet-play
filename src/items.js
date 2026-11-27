@@ -50,6 +50,7 @@ export class Inventory {
     this.belt = [null, null, null, null];
     this.back = [null];
     this.body = [null]; this.head = [null];       // armour ("wear": "body" or "head")
+    this.quiver = [null];                         // a place for arrows only, on the belt; it is shown while a bow is in a hand (Mirko)
     this.held = null;
     this.open = null;
     this.capacity = 25;       // kilograms carried before you slow down
@@ -63,9 +64,23 @@ export class Inventory {
   fits(item, area) {
     if (area === 'back' || area === 'body' || area === 'head') return item.def.wear === area;
     if (area === 'belt') return item.def.size <= 1;
-    if (area === 'pack') return item.def.size <= this.back[0].def.maxSize;
-    if (area === 'bag') return item.def.size <= this.open.def.maxSize;
+    if (area === 'quiver') return !!item.def.arrow;
+    if (area === 'pack') return this.takes(this.back[0], item);
+    if (area === 'bag') return this.takes(this.open, item);
     return true;
+  }
+  // Will this bag take that thing? It must be small enough; and a bag goes into no bag but the knapsack (so sacks cannot be
+  // put one inside another without end).
+  takes(bag, item) { return item.def.size <= bag.def.maxSize && !(item.inside && bag.def.wear !== 'back'); }
+  bowInHand() { return this.hands.some(it => it && it.def.bow); }
+  // The quiver is filled from the pack when you take up the bow: the first pile of arrows you carry goes into it.
+  fillQuiver() {
+    if (this.quiver[0]) return;
+    for (const [it, arr, i] of this.all()) {
+      if (!it.def.arrow || !arr) continue;
+      arr[i] = null; this.quiver[0] = it; this.version++;
+      return;
+    }
   }
   lifted(item) {              // an open bag closes when it, or the bag it is in, is picked up
     if (this.open && (item === this.open || item.contains(this.open))) this.open = null;
@@ -88,7 +103,7 @@ export class Inventory {
     }
     if (cur && cur.inside) {
       const j = cur.inside.indexOf(null);
-      if (j >= 0 && this.held.def.size <= cur.def.maxSize) { cur.inside[j] = this.held; this.held = null; return; }
+      if (j >= 0 && this.takes(cur, this.held)) { cur.inside[j] = this.held; this.held = null; return; }
     }
     if (!this.fits(this.held, area)) return 'no';
     arr[i] = this.held;
@@ -106,7 +121,7 @@ export class Inventory {
         if (it.inside) yield* walk(it.inside);
       }
     }
-    for (const a of ['hands', 'belt', 'back', 'body', 'head']) yield* walk(this[a]);
+    for (const a of ['hands', 'belt', 'quiver', 'back', 'body', 'head']) yield* walk(this[a]);
     if (this.held) { yield [this.held, null, -1]; if (this.held.inside) yield* walk(this.held.inside); }
   }
   remove(item) {
@@ -148,9 +163,10 @@ export class Inventory {
     const d = item.def;
     if (d.wear && this[d.wear] && tryArea(d.wear)) return d.wear;       // a knapsack or armour goes straight on, if nothing is worn there
     if ((d.weapon || d.bow || d.block || d.light) && tryArea('hands')) return 'hands';
+    if (d.arrow && this.bowInHand() && tryArea('quiver')) return 'quiver';
     for (const area of ['pack', 'belt']) if (tryArea(area)) return area;
     for (const [bag] of this.all()) {                 // any other bag you carry
-      if (!bag.inside || bag === item || d.size > bag.def.maxSize) continue;
+      if (!bag.inside || bag === item || !this.takes(bag, item)) continue;
       const i = bag.inside.indexOf(null);
       if (i >= 0) { bag.inside[i] = item; this.version++; return 'bag'; }
     }
@@ -158,7 +174,7 @@ export class Inventory {
   }
   get weight() {
     let w = this.held ? this.held.weight : 0;
-    for (const area of ['hands', 'belt', 'back', 'body', 'head']) for (const it of this[area]) if (it) w += it.weight;
+    for (const area of ['hands', 'belt', 'quiver', 'back', 'body', 'head']) for (const it of this[area]) if (it) w += it.weight;
     return w;
   }
 }

@@ -55,7 +55,13 @@ export class Arrows {
         a.vy -= G * h;
         const x = a.x + a.vx * h, y = a.y + a.vy * h, z = a.z + a.vz * h;
         const c = this.creatures.list.find(c => c.state !== 'dead' && y > c.y - 0.1 && y < c.y + c.def.height + 0.1 && Math.hypot(x - c.x, z - c.z) < c.def.radius + 0.15);
-        if (c) { this.hit(c, a); done = true; }
+        if (c) {
+          // where on it: how far up its body (0 its feet, 1 its top) and how far off its middle line (0 the middle, 1 its edge),
+          // taken where the arrow's line comes nearest the middle of the creature (src/fight.js arrowHit: its vital places)
+          const hh = a.vx * a.vx + a.vz * a.vz || 1, s = ((c.x - x) * a.vx + (c.z - z) * a.vz) / hh;
+          a.at = { f: Math.max(0, Math.min(1, (y + a.vy * s - c.y) / c.def.height)), lat: Math.hypot(x + a.vx * s - c.x, z + a.vz * s - c.z) / c.def.radius };
+          this.hit(c, a); done = true;
+        }
         else if (this.blocked(x, y, z, this.level.cellAt(a.x, a.z))) done = true;
         else { a.x = x; a.y = y; a.z = z; }
       }
