@@ -31,6 +31,7 @@ const sin = Math.sin, PI = Math.PI;
 const REST_DROP = -0.15;      // how far the hands are lowered when they are not striking or guarding
 const HELD = {
   ready: [0.3, -0.37, -0.72, -0.28, 0],
+  bow: c => [0.2 - 0.05 * c, -0.2 + 0.03 * c, -0.74 + 0.12 * c, -0.04, 0],       // a bow held up and drawn (c from 0 to 1)
   light: [0.31, -0.3, -0.72, -0.06, 0],
   block: [0.02, -0.27, -0.62, 0.22, 0.2],
   high: { wind: c => [0.27, -0.33 + 0.2 * c, -0.7, -0.28 - 0.2 * c, 0.9 * c], swing: k => [0.22 - 0.08 * k, -0.13 - 0.28 * k, -0.72 - 0.1 * k, -0.48 + 0.4 * k, 0.9 - 2.1 * k] },
@@ -97,10 +98,15 @@ export class Fight {
 
   // What the hand that is striking strikes with: the weapon in it, or a bare fist.
   weapon() { const it = this.inv.hands[this.hand]; return it && it.def.weapon ? it.def : FISTS; }
+  // A bow in the striking hand ("bow" in data/items.json: damage, speed in metres a second, wind, recover), or null.
+  // With one, attacking draws it and letting go shoots an arrow, if you carry any ("arrow": true). See src/bow.js.
+  bow() { const it = this.inv.hands[this.hand]; return it && it.def.bow ? it.def.bow : null; }
+  arrows() { for (const [it] of this.inv.all()) if (it.def.arrow && it.n > 0) return it; return null; }
   // The hand that strikes when a key or a trigger is used, where no hand is named: the one with a weapon in it.
   mainHand() {
     const h = this.inv.hands, free = i => !h[i] || !h[i].def.light;
-    return h[1] && h[1].def.weapon ? 1 : h[0] && h[0].def.weapon ? 0 : free(1) ? 1 : 0;
+    const arm = it => it && (it.def.weapon || it.def.bow);
+    return arm(h[1]) ? 1 : arm(h[0]) ? 0 : free(1) ? 1 : 0;
   }
   // Would a blow struck now reach this creature? aim: 'high' | 'mid' | 'low'.
   reaches(c, aim) {
@@ -108,7 +114,7 @@ export class Fight {
     const w = it && it.def.weapon ? it.def : FISTS, wp = w.weapon, m = blowOf(w, busy ? this.move : aim || 'mid'), P = this.player;
     return this.creatures.inArc({ x: P.pos.x, y: P.pos.y, z: P.pos.z, eyeY: P.eyeY }, P.yaw, wp.reach + m.reach + 0.3, m.arc).includes(c);
   }
-  blowName() { return blowOf(this.weapon(), this.move).name; }      // what the blow being wound up is called, for the screen
+  blowName() { return this.bow() ? 'Draw' : blowOf(this.weapon(), this.move).name; }      // what the blow being wound up is called, for the screen
   guard() {                 // what you block with: the best of what is in your hands
     let best = FISTS;
     for (const it of this.inv.hands) if (it && (it.def.block || 0) > best.block) best = it.def;
@@ -121,7 +127,8 @@ export class Fight {
     if (this.dead) { this.mesh.visible = false; if (this.h) for (const H of this.h) H.mesh.visible = false; return; }
     if (ctl.attack && !this.winding && this.swing <= 0 && ctl.hand >= 0) this.hand = ctl.hand;
     if (ctl.cancel && this.winding) { this.winding = false; this.charge = 0; }
-    const w = this.weapon(), wp = w.weapon;
+    const w = this.weapon(), bow = this.bow(), wp = bow || w.weapon;
+    if (!ctl.attack) this.dry = false;
     this.cool = Math.max(0, this.cool - dt); this.dodgeCd = Math.max(0, this.dodgeCd - dt);
     this.hurtT = Math.max(0, this.hurtT - dt); this.noise = Math.max(0, this.noise - dt * 1.5);
     this.kickT += dt; this.kick = Math.max(0, this.kick - dt * 2.6);
@@ -135,10 +142,15 @@ export class Fight {
       this.swing -= dt;
       if (!this.landed && this.swing <= SWING * 0.45) { this.landed = true; this.land(w); }
       if (this.swing <= 0) this.cool = wp.recover;
+    } else if (ctl.attack && !this.blocking && this.cool <= 0 && bow && !this.arrows()) {
+      if (!this.dry) { this.dry = true; this.ui.say('You have no arrows.'); }
     } else if (ctl.attack && !this.blocking && this.cool <= 0) {       // held: winding up
       if (!this.winding) { this.winding = true; this.charge = 0; }
       this.charge = Math.min(1, this.charge + dt / wp.wind);
       this.move = ctl.aim || 'mid';
+    } else if (this.winding && bow) {                                  // let go: the arrow flies
+      this.winding = false;
+      this.loose(bow);
     } else if (this.winding) {                                         // let go: the blow
       this.winding = false;
       const cost = (7 + 14 * this.charge + (w.weight || 0) * 2) * MOVES[this.move].cost;
@@ -166,6 +178,33 @@ export class Fight {
     this.calm = this.creatures.hunting ? 0 : this.calm + dt;       // seconds since anything was after you
 
     this.show(dt, w, bright);
+  }
+
+  // An arrow leaves the bow. A longer draw sends it faster and makes it hit harder.
+  loose(bow) {
+    const a = this.arrows();
+    if (!a) return;
+    const power = Math.max(0.15, this.charge);
+    this.st = Math.max(0, this.st - 4 - 6 * power); this.stWait = 0.6;
+    a.n--; if (a.n <= 0) this.inv.remove(a);
+    this.inv.version++;
+    this.cool = bow.recover; this.noise = 0.5;
+    play('bow');
+    if (this.onShoot) this.onShoot(bow.speed * (0.45 + 0.55 * power), bow.damage * (0.3 + 0.7 * power) * (0.9 + Math.random() * 0.2));
+  }
+  // An arrow strikes a creature (src/bow.js). Arrows are their own kind of harm ("arrow" in a creature's "weak"): little to
+  // bone and shell, most to things that fly.
+  arrowHit(c, dmg, fromX, fromZ) {
+    const res = this.creatures.hurt(c, dmg, 'arrow', fromX, fromZ, 0.4);
+    if (!res) return;
+    play(res.weak <= 0.6 ? 'glance' : 'hit');
+    if (this.onHit) this.onHit(c, res);
+    const name = c.def.name.toLowerCase(), key = c.def.id + 'arrow';
+    if (res.killed) this.ui.say(`The ${name} is dead.`);
+    else if (!this.told.has(key) && (res.weak <= 0.6 || res.weak >= 1.5)) {
+      this.told.add(key);
+      this.ui.say(res.weak <= 0.2 ? `Arrows do almost nothing to the ${name}.` : res.weak < 1 ? `Arrows do little to the ${name}.` : `Arrows hurt the ${name} badly.`);
+    }
   }
 
   // The blow arrives: who is in the way?
@@ -311,12 +350,15 @@ export class Fight {
       if (H.mesh.material.map !== map) { H.mesh.material.map = map; H.mesh.material.needsUpdate = true; }
       H.thing.visible = !own;
       if (!own) {
-        const imap = this.tex('icon:' + it.def.id, iconCanvas(it.def));
+        const heldPic = it.def.heldArt && art.items[it.def.heldArt];      // a picture of its own for the hand (the bow, standing upright)
+        const imap = this.tex("icon:" + it.def.id, heldPic || iconCanvas(it.def));
         if (H.thing.material.map !== imap) { H.thing.material.map = imap; H.thing.material.needsUpdate = true; }
+        const big = it.def.heldIcon || 1;             // a long thing (a bow) is drawn bigger, with the fist at its middle
+        H.thing.scale.set(big * (heldPic ? heldPic.width / heldPic.height : 1), big, 1); H.thing.position.set(big > 1 ? 0 : -0.02, big > 1 ? 0.04 : 0.17, 0);
       }
       let to = it && it.def.light && !it.def.weapon ? HELD.light : HELD.ready, snap = false;      // a light is carried higher, hanging straight
       if (this.hand === i && this.swing > 0) { snap = true; to = HELD[this.move].swing(1 - this.swing / SWING); }
-      else if (this.hand === i && this.winding) to = HELD[this.move].wind(this.charge);
+      else if (this.hand === i && this.winding) to = it && it.def.bow ? HELD.bow(this.charge) : HELD[this.move].wind(this.charge);
       else if (guarding) to = HELD.block;
       else to = [to[0], to[1] + REST_DROP, to[2], to[3], to[4]];      // at rest and winding up, the hands hang low in the view
       const k = snap ? 1 : Math.min(1, dt * 16);

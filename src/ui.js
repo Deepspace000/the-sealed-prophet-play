@@ -305,7 +305,8 @@ export class UI {
     const icon = it ? `<i${hasArt(it.def) ? ' class="art"' : ''} style="background-image:url(${iconURL(it.def)})"></i>` : '';
     const opener = it && it.inside ? `<b class="opener${this.inv.open === it || (it === this.inv.back[0] && this.open) ? ' on' : ''}">&#9662;</b>` : '';
     const fuel = it && it.def.light ? `<u class="fuel"><s></s></u>` : '';       // a small line under a lamp's icon that runs down as it burns
-    return `<div class="slot${it && it.lit ? ' lit' : ''}" data-area="${area}" data-i="${i}">${icon}${opener}${fuel}</div>`;
+    const count = it && it.def.stack ? `<em class="cnt">${it.n}</em>` : '';       // how many are in a pile (arrows)
+    return `<div class="slot${it && it.lit ? ' lit' : ''}" data-area="${area}" data-i="${i}">${icon}${opener}${fuel}${count}</div>`;
   }
   fuelLines() {                                       // kept current every frame, without redrawing the bar
     for (const s of this.slots()) {
@@ -359,12 +360,13 @@ export class UI {
       if (d.light) return (it.lit ? ' Lit.' : '') + (it.n > 0 ? ` Burns for ${Math.ceil(it.n / 60)} more ${Math.ceil(it.n / 60) === 1 ? 'minute' : 'minutes'}.` : ' Empty.');
       if (d.durability) return it.n <= d.durability * 0.25 ? ' It is cracked and close to breaking.' : it.n <= d.durability * 0.6 ? ' It is worn.' : '';
       if (d.count) return ` ${it.n} left.`;
+      if (d.stack) return ` Up to ${d.stack} fit in one place.`;
       if (d.drinks) return ` ${it.n} ${it.n === 1 ? 'drink' : 'drinks'} left.`;
       return '';
     };
     // what it does in a fight: the harm of a blow, and how much of a blow it stops when you guard with it
     const round1 = v => Math.round(v * 10) / 10;
-    const stats = (d, it) => (d.weapon || d.block || d.armour ? ' <i>' + [d.weapon ? `Level ${it.lvl || 1} &nbsp; Damage ${round1(it.harm ?? d.weapon.damage)} (${d.weapon.type})` + (d.light ? '' : ` &nbsp; Sharpened ${it.edge || 0} of ${EDGE_MAX}`) : '',
+    const stats = (d, it) => (d.weapon || d.bow || d.block || d.armour ? ' <i>' + [d.bow ? `Damage ${d.bow.damage} at full draw (arrow)` : '', d.weapon ? `Level ${it.level || 1} &nbsp; Damage ${round1(it.harm ?? d.weapon.damage)} (${d.weapon.type})` + (d.light ? '' : ` &nbsp; Sharpened ${it.edge || 0} of ${EDGE_MAX}`) : '',
       d.block ? `Block ${Math.round(d.block * 100)}%` : '', d.armour ? `Takes ${Math.round(d.armour * 100)}% of a blow when worn` : '']
       .filter(Boolean).join(' &nbsp; ') + '</i>' : '');
     const describe = it => `<b>${it.name}.</b> ${it.def.text}${left(it)}${stats(it.def, it)} <span style="white-space:nowrap">(${kg(it.weight)})</span>`;

@@ -14,6 +14,7 @@ import { UI } from './ui.js';
 import { runIntro } from './intro.js';
 import { Creatures } from './creatures.js';
 import { Fight, MOVES } from './fight.js';
+import { Arrows } from './bow.js';
 import { Survival } from './survival.js';
 import { Menu } from './menu.js';
 import { GameMap } from './map.js';
@@ -217,7 +218,12 @@ if (run && params.get('kit') === '1') for (const id of data.carry || []) if (![.
 // ?give=a,b,c (for a test link): you are also given these things; ?drop=a,b: and these you do not carry (to make room)
 const notKept = (params.get('drop') || '').split(',');
 for (const e of [...inv.all()]) if (notKept.includes(e[0].def.id)) inv.remove(e[0]);
-for (const id of (params.get('give') || '').split(',')) if (defs[id] && defs[id].compass) flags.compass = true; else if (defs[id] && ![...inv.all()].some(e => e[0].def.id === id)) inv.add(make(id));
+// (a pile is given with its number: give=arrow:20)
+for (const part of (params.get('give') || '').split(',')) {
+  const [id, n] = part.split(':');
+  if (defs[id] && defs[id].compass) flags.compass = true;
+  else if (defs[id] && ![...inv.all()].some(e => e[0].def.id === id)) { const it = make(id); if (it.def.stack && +n > 0) it.n = Math.min(it.def.stack, +n); inv.add(it); }
+}
 const ui = new UI(inv, () => dropHeld(), it => useThing(it));
 ui.compass = !!flags.compass;          // the compass, once found, is on the screen for good (it is not a thing you carry)
 if (rebuilt) setTimeout(() => ui.say('This place has been rebuilt since you were last here. You start it again from its door.'), 1500);
@@ -251,6 +257,7 @@ if (saved) {
   const at = it.at || [0.5, 0.5];
   const thing = make(it.id);
   if (it.lvl && thing.def.weapon) thing.lvl = it.lvl;                // a weapon lying in a level may be of a higher level ("lvl")
+  if (it.n && thing.def.stack) thing.n = Math.min(thing.def.stack, it.n);      // a pile: several arrows lying together ("n")
   (it.inside || []).forEach((id, i) => { if (thing.inside && i < thing.inside.length) thing.inside[i] = make(id); });     // what is in a bag
   world.place(thing, (it.cell[0] + at[0]) * level.size, (it.cell[1] + at[1]) * level.size, it.y);      // y: on a room's roof or a ray, not the floor below
 }
@@ -361,6 +368,11 @@ fight.onMiss = (me, yaw, reach, half, dmg, type, kind) => {
     if (hit.urn.inside) world.place(make(hit.urn.inside), hit.urn.x + 0.25, hit.urn.z + 0.2);
   } else if (!chipped.has(type)) { chipped.add(type); ui.say(`${kind} blows only chip the clay. Something heavy would break it.`); }
 };
+// Arrows in the air (src/bow.js). One that stops, on a creature or on stone, lies there to be picked up again.
+const arrows = new Arrows({ scene, level, creatures, ground: (x, z, near) => world.ground(x, z, near),
+  land: (x, y, z) => world.place(make('arrow'), x, z, y),
+  hit: (c, a) => fight.arrowHit(c, a.dmg, a.from.x, a.from.z) });
+fight.onShoot = (speed, dmg) => arrows.shoot(camera.position, (input.device === 'keys' && !input.locked() ? dirAt(...input.pointer) : viewDir).clone(), speed, dmg);
 const life = new Survival({ inv, fight, ui, onSleep: () => sleep(), onMap: () => openMap() });
 // Text scenes: your thoughts the first time you meet an enemy, a body, water, a hidden room. ?scenes=0 turns them off for tests.
 const scenes = new Scenes({
@@ -623,10 +635,10 @@ function pickUp(dir, tol) {          // returns true if there was something ther
     ui.say('You found a compass. It is on the screen now and shows which way you face.');
     return true;
   }
-  const where = inv.add(e.item), name = e.item.name;
+  const name = e.item.name, where = inv.add(e.item);
   if (!where) { ui.say(`You have nowhere to put the ${name.toLowerCase()}.`); return true; }
   world.remove(e);
-  const put = { pack: ' It is in your pack.', belt: ' It is on your belt.', bag: ' It is in a bag.' }[where] || '';
+  const put = e.item.def.stack ? ` You have ${inv.count(e.item.def.id)}.` : { pack: ' It is in your pack.', belt: ' It is on your belt.', bag: ' It is in a bag.' }[where] || '';
   ui.say(where === 'back' || where === 'body' || where === 'head' ? `You put on the ${name.toLowerCase()}.` : `Picked up: ${name}.${put}`);
   if (e.item.def.relic && e.item.def.relic === LEVEL) finishRealm();
   return true;
@@ -800,12 +812,14 @@ function step(dt, forced) {
   lifts.update(dt);
   lifts.carry(player);
   player.update(dt, inp);
-  // A level with "fallDamage": a fall of more than six metres hurts, more the further it is; sixteen metres or more kills.
+  // A level with "fallDamage" (Mirko: "make falling a bit more permissive. 10 metres survives. Anything above that does big
+  // damage"): a fall of up to ten metres does no harm. Further than that it takes half your health and a twentieth more for
+  // each metre over ten, so twenty metres or more kills.
   if (player.landed) {
     const h = player.landed; player.landed = 0;
-    if (data.fallDamage && h > 6 && !fight.dead) {
-      if (h >= 16) { ui.say('You fall a long way.'); fight.harm(9999, 'fell'); }
-      else { ui.say('You land hard.'); fight.harm(Math.round((h - 6) / 10 * fight.hpMax * 0.9), 'fell'); }      // (up to 90% of your health, at 16 m)
+    if (data.fallDamage && h > 10 && !fight.dead) {
+      if (h >= 20) { ui.say('You fall a long way.'); fight.harm(9999, 'fell'); }
+      else { ui.say('You land hard.'); fight.harm(Math.round((0.5 + (h - 10) / 20) * fight.hpMax), 'fell'); }
     }
   }
   if (dropWords && (player.onGround || player.swimming)) { ui.say(dropWords); dropWords = ''; }
@@ -979,6 +993,7 @@ function step(dt, forced) {
   });
 
   world.light(brightnessAt);
+  arrows.update(dt, brightnessAt);
   for (const f of props.flat) f.spr.material.color.setScalar(brightnessAt(f.x, f.y, f.z));
 
   const f = player.underwater ? WET : DARK;
@@ -1014,6 +1029,8 @@ if (!fresh) {
   black.style.display = 'none';
 } else {
   const latest = newest(), cont = document.getElementById('continueBtn');
+  // LOAD on the title (Mirko: "add a load button to the menu too"): the list of saves, and a save from a file
+  document.getElementById('loadBtn').onclick = e => { e.stopPropagation(); menu.pad = false; if (!menu.open) menu.toggle('', 'load'); };
   if (latest) {                       // there is a save: offer to go on from it
     cont.style.display = 'block';
     cont.onclick = e => { e.stopPropagation(); loadRun(latest.run); };

@@ -30,6 +30,7 @@ function tone(vol, f0, f1, dur, type = 'sine', wobble = 0) {
 
 const SOUNDS = {
   swing: v => hiss(0.22 * v, 500, 2200, 0.17, 1.2),
+  bow: v => { tone(0.3 * v, 240, 130, 0.14, 'triangle'); hiss(0.16 * v, 900, 3200, 0.22, 1.2); },      // the string, and the arrow going
   hit: v => { tone(0.5 * v, 150, 55, 0.16); hiss(0.25 * v, 1800, 500, 0.07, 0.8); },
   chip: v => { tone(0.16 * v, 520, 380, 0.07, 'triangle'); hiss(0.12 * v, 1800, 900, 0.05, 2); },
   smash: v => { hiss(0.5 * v, 3200, 500, 0.32, 1.2); tone(0.3 * v, 240, 90, 0.16, 'triangle'); hiss(0.25 * v, 5200, 1800, 0.5, 3); },

@@ -75,7 +75,7 @@ export class Survival {
       const sharpen = w => {
         if (![...this.inv.all()].some(e => e[0] === it) || w.edge >= EDGE_MAX) return;
         w.edge++; this.inv.remove(it); this.inv.version++; play('chip');
-        this.ui.say(`You sharpen the ${low(w.def.name)}. Damage ${Math.round(w.harm * 10) / 10} now (sharpened ${w.edge} of ${EDGE_MAX}). The stone breaks.`);
+        this.ui.say(`You sharpen the ${low(w.def.name)}. It is level ${w.level} now: damage ${Math.round(w.harm * 10) / 10} (sharpened ${w.edge} of ${EDGE_MAX}). The stone breaks.`);
       };
       if (ws.length === 1) sharpen(ws[0]);
       else this.ui.choose('Choose the weapon to sharpen.', ws.map(w => [`${w.def.name} ${w.edge}/${EDGE_MAX}`, w.edge < EDGE_MAX, () => sharpen(w)]));

@@ -48,7 +48,7 @@ export class Shop {
       const b = document.createElement('button'), can = w.lvl < LEVEL_MAX;
       b.className = 'ware' + (this.pick === WORK ? ' on' : ''); b.disabled = !can;
       b.innerHTML = can ? `<b>His work on your ${w.def.name.toLowerCase()}</b><span class="worth">worth ${this.workPrice}</span><i>He takes the weapon in your hand, works on it, and gives it back one level better.</i>`
-          + `<i class="stats">Level ${w.lvl} to level ${w.lvl + 1}: harm ${Math.round(w.harm * 10) / 10} to ${Math.round((w.harm + w.def.weapon.damage * LEVEL_GAIN) * 10) / 10}.</i>`
+          + `<i class="stats">Level ${w.level} to level ${w.level + 1}: harm ${Math.round(w.harm * 10) / 10} to ${Math.round((w.harm + w.def.weapon.damage * LEVEL_GAIN) * 10) / 10}.</i>`
         : `<b>Your ${w.def.name.toLowerCase()}</b><i>It is as good as he can make it.</i>`;
       b.addEventListener('click', () => { this.pick = this.pick === WORK ? null : WORK; this.render(); });
       $('shopTheirs').querySelector('.none')?.remove();
@@ -90,7 +90,7 @@ export class Shop {
       if (!w || w.lvl >= LEVEL_MAX || given.reduce((s, it) => s + (it.def.worth || 0), 0) < this.workPrice) return;
       for (const it of given) this.inv.remove(it);
       w.lvl++; this.inv.version++;
-      this.say(`He works on the ${w.def.name.toLowerCase()}. It is level ${w.lvl} now.`);
+      this.say(`He works on the ${w.def.name.toLowerCase()}. It is level ${w.level} now.`);
       this.pick = null; this.offer = new Set();
       return this.render();
     }

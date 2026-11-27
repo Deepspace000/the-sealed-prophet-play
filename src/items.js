@@ -15,17 +15,24 @@ export class Item {
     else if (def.drinks) this.n = def.drinks;
     else if (def.light) this.n = def.light.start ?? def.light.burn;
     else if (def.durability) this.n = def.durability;       // blows it can take before it breaks
+    else if (def.stack) this.n = 1;                         // a pile (arrows): how many are in it, def.stack at most
     this.lit = false;
     // A weapon has a level (1 and up): each level above the first adds to the harm of its blows (LEVEL_GAIN). You do not grow
     // stronger yourself in this game: your weapons do (a whetstone, or the trader's work).
     if (def.weapon) { this.lvl = def.level || 1; this.edge = 0; }       // edge: how many times it has been sharpened
   }
   // its name with its level, for the screen: "Curved sword, level 2"
-  get name() { return this.def.name + (this.lvl > 1 ? `, level ${this.lvl}` : ''); }
+  get name() {
+    if (this.def.stack && this.n > 1) return `${this.n} ${this.def.plural || this.def.name.toLowerCase() + 's'}`;      // "12 arrows"
+    return this.def.name + (this.level > 1 ? `, level ${this.level}` : '');
+  }
+  // The level shown to the player (Mirko: "when a weapon is sharpened, it should become level 2"): each sharpening raises it by
+  // one, and so does each time the trader works on it. (lvl: the trader's work, 40% each; edge: sharpenings, 1 damage each.)
+  get level() { return (this.lvl || 1) + (this.edge || 0); }
   get harm() { return this.def.weapon ? this.def.weapon.damage * this.might + (this.edge || 0) : 0; }      // the damage of a full blow
   get might() { return 1 + LEVEL_GAIN * ((this.lvl || 1) - 1); }      // how much harder it hits than at level 1
   get weight() {
-    let w = this.def.weight;
+    let w = this.def.weight * (this.def.stack ? this.n : 1);
     if (this.inside) for (const it of this.inside) if (it) w += it.weight;
     return w;
   }
@@ -73,6 +80,12 @@ export class Inventory {
       if (cur) { arr[i] = null; this.held = cur; this.lifted(cur); }
       return;
     }
+    if (cur && cur.def === this.held.def && cur.def.stack && cur.n < cur.def.stack) {      // onto a pile of the same thing
+      const k = Math.min(this.held.n, cur.def.stack - cur.n);
+      cur.n += k; this.held.n -= k;
+      if (this.held.n <= 0) this.held = null;
+      return;
+    }
     if (cur && cur.inside) {
       const j = cur.inside.indexOf(null);
       if (j >= 0 && this.held.def.size <= cur.def.maxSize) { cur.inside[j] = this.held; this.held = null; return; }
@@ -109,7 +122,21 @@ export class Inventory {
   // A weapon, a shield or a light goes into an empty hand if there is one. Everything else goes into the pack first,
   // then the belt, then any other bag, and into an empty hand only if there is nowhere else.
   // What you already hold in your hands is never moved to make room.
+  // A pile (arrows): as many of them as there is room for go onto piles of the same thing you already carry.
+  // Returns true if all of them went.
+  pile(item) {
+    if (!item.def.stack) return false;
+    for (const [it] of this.all()) {
+      if (it === item || it.def !== item.def || it.n >= it.def.stack) continue;
+      const k = Math.min(item.n, it.def.stack - it.n);
+      it.n += k; item.n -= k; this.version++;
+      if (item.n <= 0) return true;
+    }
+    return false;
+  }
+  count(id) { let n = 0; for (const [it] of this.all()) if (it.def.id === id) n += it.def.stack ? it.n : 1; return n; }
   add(item) {
+    if (this.pile(item)) return 'pile';
     const tryArea = area => {
       const arr = this.arr(area);
       if (!arr || !this.fits(item, area)) return false;
@@ -120,7 +147,7 @@ export class Inventory {
     };
     const d = item.def;
     if (d.wear && this[d.wear] && tryArea(d.wear)) return d.wear;       // a knapsack or armour goes straight on, if nothing is worn there
-    if ((d.weapon || d.block || d.light) && tryArea('hands')) return 'hands';
+    if ((d.weapon || d.bow || d.block || d.light) && tryArea('hands')) return 'hands';
     for (const area of ['pack', 'belt']) if (tryArea(area)) return area;
     for (const [bag] of this.all()) {                 // any other bag you carry
       if (!bag.inside || bag === item || d.size > bag.def.maxSize) continue;

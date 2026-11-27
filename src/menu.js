@@ -20,8 +20,10 @@ export class Menu {
       if (f) this.actions.fromFile(f);
     });
   }
-  toggle(note = '') {
-    this.open = !this.open; this.focus = 0; this.note = note;
+  // mode 'load': only the list of saves to load from (the LOAD button on the title screen, and the one in this menu).
+  toggle(note = '', mode = null) {
+    this.open = !this.open; this.focus = 0; this.note = note; this.mode = this.open ? mode : null;
+    this.el.style.zIndex = this.mode === 'load' ? 60 : '';       // (over the title screen)
     this.el.style.display = this.open ? 'flex' : 'none';
     if (this.open) this.render();
   }
@@ -34,6 +36,7 @@ export class Menu {
   act(b) {
     const a = b.dataset.m, slot = b.dataset.s;
     if (a === 'close') this.toggle();
+    else if (a === 'loadlist') { this.mode = 'load'; this.focus = 0; this.note = ''; this.render(); }
     else if (a === 'sleep') { this.toggle(); this.actions.sleep(); }
     else if (a === 'save') this.say(this.actions.save(slot) ? `Saved in place ${slot}.` : saveOff ? 'Saving is switched off in this test link (nosave=1 in the address).' : 'The save could not be written.');
     else if (a === 'load') this.actions.load(slot);
@@ -47,8 +50,13 @@ export class Menu {
     const row = (title, v, slot, canSave) => `<div class="slotRow"><span><b>${title}</b> ${describe(v)}</span>`
       + (canSave ? `<button data-m="save" data-s="${slot}">SAVE</button>` : '')
       + (v ? `<button data-m="load" data-s="${slot}">LOAD</button>` : '') + '</div>';
-    this.box.innerHTML = '<h2 class="deco">SETTINGS</h2>'
-      + '<div class="menuRow"><button data-m="close">BACK TO THE GAME</button><button data-m="sleep">SLEEP</button></div>'
+    const places = [...SLOTS.map(s => [`Place ${s}.`, s]), ['Quicksave (F5).', 'quick'], ['Kept by the game.', 'auto']];
+    if (this.mode === 'load') this.box.innerHTML = '<h2 class="deco">LOAD</h2>'
+      + places.map(([t, s]) => row(t, readSlot(s), s, false)).join('')
+      + '<div class="menuRow"><button data-m="import">LOAD FROM A FILE</button><button data-m="close">BACK</button></div>'
+      + `<div class="menuNote">${this.note}</div>`;
+    else this.box.innerHTML = '<h2 class="deco">SETTINGS</h2>'
+      + '<div class="menuRow"><button data-m="close">BACK TO THE GAME</button><button data-m="loadlist">LOAD</button><button data-m="sleep">SLEEP</button></div>'
       + SLOTS.map(s => row(`Place ${s}.`, readSlot(s), s, true)).join('')
       + row('Quicksave (F5).', readSlot('quick'), 'quick', true)
       + row('Kept by the game.', readSlot('auto'), 'auto', false)

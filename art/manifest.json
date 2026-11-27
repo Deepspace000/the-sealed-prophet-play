@@ -1,9 +1,13 @@
 {
- "v": 1795737992,
+ "v": 1795765716,
  "items": [
+  "arrow",
+  "arrow_fly",
   "bandage",
   "bedroll",
   "bone",
+  "bow",
+  "bow_held",
   "bronze_helmet",
   "bully_beef",
   "canteen",
